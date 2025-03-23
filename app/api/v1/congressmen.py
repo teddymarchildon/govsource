@@ -1,0 +1,61 @@
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
+from app.database import get_db
+from app.models.congress import Congressman as CongressmanModel
+from app.schemas.congress import Congressman, CongressmanWithBills, CongressmanList
+
+router = APIRouter()
+
+@router.get("", response_model=CongressmanList)
+def get_congressmen(
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    party: Optional[str] = None,
+    chamber: Optional[str] = None,
+    state: Optional[str] = None,
+):
+    """
+    Get a list of congressmen with optional filtering.
+    """
+    query = db.query(CongressmanModel)
+
+    # Apply filters if provided
+    if party:
+        query = query.filter(CongressmanModel.party == party)
+    if chamber:
+        query = query.filter(CongressmanModel.chamber == chamber)
+    if state:
+        query = query.filter(CongressmanModel.state == state)
+
+    # Get total count for pagination
+    total = query.count()
+
+    # Apply pagination
+    congressmen = query.offset(skip).limit(limit).all()
+
+    # Calculate pagination info
+    page_size = limit
+    page = skip // page_size + 1
+    pages = (total + page_size - 1) // page_size  # Ceiling division
+
+    return {
+        "items": congressmen,
+        "total": total,
+        "page": page,
+        "size": page_size,
+        "pages": pages
+    }
+
+@router.get("/{congressman_id}", response_model=CongressmanWithBills)
+def get_congressman(congressman_id: int, db: Session = Depends(get_db)):
+    """
+    Get detailed information about a specific congressman, including sponsored and cosponsored bills.
+    """
+    congressman = db.query(CongressmanModel).filter(CongressmanModel.id == congressman_id).first()
+    if congressman is None:
+        raise HTTPException(status_code=404, detail="Congressman not found")
+    return congressman

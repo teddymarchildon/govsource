@@ -1,0 +1,43 @@
+services:
+  api:
+    build: .
+    container_name: govlens-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://govlens:govlens@db:5432/govlens
+      - CONGRESS_API_KEY=${CONGRESS_API_KEY}
+    volumes:
+      - .:/app
+    command: >
+      bash -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    restart: always
+    networks:
+      - govlens-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: govlens-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=govlens
+      - POSTGRES_PASSWORD=govlens
+      - POSTGRES_DB=govlens
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - govlens-network
+
+volumes:
+  postgres_data:
+
+networks:
+  govlens-network:
+    driver: bridge
