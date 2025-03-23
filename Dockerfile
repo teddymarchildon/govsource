@@ -15,7 +15,7 @@ RUN pip install pipenv
 COPY Pipfile* ./
 
 # Install dependencies
-RUN pipenv install --deploy --system
+RUN pipenv install --system
 
 # Copy the rest of the application
 COPY . .

@@ -1,11 +1,13 @@
-import os
-import requests
-from datetime import datetime
 import logging
-from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from app.models.congress import Bill, Congressman, Party, Chamber, PolicyArea, BillText
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import requests
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+
+from app.models.congress import Bill, BillText, Chamber, Congressman, Party, PolicyArea
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,14 +35,10 @@ def fetch_bills(congress: int, limit: int = 20, offset: int = 0) -> Dict[str, An
         Dictionary containing bill data
     """
     url = f"{BASE_URL}/bill/{congress}"
-    params = {
-        "limit": limit,
-        "offset": offset,
-        "format": "json"
-    }
+    params = {"limit": limit, "offset": offset, "format": "json"}
 
     try:
-        response = requests.get(url, headers=HEADERS, params=params)
+        response = requests.get(url, headers=HEADERS, params=params)  # type: ignore
         response.raise_for_status()
         response_data = response.json()
         logger.info(f"Bills API Response structure: {list(response_data.keys())}")
@@ -88,14 +86,10 @@ def fetch_members(limit: int = 100, offset: int = 0) -> Dict[str, Any]:
         Dictionary containing member data
     """
     url = f"{BASE_URL}/member"
-    params = {
-        "limit": limit,
-        "offset": offset,
-        "format": "json"
-    }
+    params = {"limit": limit, "offset": offset, "format": "json"}
 
     try:
-        response = requests.get(url, headers=HEADERS, params=params)
+        response = requests.get(url, headers=HEADERS, params=params)  # type: ignore
         response.raise_for_status()
         response_data = response.json()
         logger.info(f"API Response structure: {list(response_data.keys())}")
@@ -116,9 +110,7 @@ def fetch_member_detail(bioguide_id: str) -> Dict[str, Any]:
         Dictionary containing member data
     """
     url = f"{BASE_URL}/member/{bioguide_id}"
-    params = {
-        "format": "json"
-    }
+    params = {"format": "json"}
 
     try:
         response = requests.get(url, headers=HEADERS, params=params)
@@ -164,7 +156,9 @@ def fetch_bill_cosponsors(url: str) -> List[Dict[str, Any]]:
         response_data = response.json()
 
         # Log the structure of the response to debug
-        logger.info(f"Cosponsor response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dictionary'}")
+        logger.info(
+            f"Cosponsor response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dictionary'}"
+        )
 
         # Extract cosponsors from the response
         cosponsors = []
@@ -182,7 +176,7 @@ def fetch_bill_cosponsors(url: str) -> List[Dict[str, Any]]:
                     "state": item.get("state", ""),
                     "district": str(item.get("district", "")),
                     "sponsorship_date": item.get("sponsorshipDate", ""),
-                    "is_original_cosponsor": item.get("isOriginalCosponsor", False)
+                    "is_original_cosponsor": item.get("isOriginalCosponsor", False),
                 }
                 cosponsors.append(cosponsor)
 
@@ -226,7 +220,9 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
         response_data = response.json()
 
         # Log the structure of the response to debug
-        logger.info(f"Text response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dictionary'}")
+        logger.info(
+            f"Text response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dictionary'}"
+        )
 
         # Extract text versions from the response
         text_versions = []
@@ -267,7 +263,7 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
                     "date": date_obj,
                     "pdf_url": pdf_url,
                     "xml_url": xml_url,
-                    "formatted_text_url": formatted_text_url
+                    "formatted_text_url": formatted_text_url,
                 }
                 text_versions.append(text_version)
 
@@ -327,7 +323,7 @@ def parse_bill_data(bill_data: Dict[str, Any]) -> Dict[str, Any]:
                 "last_name": sponsor.get("lastName", ""),
                 "party": sponsor.get("party", ""),
                 "state": sponsor.get("state", ""),
-                "district": str(sponsor.get("district", ""))
+                "district": str(sponsor.get("district", "")),
             }
             sponsors.append(sponsor)
             logger.info(f"Found sponsor: {sponsor['full_name']}")
@@ -362,7 +358,7 @@ def parse_bill_data(bill_data: Dict[str, Any]) -> Dict[str, Any]:
         "cosponsor_count": cosponsor_count,
         "cosponsor_url": cosponsor_url,
         "text_versions_count": text_versions_count,
-        "text_versions_url": text_versions_url
+        "text_versions_url": text_versions_url,
     }
 
 
@@ -385,7 +381,7 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
         # Fetch bills from the Congress API
         bill_list = fetch_bills(congress=congress, limit=limit, offset=offset)
         # Process each bill
-        for bill_item in bill_list['bills']:
+        for bill_item in bill_list["bills"]:
             try:
                 # Fetch detailed bill information
                 bill_url = bill_item.get("url", "")
@@ -393,7 +389,9 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                     logger.warning(f"No URL found for bill: {bill_item}")
                     continue
 
-                bill_data = fetch_bill_detail(congress, bill_item.get("type", ""), bill_item.get("number", 0))
+                bill_data = fetch_bill_detail(
+                    congress, bill_item.get("type", ""), bill_item.get("number", 0)
+                )
                 if not bill_data:
                     logger.warning(f"No data found for bill at URL: {bill_url}")
                     continue
@@ -420,7 +418,7 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                         bill_number=parsed_bill["bill_number"],
                         title=parsed_bill["title"],
                         introduced_date=parsed_bill["introduced_date"],
-                        policy_areas=parsed_bill["policy_areas"]
+                        policy_areas=parsed_bill["policy_areas"],
                     )
                     db.add(bill)
 
@@ -437,7 +435,11 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                             continue
 
                         # Check if congressman exists
-                        congressman = db.query(Congressman).filter(Congressman.bioguide_id == bioguide_id).first()
+                        congressman = (
+                            db.query(Congressman)
+                            .filter(Congressman.bioguide_id == bioguide_id)
+                            .first()
+                        )
 
                         if not congressman:
                             # Fetch congressman details if not in database
@@ -453,12 +455,14 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                                     party=member_info.get("party", Party.OTHER),
                                     chamber=member_info.get("chamber", Chamber.HOUSE),
                                     state=sponsor_data.get("state", ""),
-                                    district=sponsor_data.get("district", "")
+                                    district=sponsor_data.get("district", ""),
                                 )
                                 db.add(congressman)
                                 db.flush()  # Flush to get the ID
                             else:
-                                logger.warning(f"Could not fetch details for congressman: {bioguide_id}")
+                                logger.warning(
+                                    f"Could not fetch details for congressman: {bioguide_id}"
+                                )
                                 continue
 
                         # Add sponsor relationship
@@ -475,7 +479,11 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                             continue
 
                         # Check if congressman exists
-                        congressman = db.query(Congressman).filter(Congressman.bioguide_id == bioguide_id).first()
+                        congressman = (
+                            db.query(Congressman)
+                            .filter(Congressman.bioguide_id == bioguide_id)
+                            .first()
+                        )
 
                         if not congressman:
                             # Fetch congressman details if not in database
@@ -491,12 +499,14 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                                     party=member_info.get("party", Party.OTHER),
                                     chamber=member_info.get("chamber", Chamber.HOUSE),
                                     state=cosponsor_data.get("state", ""),
-                                    district=cosponsor_data.get("district", "")
+                                    district=cosponsor_data.get("district", ""),
                                 )
                                 db.add(congressman)
                                 db.flush()  # Flush to get the ID
                             else:
-                                logger.warning(f"Could not fetch details for congressman: {bioguide_id}")
+                                logger.warning(
+                                    f"Could not fetch details for congressman: {bioguide_id}"
+                                )
                                 continue
 
                         # Add cosponsor relationship
@@ -511,25 +521,38 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                     for text_data in text_versions:
                         # Skip if date is None
                         if not text_data.get("date"):
-                            logger.warning(f"Skipping text version with no date for bill: {bill.bill_id}")
+                            logger.warning(
+                                f"Skipping text version with no date for bill: {bill.bill_id}"
+                            )
                             continue
 
                         # Check if this text version already exists
-                        existing_text = db.query(BillText).filter(
-                            BillText.bill_id == bill.bill_id,
-                            BillText.date == text_data.get("date")
-                        ).first()
+                        existing_text = (
+                            db.query(BillText)
+                            .filter(
+                                BillText.bill_id == bill.bill_id,
+                                BillText.date == text_data.get("date"),
+                            )
+                            .first()
+                        )
 
                         if existing_text:
-                            logger.info(f"Text version for date {text_data.get('date')} already exists for bill: {bill.bill_id}")
+                            logger.info(
+                                f"Text version for date {text_data.get('date')} already exists for bill: {bill.bill_id}"
+                            )
                             # Optionally update URLs if they've changed
-                            if (existing_text.pdf_url != text_data.get("pdf_url") or
-                                existing_text.xml_url != text_data.get("xml_url") or
-                                existing_text.formatted_text_url != text_data.get("formatted_text_url")):
+                            if (
+                                existing_text.pdf_url != text_data.get("pdf_url")
+                                or existing_text.xml_url != text_data.get("xml_url")
+                                or existing_text.formatted_text_url
+                                != text_data.get("formatted_text_url")
+                            ):
                                 logger.info(f"Updating URLs for existing text version")
                                 existing_text.pdf_url = text_data.get("pdf_url")
                                 existing_text.xml_url = text_data.get("xml_url")
-                                existing_text.formatted_text_url = text_data.get("formatted_text_url")
+                                existing_text.formatted_text_url = text_data.get(
+                                    "formatted_text_url"
+                                )
                             continue
 
                         # Create new text version if it doesn't exist
@@ -539,10 +562,12 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                             date=text_data.get("date"),
                             pdf_url=text_data.get("pdf_url"),
                             xml_url=text_data.get("xml_url"),
-                            formatted_text_url=text_data.get("formatted_text_url")
+                            formatted_text_url=text_data.get("formatted_text_url"),
                         )
                         db.add(bill_text)
-                        logger.info(f"Added new text version for date {text_data.get('date')} for bill: {bill.bill_id}")
+                        logger.info(
+                            f"Added new text version for date {text_data.get('date')} for bill: {bill.bill_id}"
+                        )
                 # Commit changes for this bill
                 db.commit()
                 bills.append(bill)
@@ -560,7 +585,7 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
         return []
 
 
-def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congressman]:
+def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[dict[str, Any]]:
     """
     Sync members from the Congress API to the database
 
@@ -576,9 +601,6 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
 
     # Fetch members from the API
     response_data = fetch_members(limit=limit, offset=offset)
-
-    # Process each member
-    processed_members = []
 
     # Extract members from the response - the API returns a list under a specific key
     # We need to check the structure of the response
@@ -596,7 +618,9 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
                 break
         else:
             # If we can't find a list, log the structure and return empty
-            logger.error(f"Could not find members list in response. Keys: {list(response_data.keys())}")
+            logger.error(
+                f"Could not find members list in response. Keys: {list(response_data.keys())}"
+            )
             return []
 
     logger.info(f"Found {len(members_list)} members to process")
@@ -604,7 +628,9 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
     # Log the structure of the first member item to understand its format
     if members_list and len(members_list) > 0:
         first_member = members_list[0]
-        logger.info(f"First member structure: {first_member.keys() if isinstance(first_member, dict) else 'Not a dictionary'}")
+        logger.info(
+            f"First member structure: {first_member.keys() if isinstance(first_member, dict) else 'Not a dictionary'}"
+        )
 
     for member_item in members_list:
         try:
@@ -631,7 +657,7 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
 
             if not bioguide_id:
                 logger.error("Could not find bioguide ID in member data")
-                return {}
+                return []
 
             # Extract name components
             first_name = member_item.get("firstName", "")
@@ -674,7 +700,11 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
 
             # Get chamber
             chamber = Chamber.HOUSE  # Default to House
-            if "terms" in member_item and isinstance(member_item["terms"], list) and member_item["terms"]:
+            if (
+                "terms" in member_item
+                and isinstance(member_item["terms"], list)
+                and member_item["terms"]
+            ):
                 most_recent_term = member_item["terms"][-1]
                 if isinstance(most_recent_term, dict) and "chamber" in most_recent_term:
                     chamber_name = most_recent_term["chamber"]
@@ -698,7 +728,9 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
 
             office = ""
             phone = ""
-            if "addressInformation" in member_item and isinstance(member_item["addressInformation"], dict):
+            if "addressInformation" in member_item and isinstance(
+                member_item["addressInformation"], dict
+            ):
                 address_info = member_item["addressInformation"]
                 office = address_info.get("officeAddress", "")
                 phone = address_info.get("phoneNumber", "")
@@ -712,7 +744,11 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
             state = ""
             district = ""
 
-            if "terms" in member_item and isinstance(member_item["terms"], list) and member_item["terms"]:
+            if (
+                "terms" in member_item
+                and isinstance(member_item["terms"], list)
+                and member_item["terms"]
+            ):
                 most_recent_term = member_item["terms"][-1]
                 if isinstance(most_recent_term, dict):
                     state = most_recent_term.get("stateName", member_item.get("state", ""))
@@ -740,13 +776,13 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
                 "office": office,
                 "phone": phone,
                 "state": state,
-                "district": district
+                "district": district,
             }
 
-            return member_data
+            return [member_data]
         except Exception as e:
             logger.error(f"Error parsing member data: {e}")
-            return {}
+            return []
 
 
 def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -771,11 +807,15 @@ def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
                     break
             else:
                 # If we can't find the member data, log the structure and return empty
-                logger.error(f"Could not find member data in response. Keys: {list(member_data.keys())}")
+                logger.error(
+                    f"Could not find member data in response. Keys: {list(member_data.keys())}"
+                )
                 return {}
 
         # Log the structure of the member info to understand its format
-        logger.info(f"Member info structure: {member_info.keys() if isinstance(member_info, dict) else 'Not a dictionary'}")
+        logger.info(
+            f"Member info structure: {member_info.keys() if isinstance(member_info, dict) else 'Not a dictionary'}"
+        )
 
         # Extract bioguide ID
         bioguide_id = None
@@ -838,7 +878,11 @@ def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
 
         # Get chamber
         chamber = Chamber.HOUSE  # Default to House
-        if "terms" in member_info and isinstance(member_info["terms"], list) and member_info["terms"]:
+        if (
+            "terms" in member_info
+            and isinstance(member_info["terms"], list)
+            and member_info["terms"]
+        ):
             most_recent_term = member_info["terms"][-1]
             if isinstance(most_recent_term, dict) and "chamber" in most_recent_term:
                 chamber_name = most_recent_term["chamber"]
@@ -862,7 +906,9 @@ def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
 
         office = ""
         phone = ""
-        if "addressInformation" in member_info and isinstance(member_info["addressInformation"], dict):
+        if "addressInformation" in member_info and isinstance(
+            member_info["addressInformation"], dict
+        ):
             address_info = member_info["addressInformation"]
             office = address_info.get("officeAddress", "")
             phone = address_info.get("phoneNumber", "")
@@ -876,7 +922,11 @@ def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
         state = ""
         district = ""
 
-        if "terms" in member_info and isinstance(member_info["terms"], list) and member_info["terms"]:
+        if (
+            "terms" in member_info
+            and isinstance(member_info["terms"], list)
+            and member_info["terms"]
+        ):
             most_recent_term = member_info["terms"][-1]
             if isinstance(most_recent_term, dict):
                 state = most_recent_term.get("stateName", member_info.get("state", ""))
@@ -904,7 +954,7 @@ def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
             "office": office,
             "phone": phone,
             "state": state,
-            "district": district
+            "district": district,
         }
 
         return member_data

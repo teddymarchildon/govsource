@@ -8,11 +8,16 @@ services:
       - db
     environment:
       - DATABASE_URL=postgresql://govlens:govlens@db:5432/govlens
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=govlens
+      - POSTGRES_PASSWORD=govlens
+      - POSTGRES_DB=govlens
       - CONGRESS_API_KEY=${CONGRESS_API_KEY}
     volumes:
       - .:/app
     command: >
       bash -c "
+        pip install pydantic-settings==2.1.0 &&
         alembic upgrade head &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "

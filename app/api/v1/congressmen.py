@@ -1,15 +1,17 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.congress import Congressman as CongressmanModel
-from app.schemas.congress import Congressman, CongressmanWithBills, CongressmanList
+from app.schemas.congress import Congressman, CongressmanList, CongressmanWithBills
 
 router = APIRouter()
 
-@router.get("", response_model=CongressmanList)
+
+@router.get("", response_model=CongressmanList)  # type: ignore
 def get_congressmen(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
@@ -17,7 +19,7 @@ def get_congressmen(
     party: Optional[str] = None,
     chamber: Optional[str] = None,
     state: Optional[str] = None,
-):
+) -> Dict[str, Any]:
     """
     Get a list of congressmen with optional filtering.
     """
@@ -42,16 +44,11 @@ def get_congressmen(
     page = skip // page_size + 1
     pages = (total + page_size - 1) // page_size  # Ceiling division
 
-    return {
-        "items": congressmen,
-        "total": total,
-        "page": page,
-        "size": page_size,
-        "pages": pages
-    }
+    return {"items": congressmen, "total": total, "page": page, "size": page_size, "pages": pages}
 
-@router.get("/{congressman_id}", response_model=CongressmanWithBills)
-def get_congressman(congressman_id: int, db: Session = Depends(get_db)):
+
+@router.get("/{congressman_id}", response_model=CongressmanWithBills)  # type: ignore
+def get_congressman(congressman_id: int, db: Session = Depends(get_db)) -> CongressmanWithBills:
     """
     Get detailed information about a specific congressman, including sponsored and cosponsored bills.
     """

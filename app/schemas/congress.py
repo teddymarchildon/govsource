@@ -1,7 +1,9 @@
-from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
 
 # Enum definitions
 class Party(str, Enum):
@@ -12,9 +14,11 @@ class Party(str, Enum):
     GREEN = "Green"
     OTHER = "Other"
 
+
 class Chamber(str, Enum):
     HOUSE = "house"
     SENATE = "senate"
+
 
 # Base schemas
 class CongressmanBase(BaseModel):
@@ -37,6 +41,7 @@ class CongressmanBase(BaseModel):
     state: str
     district: Optional[str] = None
 
+
 class BillBase(BaseModel):
     congress: int
     bill_id: str
@@ -49,6 +54,7 @@ class BillBase(BaseModel):
     most_recent_congress_pdf_url: Optional[str] = None
     policy_areas: Optional[List[str]] = None
 
+
 # Response schemas
 class Congressman(CongressmanBase):
     id: int
@@ -59,22 +65,31 @@ class Congressman(CongressmanBase):
         orm_mode = True
         from_attributes = True
 
+
 class Bill(BillBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    most_recent_congress_pdf_url: Optional[str] = None
+    most_recent_formatted_text_url: Optional[str] = None
+    sponsor: Optional["Congressman"] = None
+    sponsors: List["Congressman"] = []
+    cosponsors: List["Congressman"] = []
 
     class Config:
         orm_mode = True
         from_attributes = True
 
+
 class CongressmanWithBills(Congressman):
     sponsored_bills: List[Bill] = []
     cosponsored_bills: List[Bill] = []
 
+
 class BillWithCongressmen(Bill):
     sponsors: List[Congressman] = []
     cosponsors: List[Congressman] = []
+
 
 # List response schemas
 class CongressmanList(BaseModel):
@@ -83,6 +98,7 @@ class CongressmanList(BaseModel):
     page: int
     size: int
     pages: int
+
 
 class BillList(BaseModel):
     items: List[Bill]
