@@ -513,7 +513,7 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                         bill.cosponsors.append(congressman)
 
                 # Fetch and add text versions if available
-                if "text_versions_url" in parsed_bill and parsed_bill["text_versions_url"]:
+                if "text_versions_url" in parsed_bill:
                     # We no longer clear existing text versions, instead we'll check if they exist
 
                     text_versions = fetch_bill_texts(parsed_bill["text_versions_url"])
@@ -530,7 +530,7 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                         existing_text = (
                             db.query(BillText)
                             .filter(
-                                BillText.bill_id == bill.bill_id,
+                                BillText.formatted_bill_id == bill.bill_id,
                                 BillText.date == text_data.get("date"),
                             )
                             .first()
@@ -557,7 +557,7 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
 
                         # Create new text version if it doesn't exist
                         bill_text = BillText(
-                            bill_id=bill.bill_id,
+                            formatted_bill_id=bill.bill_id,
                             type=text_data.get("type", ""),
                             date=text_data.get("date"),
                             pdf_url=text_data.get("pdf_url"),

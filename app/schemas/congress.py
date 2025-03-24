@@ -72,7 +72,6 @@ class Bill(BillBase):
     updated_at: datetime
     most_recent_congress_pdf_url: Optional[str] = None
     most_recent_formatted_text_url: Optional[str] = None
-    sponsor: Optional["Congressman"] = None
     sponsors: List["Congressman"] = []
     cosponsors: List["Congressman"] = []
 

@@ -19,23 +19,27 @@ def get_bills(
     limit: int = Query(100, ge=1, le=100),
     congress: Optional[int] = None,
     bill_type: Optional[str] = None,
-    status: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Get a list of bills with optional filtering.
     """
-    # Use joinedload to eagerly load sponsors
-    query = db.query(BillModel).options(joinedload(BillModel.sponsors))
+    # Use joinedload to eagerly load sponsors and text_versions
+    query = db.query(BillModel).options(
+        joinedload(BillModel.sponsors), joinedload(BillModel.text_versions)
+    )
 
     # Apply filters if provided
     if congress:
         query = query.filter(BillModel.congress == congress)
     if bill_type:
         query = query.filter(BillModel.bill_type == bill_type)
-    if status:
-        query = query.filter(BillModel.status == status)
 
-    # Get total count for pagination
+    # Filter for bills that have at least one text version with a PDF URL
+    query = (
+        query.join(BillText, BillModel.bill_id == BillText.formatted_bill_id)
+        .filter(BillText.pdf_url.isnot(None))
+        .distinct()
+    )
     total = query.count()
 
     # Apply pagination
@@ -44,46 +48,41 @@ def get_bills(
     # Add text URLs to each bill
     bills_with_text = []
     for bill in bills:
-        # Get the most recent text version for each bill
-        most_recent_text = (
-            db.query(BillText)
-            .filter(BillText.bill_id == bill.bill_id)
-            .order_by(desc(BillText.date))
-            .first()
-        )
+        # Find the most recent text version from the prefetched text_versions
+        most_recent_text = None
+        if bill.text_versions:
+            # Filter for text versions with PDF URLs if needed
+            text_versions_with_pdf = [t for t in bill.text_versions if t.pdf_url is not None]
+            if text_versions_with_pdf:
+                most_recent_text = max(text_versions_with_pdf, key=lambda x: x.date)
 
         if most_recent_text:
             bill.most_recent_congress_pdf_url = most_recent_text.pdf_url
             bill.most_recent_formatted_text_url = most_recent_text.formatted_text_url
             # Only include bills that have both PDF and formatted text URLs
             if most_recent_text.pdf_url and most_recent_text.formatted_text_url:
-                # Add sponsor information
-                if bill.sponsors and len(bill.sponsors) > 0:
-                    bill.sponsor = bill.sponsors[0]
+                # No need to set bill.sponsor anymore since we're using the sponsors list directly
                 bills_with_text.append(bill)
         else:
             bill.most_recent_congress_pdf_url = None
             bill.most_recent_formatted_text_url = None
 
-    # Recalculate total for pagination based on filtered bills
-    total_with_text = len(bills_with_text)
-
     # Calculate pagination info
     page_size = limit
     page = skip // page_size + 1
-    pages = (total_with_text + page_size - 1) // page_size  # Ceiling division
+    pages = (total + page_size - 1) // page_size  # Ceiling division
 
     return {
         "items": bills_with_text,
-        "total": total_with_text,
+        "total": total,
         "page": page,
         "pages": pages,
         "size": page_size,
     }
 
 
-@router.get("/{bill_id}", response_model=Bill)  # type: ignore
-def get_bill(bill_id: str, db: Session = Depends(get_db)) -> Bill:
+@router.get("/{bill_id}", response_model=BillWithCongressmen)
+def get_bill(bill_id: str, db: Session = Depends(get_db)) -> BillModel:
     """
     Get detailed information about a specific bill, including sponsors and cosponsors.
     """
@@ -101,7 +100,7 @@ def get_bill(bill_id: str, db: Session = Depends(get_db)) -> Bill:
     # Get the most recent text version for the bill
     most_recent_text = (
         db.query(BillText)
-        .filter(BillText.bill_id == bill.bill_id)
+        .filter(BillText.formatted_bill_id == bill.bill_id)
         .order_by(desc(BillText.date))
         .first()
     )
@@ -112,9 +111,5 @@ def get_bill(bill_id: str, db: Session = Depends(get_db)) -> Bill:
     else:
         bill.most_recent_congress_pdf_url = None
         bill.most_recent_formatted_text_url = None
-
-    # Add sponsor information
-    if bill.sponsors and len(bill.sponsors) > 0:
-        bill.sponsor = bill.sponsors[0]
 
     return bill
