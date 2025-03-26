@@ -105,3 +105,12 @@ class BillList(BaseModel):
     page: int
     size: int
     pages: int
+
+
+class BillText(BaseModel):
+    """Schema for bill text response"""
+
+    bill_id: str
+    title: str
+    html_content: str
+    date: datetime

@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models.congress import Bill as BillModel
 from app.models.congress import BillText
-from app.schemas.congress import Bill, BillList, BillWithCongressmen
+from app.schemas.congress import Bill, BillList
+from app.schemas.congress import BillText as BillTextSchema
+from app.schemas.congress import BillWithCongressmen
 
 router = APIRouter()
 
@@ -59,10 +61,7 @@ def get_bills(
         if most_recent_text:
             bill.most_recent_congress_pdf_url = most_recent_text.pdf_url
             bill.most_recent_formatted_text_url = most_recent_text.formatted_text_url
-            # Only include bills that have both PDF and formatted text URLs
-            if most_recent_text.pdf_url and most_recent_text.formatted_text_url:
-                # No need to set bill.sponsor anymore since we're using the sponsors list directly
-                bills_with_text.append(bill)
+            bills_with_text.append(bill)
         else:
             bill.most_recent_congress_pdf_url = None
             bill.most_recent_formatted_text_url = None
@@ -113,3 +112,32 @@ def get_bill(bill_id: str, db: Session = Depends(get_db)) -> BillModel:
         bill.most_recent_formatted_text_url = None
 
     return bill
+
+
+@router.get("/{bill_id}/text", response_model=BillTextSchema)
+def get_bill_text(bill_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Get the HTML content of a bill's text.
+    """
+    # First check if the bill exists
+    bill = db.query(BillModel).filter(BillModel.id == bill_id).first()
+    if bill is None:
+        raise HTTPException(status_code=404, detail="Bill not found")
+
+    # Get the most recent text version for the bill
+    most_recent_text = (
+        db.query(BillText)
+        .filter(BillText.formatted_bill_id == bill.bill_id)
+        .order_by(desc(BillText.date))
+        .first()
+    )
+
+    if most_recent_text is None or most_recent_text.html_content is None:
+        raise HTTPException(status_code=404, detail="Bill text not found")
+
+    return {
+        "bill_id": bill.bill_id,
+        "title": bill.title,
+        "html_content": most_recent_text.html_content,
+        "date": most_recent_text.date,
+    }

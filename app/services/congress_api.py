@@ -340,7 +340,7 @@ def parse_bill_data(bill_data: Dict[str, Any]) -> Dict[str, Any]:
     # Extract text versions information
     text_versions_count = 0
     text_versions_url = None
-    if "textVersions" in bill_info and isinstance(bill_info["textVersions"], dict):
+    if "textVersions" in bill_info:
         if "count" in bill_info["textVersions"]:
             text_versions_count = bill_info["textVersions"]["count"]
         if "url" in bill_info["textVersions"]:
@@ -513,9 +513,7 @@ def sync_bills(db: Session, congress: int = 118, limit: int = 20, offset: int = 
                         bill.cosponsors.append(congressman)
 
                 # Fetch and add text versions if available
-                if "text_versions_url" in parsed_bill:
-                    # We no longer clear existing text versions, instead we'll check if they exist
-
+                if "text_versions_url" in parsed_bill and parsed_bill["text_versions_url"]:
                     text_versions = fetch_bill_texts(parsed_bill["text_versions_url"])
 
                     for text_data in text_versions:

@@ -168,6 +168,7 @@ class BillText(GovLensModel):
     pdf_url = Column(String(500), nullable=True)
     formatted_text_url = Column(String(500), nullable=True)
     xml_url = Column(String(500), nullable=True)
+    html_content = Column(Text, nullable=True)  # Store the downloaded HTML content
 
     # Relationships
     bill = relationship("Bill", back_populates="text_versions")
