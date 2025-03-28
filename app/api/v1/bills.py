@@ -21,6 +21,8 @@ def get_bills(
     limit: int = Query(100, ge=1, le=100),
     congress: Optional[int] = None,
     bill_type: Optional[str] = None,
+    policy_area: Optional[str] = None,
+    status: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Get a list of bills with optional filtering.
@@ -35,6 +37,12 @@ def get_bills(
         query = query.filter(BillModel.congress == congress)
     if bill_type:
         query = query.filter(BillModel.bill_type == bill_type)
+    if policy_area:
+        # Filter for bills that have the specified policy area in their policy_areas array
+        query = query.filter(BillModel.policy_areas.any(policy_area))
+    if status:
+        # Filter by status if provided
+        query = query.filter(BillModel.status.ilike(f"%{status}%"))
 
     # Filter for bills that have at least one text version with a PDF URL
     query = (
@@ -65,6 +73,7 @@ def get_bills(
         else:
             bill.most_recent_congress_pdf_url = None
             bill.most_recent_formatted_text_url = None
+            bills_with_text.append(bill)
 
     # Calculate pagination info
     page_size = limit
@@ -107,9 +116,6 @@ def get_bill(bill_id: str, db: Session = Depends(get_db)) -> BillModel:
     if most_recent_text:
         bill.most_recent_congress_pdf_url = most_recent_text.pdf_url
         bill.most_recent_formatted_text_url = most_recent_text.formatted_text_url
-    else:
-        bill.most_recent_congress_pdf_url = None
-        bill.most_recent_formatted_text_url = None
 
     return bill
 
@@ -119,7 +125,6 @@ def get_bill_text(bill_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]
     """
     Get the HTML content of a bill's text.
     """
-    # First check if the bill exists
     bill = db.query(BillModel).filter(BillModel.id == bill_id).first()
     if bill is None:
         raise HTTPException(status_code=404, detail="Bill not found")
