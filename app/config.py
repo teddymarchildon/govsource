@@ -20,6 +20,15 @@ class Settings(BaseSettings):
     # API settings
     CONGRESS_API_KEY: Optional[str] = os.getenv("CONGRESS_API_KEY")
 
+    # Authentication settings
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "govlens_secret_key_change_in_production")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")
+    )  # 24 hours
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", "10080")
+    )  # 7 days
+
     class Config:
         case_sensitive = True
         env_file = ".env"

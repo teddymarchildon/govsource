@@ -8,14 +8,11 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pipenv
-RUN pip install pipenv
-
-# Copy Pipfile and Pipfile.lock
-COPY Pipfile* ./
+# Copy requirements file
+COPY requirements.txt .
 
 # Install dependencies
-RUN pipenv install --system
+RUN pip install -r requirements.txt
 
 # Copy the rest of the application
 COPY . .

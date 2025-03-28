@@ -17,7 +17,7 @@ services:
       - .:/app
     command: >
       bash -c "
-        pip install pydantic-settings==2.1.0 &&
+        pip install -r requirements.txt &&
         alembic upgrade head &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "
