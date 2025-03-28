@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.auth import SavedBill, SavedCongressman
 from app.models.congress import Bill, Congressman
@@ -10,7 +10,12 @@ from app.schemas.auth import SavedBillCreate, SavedCongressmanCreate
 
 def get_saved_bills(db: Session, user_id: int) -> List[SavedBill]:
     """Get all saved bills for a user"""
-    return db.query(SavedBill).filter(SavedBill.user_id == user_id).all()
+    return (
+        db.query(SavedBill)
+        .filter(SavedBill.user_id == user_id)
+        .options(joinedload(SavedBill.bill))
+        .all()
+    )
 
 
 def get_saved_bill(db: Session, user_id: int, saved_bill_id: int) -> Optional[SavedBill]:
@@ -18,6 +23,7 @@ def get_saved_bill(db: Session, user_id: int, saved_bill_id: int) -> Optional[Sa
     return (
         db.query(SavedBill)
         .filter(SavedBill.id == saved_bill_id, SavedBill.user_id == user_id)
+        .options(joinedload(SavedBill.bill))
         .first()
     )
 
@@ -58,6 +64,9 @@ def create_saved_bill(db: Session, user_id: int, saved_bill_in: SavedBillCreate)
     db.add(saved_bill)
     db.commit()
     db.refresh(saved_bill)
+
+    # Load the bill relationship
+    db.refresh(saved_bill, ["bill"])
     return saved_bill
 
 
@@ -74,6 +83,9 @@ def update_saved_bill(db: Session, user_id: int, saved_bill_id: int, notes: str)
     db.add(saved_bill)
     db.commit()
     db.refresh(saved_bill)
+
+    # Load the bill relationship
+    db.refresh(saved_bill, ["bill"])
     return saved_bill
 
 
@@ -92,7 +104,12 @@ def delete_saved_bill(db: Session, user_id: int, saved_bill_id: int) -> None:
 
 def get_saved_congressmen(db: Session, user_id: int) -> List[SavedCongressman]:
     """Get all saved congressmen for a user"""
-    return db.query(SavedCongressman).filter(SavedCongressman.user_id == user_id).all()
+    return (
+        db.query(SavedCongressman)
+        .filter(SavedCongressman.user_id == user_id)
+        .options(joinedload(SavedCongressman.congressman))
+        .all()
+    )
 
 
 def get_saved_congressman(
@@ -101,7 +118,11 @@ def get_saved_congressman(
     """Get a specific saved congressman for a user"""
     return (
         db.query(SavedCongressman)
-        .filter(SavedCongressman.id == saved_congressman_id, SavedCongressman.user_id == user_id)
+        .filter(
+            SavedCongressman.id == saved_congressman_id,
+            SavedCongressman.user_id == user_id,
+        )
+        .options(joinedload(SavedCongressman.congressman))
         .first()
     )
 
@@ -113,7 +134,8 @@ def get_saved_congressman_by_congressman_id(
     return (
         db.query(SavedCongressman)
         .filter(
-            SavedCongressman.congressman_id == congressman_id, SavedCongressman.user_id == user_id
+            SavedCongressman.congressman_id == congressman_id,
+            SavedCongressman.user_id == user_id,
         )
         .first()
     )
@@ -152,6 +174,9 @@ def create_saved_congressman(
     db.add(saved_congressman)
     db.commit()
     db.refresh(saved_congressman)
+
+    # Load the congressman relationship
+    db.refresh(saved_congressman, ["congressman"])
     return saved_congressman
 
 
@@ -170,6 +195,9 @@ def update_saved_congressman(
     db.add(saved_congressman)
     db.commit()
     db.refresh(saved_congressman)
+
+    # Load the congressman relationship
+    db.refresh(saved_congressman, ["congressman"])
     return saved_congressman
 
 

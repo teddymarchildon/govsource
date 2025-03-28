@@ -2,6 +2,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.schemas.congress import Bill, Congressman
+
 
 class UserBase(BaseModel):
     email: Optional[EmailStr] = None
@@ -74,6 +76,15 @@ class SavedBill(SavedBillBase):
         from_attributes = True
 
 
+class SavedBillWithBill(SavedBill):
+    """SavedBill response model with full Bill object"""
+
+    bill: Bill
+
+    class Config:
+        from_attributes = True
+
+
 class SavedCongressmanBase(BaseModel):
     congressman_id: int
     notes: Optional[str] = None
@@ -86,6 +97,15 @@ class SavedCongressmanCreate(SavedCongressmanBase):
 class SavedCongressman(SavedCongressmanBase):
     id: int
     user_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class SavedCongressmanWithCongressman(SavedCongressman):
+    """SavedCongressman response model with full Congressman object"""
+
+    congressman: Congressman
 
     class Config:
         from_attributes = True

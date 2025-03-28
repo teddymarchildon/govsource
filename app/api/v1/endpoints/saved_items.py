@@ -5,7 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.auth import User
-from app.schemas.auth import SavedBill, SavedBillCreate, SavedCongressman, SavedCongressmanCreate
+from app.schemas.auth import (
+    SavedBill,
+    SavedBillCreate,
+    SavedBillWithBill,
+    SavedCongressman,
+    SavedCongressmanCreate,
+    SavedCongressmanWithCongressman,
+)
 from app.services.auth import get_current_active_user
 from app.services.saved_items import (
     create_saved_bill,
@@ -23,7 +30,7 @@ from app.services.saved_items import (
 router = APIRouter()
 
 
-@router.get("/bills", response_model=List[SavedBill])
+@router.get("/bills", response_model=List[SavedBillWithBill])
 def read_saved_bills(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -35,7 +42,7 @@ def read_saved_bills(
     return saved_bills
 
 
-@router.post("/bills", response_model=SavedBill)
+@router.post("/bills", response_model=SavedBillWithBill)
 def save_bill(
     saved_bill_in: SavedBillCreate,
     db: Session = Depends(get_db),
@@ -48,7 +55,7 @@ def save_bill(
     return saved_bill
 
 
-@router.get("/bills/{saved_bill_id}", response_model=SavedBill)
+@router.get("/bills/{saved_bill_id}", response_model=SavedBillWithBill)
 def read_saved_bill(
     saved_bill_id: int,
     db: Session = Depends(get_db),
@@ -66,7 +73,7 @@ def read_saved_bill(
     return saved_bill
 
 
-@router.put("/bills/{saved_bill_id}", response_model=SavedBill)
+@router.put("/bills/{saved_bill_id}", response_model=SavedBillWithBill)
 def update_bill_notes(
     saved_bill_id: int,
     notes: str,
