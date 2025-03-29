@@ -22,7 +22,6 @@ def get_bills(
     congress: Optional[int] = None,
     bill_type: Optional[str] = None,
     policy_area: Optional[str] = None,
-    status: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Get a list of bills with optional filtering.
@@ -40,9 +39,6 @@ def get_bills(
     if policy_area:
         # Filter for bills that have the specified policy area in their policy_areas array
         query = query.filter(BillModel.policy_areas.any(policy_area))
-    if status:
-        # Filter by status if provided
-        query = query.filter(BillModel.status.ilike(f"%{status}%"))
 
     # Filter for bills that have at least one text version with a PDF URL
     query = (

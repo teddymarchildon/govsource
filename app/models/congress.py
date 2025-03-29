@@ -128,9 +128,38 @@ class Congressman(GovLensModel):
     # Relationships
     sponsored_bills = relationship("Bill", secondary=bill_sponsor, back_populates="sponsors")
     cosponsored_bills = relationship("Bill", secondary=bill_cosponsor, back_populates="cosponsors")
+    terms = relationship(
+        "CongressmanTerm", back_populates="congressman", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Congressman {self.full_name} ({self.party}-{self.state})>"
+
+
+class CongressmanTerm(GovLensModel):
+    """Model for terms served by members of Congress"""
+
+    __tablename__ = "congressman_terms"
+
+    congressman_id = Column(Integer, ForeignKey("congressmen.id"), index=True)
+    congress = Column(Integer)
+    chamber = Column(Enum(Chamber), nullable=False)
+    start_year = Column(Integer)
+    end_year = Column(Integer, nullable=True)
+    state_code = Column(String(2))
+    state_name = Column(String(50))
+    district = Column(String(10), nullable=True)
+    member_type = Column(String(50))  # Senator, Representative, etc.
+
+    # Relationships
+    congressman = relationship("Congressman", back_populates="terms")
+
+    __table_args__ = (
+        UniqueConstraint("congressman_id", "congress", "chamber", name="uix_congressman_term"),
+    )
+
+    def __repr__(self):
+        return f"<CongressmanTerm {self.congressman_id} {self.congress} {self.chamber.value}: {self.start_year}-{self.end_year}>"
 
 
 class Bill(GovLensModel):
@@ -152,6 +181,7 @@ class Bill(GovLensModel):
         "Congressman", secondary=bill_cosponsor, back_populates="cosponsored_bills"
     )
     text_versions = relationship("BillText", back_populates="bill", cascade="all, delete-orphan")
+    law = relationship("Law", back_populates="bill", uselist=False)
 
     def __repr__(self):
         return f"<Bill {self.bill_id}: {self.title[:50] + '...'}>"
@@ -177,3 +207,51 @@ class BillText(GovLensModel):
 
     def __repr__(self):
         return f"<BillText {self.formatted_bill_id} {self.type}: {self.date}>"
+
+
+class Law(GovLensModel):
+    """Model for laws (public and private)"""
+
+    __tablename__ = "laws"
+
+    congress = Column(Integer)  # e.g., 117 for 117th Congress
+    law_type = Column(String(10))  # "pub" for public, "pvt" for private
+    law_number = Column(String(20))  # e.g., "117-108"
+    title = Column(Text)  # The title of the law
+    enacted_date = Column(Date)  # Date the law was enacted
+
+    # Unique identifier for the law
+    law_id = Column(String(30), unique=True, index=True)  # e.g., "117-pub-108"
+
+    # Foreign key to the bill that became this law
+    bill_id = Column(String(20), ForeignKey("bills.bill_id"), nullable=True)
+
+    # Relationships
+    bill = relationship("Bill", back_populates="law")
+    text_versions = relationship("LawText", back_populates="law", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Law {self.law_id}: {self.title[:50] + '...'}>"
+
+
+class LawText(GovLensModel):
+    """Model for law text versions"""
+
+    __tablename__ = "law_texts"
+
+    law_id = Column(String(30), ForeignKey("laws.law_id"), index=True)
+    version_code = Column(String(50))  # e.g., "enr", "pl", "placed_on_calendar_senate"
+    version_name = Column(String(100))  # e.g., "Enrolled Bill", "Public Law"
+    date = Column(Date)
+    pdf_url = Column(String(500), nullable=True)
+    html_url = Column(String(500), nullable=True)
+    xml_url = Column(String(500), nullable=True)
+    html_content = Column(Text, nullable=True)  # Store the downloaded HTML content if needed
+
+    # Relationships
+    law = relationship("Law", back_populates="text_versions")
+
+    __table_args__ = (UniqueConstraint("law_id", "version_code", name="uix_law_version"),)
+
+    def __repr__(self):
+        return f"<LawText {self.law_id} {self.version_name}: {self.date}>"

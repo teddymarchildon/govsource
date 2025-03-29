@@ -1,12 +1,10 @@
 import os
-from logging.config import fileConfig
 import socket
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from dotenv import load_dotenv
+from logging.config import fileConfig
 
 from alembic import context
+from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,23 +22,27 @@ if config.config_file_name is not None:
 database_url = os.getenv("DATABASE_URL", "postgresql://govlens:govlens@localhost:5432/govlens")
 
 # If we're running locally and the URL contains 'db' as hostname, replace it with 'localhost'
-if 'db' in database_url and not os.path.exists('/.dockerenv'):
+if "db" in database_url and not os.path.exists("/.dockerenv"):
     # Check if we can resolve 'db' hostname
     try:
-        socket.gethostbyname('db')
+        socket.gethostbyname("db")
     except socket.gaierror:
         # Cannot resolve 'db', we're probably running locally
-        database_url = database_url.replace('@db:', '@localhost:')
+        database_url = database_url.replace("@db:", "@localhost:")
         print(f"Running locally, using modified database URL: {database_url}")
 
 # Override the sqlalchemy.url with the value from the environment variable
 config.set_main_option("sqlalchemy.url", database_url)
+
+# Import all models to ensure they're included in the metadata
+from app.models import auth, congress
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 from app.models.congress import Base
+
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -87,9 +89,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
