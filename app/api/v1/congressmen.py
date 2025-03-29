@@ -31,7 +31,12 @@ def get_congressmen(
     if chamber:
         query = query.filter(CongressmanModel.chamber == chamber)
     if state:
-        query = query.filter(CongressmanModel.state == state)
+        # Handle multiple states as comma-separated values
+        states = [s.strip() for s in state.split(",")]
+        if len(states) == 1:
+            query = query.filter(CongressmanModel.state == states[0])
+        else:
+            query = query.filter(CongressmanModel.state.in_(states))
 
     # Get total count for pagination
     total = query.count()

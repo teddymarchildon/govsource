@@ -101,7 +101,7 @@ def remove_saved_bill(
     delete_saved_bill(db, user_id=current_user.id, saved_bill_id=saved_bill_id)
 
 
-@router.get("/congressmen", response_model=List[SavedCongressman])
+@router.get("/congressmen", response_model=List[SavedCongressmanWithCongressman])
 def read_saved_congressmen(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -113,7 +113,7 @@ def read_saved_congressmen(
     return saved_congressmen
 
 
-@router.post("/congressmen", response_model=SavedCongressman)
+@router.post("/congressmen", response_model=SavedCongressmanWithCongressman)
 def save_congressman(
     saved_congressman_in: SavedCongressmanCreate,
     db: Session = Depends(get_db),
@@ -128,7 +128,7 @@ def save_congressman(
     return saved_congressman
 
 
-@router.get("/congressmen/{saved_congressman_id}", response_model=SavedCongressman)
+@router.get("/congressmen/{saved_congressman_id}", response_model=SavedCongressmanWithCongressman)
 def read_saved_congressman(
     saved_congressman_id: int,
     db: Session = Depends(get_db),
@@ -148,7 +148,7 @@ def read_saved_congressman(
     return saved_congressman
 
 
-@router.put("/congressmen/{saved_congressman_id}", response_model=SavedCongressman)
+@router.put("/congressmen/{saved_congressman_id}", response_model=SavedCongressmanWithCongressman)
 def update_congressman_notes(
     saved_congressman_id: int,
     notes: str,
