@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -48,11 +48,11 @@ class CongressmanTermBase(BaseModel):
     congress: int
     chamber: Chamber
     start_year: int
-    end_year: int
-    state_code: str
-    state_name: str
+    end_year: Optional[int] = None
+    state_code: str = ""
+    state_name: str = ""
     district: Optional[str] = None
-    member_type: str
+    member_type: str = ""
 
 
 class BillBase(BaseModel):
@@ -62,10 +62,8 @@ class BillBase(BaseModel):
     bill_number: int
     title: str
     short_title: Optional[str] = None
-    introduced_date: datetime
-    most_recent_formatted_text_url: Optional[str] = None
-    most_recent_congress_pdf_url: Optional[str] = None
-    policy_areas: Optional[List[str]] = None
+    introduced_date: Optional[datetime] = None
+    policy_areas: List[str] = []
 
 
 # Response schemas
@@ -109,19 +107,19 @@ class Bill(BillBase):
 
 
 class CongressmanWithBills(Congressman):
-    sponsored_bills: List[Bill] = []
-    cosponsored_bills: List[Bill] = []
+    sponsored_bills: List["Bill"] = []
+    cosponsored_bills: List["Bill"] = []
 
 
 class CongressmanWithTerms(Congressman):
     """Schema for congressman response with terms"""
 
-    terms: List[CongressmanTerm] = []
+    terms: List["CongressmanTerm"] = []
 
 
 class BillWithCongressmen(Bill):
-    sponsors: List[Congressman] = []
-    cosponsors: List[Congressman] = []
+    sponsors: List["Congressman"] = []
+    cosponsors: List["Congressman"] = []
 
 
 # Law schemas
@@ -133,7 +131,7 @@ class LawBase(BaseModel):
     law_number: str  # e.g., "117-108"
     law_id: str  # e.g., "117-pub-108"
     title: str
-    enacted_date: datetime
+    enacted_date: Optional[datetime] = None
     bill_id: Optional[str] = None
 
 
@@ -152,13 +150,7 @@ class Law(LawBase):
 class LawWithBill(Law):
     """Schema for law response with related bill"""
 
-    bill: Optional[Bill] = None
-
-
-class LawWithTextVersions(Law):
-    """Schema for law response with text versions"""
-
-    text_versions: List["LawText"] = []
+    bill: Optional["Bill"] = None
 
 
 # Law text schemas
@@ -168,7 +160,7 @@ class LawTextBase(BaseModel):
     law_id: str
     version_code: str
     version_name: str
-    date: datetime
+    date: Optional[datetime] = None
     pdf_url: Optional[str] = None
     html_url: Optional[str] = None
     xml_url: Optional[str] = None
@@ -185,6 +177,12 @@ class LawText(LawTextBase):
     class Config:
         orm_mode = True
         from_attributes = True
+
+
+class LawWithTextVersions(Law):
+    """Schema for law response with text versions"""
+
+    text_versions: List["LawText"] = []
 
 
 # List response schemas
@@ -221,3 +219,13 @@ class LawList(BaseModel):
     page: int
     size: int
     pages: int
+
+
+# Update forward references
+Congressman.update_forward_refs()
+Bill.update_forward_refs()
+CongressmanWithBills.update_forward_refs()
+CongressmanWithTerms.update_forward_refs()
+BillWithCongressmen.update_forward_refs()
+LawWithBill.update_forward_refs()
+LawWithTextVersions.update_forward_refs()

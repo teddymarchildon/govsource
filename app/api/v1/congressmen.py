@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.congress import Congressman as CongressmanModel
-from app.schemas.congress import Congressman, CongressmanList, CongressmanWithBills
+from app.schemas.congress import (
+    Congressman,
+    CongressmanList,
+    CongressmanWithBills,
+    CongressmanWithTerms,
+)
 
 router = APIRouter()
 
@@ -58,6 +63,34 @@ def get_congressman(congressman_id: int, db: Session = Depends(get_db)) -> Congr
     Get detailed information about a specific congressman, including sponsored and cosponsored bills.
     """
     congressman = db.query(CongressmanModel).filter(CongressmanModel.id == congressman_id).first()
+    if congressman is None:
+        raise HTTPException(status_code=404, detail="Congressman not found")
+    return congressman
+
+
+@router.get("/{congressman_id}/terms", response_model=CongressmanWithTerms)  # type: ignore
+def get_congressman_terms(
+    congressman_id: int, db: Session = Depends(get_db)
+) -> CongressmanWithTerms:
+    """
+    Get detailed information about a specific congressman, including their terms of service.
+    """
+    congressman = db.query(CongressmanModel).filter(CongressmanModel.id == congressman_id).first()
+    if congressman is None:
+        raise HTTPException(status_code=404, detail="Congressman not found")
+    return congressman
+
+
+@router.get("/bioguide/{bioguide_id}/terms", response_model=CongressmanWithTerms)  # type: ignore
+def get_congressman_by_bioguide_with_terms(
+    bioguide_id: str, db: Session = Depends(get_db)
+) -> CongressmanWithTerms:
+    """
+    Get detailed information about a specific congressman by bioguide ID, including their terms of service.
+    """
+    congressman = (
+        db.query(CongressmanModel).filter(CongressmanModel.bioguide_id == bioguide_id).first()
+    )
     if congressman is None:
         raise HTTPException(status_code=404, detail="Congressman not found")
     return congressman

@@ -689,16 +689,16 @@ def sync_members(db: Session, limit: int = 100, offset: int = 0) -> List[Congres
                         )
                         continue
 
-                    # Map chamber name to string value
-                    chamber_value = "house"
+                    # Map chamber name to enum
+                    chamber = Chamber.HOUSE
                     if chamber_name.upper() == "SENATE":
-                        chamber_value = "senate"
+                        chamber = Chamber.SENATE
 
                     # Create term record
                     term = CongressmanTerm(
                         congressman_id=member.id,
                         congress=congress,
-                        chamber=chamber_value,
+                        chamber=chamber,
                         start_year=start_year,
                         end_year=end_year,
                         state_code=state_code or "",
@@ -1253,7 +1253,7 @@ def sync_laws(
                             for fmt in formats:
                                 if fmt.get("type") == "PDF":
                                     pdf_url = fmt.get("url")
-                                elif fmt.get("type") == "HTML":
+                                elif fmt.get("type") == "Formatted Text":
                                     formatted_text_url = fmt.get("url")
 
                             # Parse the date
