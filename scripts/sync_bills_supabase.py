@@ -7,8 +7,10 @@ import json
 import logging
 import os
 import sys
+import tempfile
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -93,6 +95,55 @@ def fetch_bill_detail(congress: int, bill_type: str, bill_number: int) -> Dict[s
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching bill detail: {e}")
         return {}
+
+
+def fetch_bill_actions(congress: int, bill_type: str, bill_number: int) -> List[Dict[str, Any]]:
+    """
+    Fetch actions for a specific bill from the Congress API
+
+    Args:
+        congress: Congress number (e.g., 117 for 117th Congress)
+        bill_type: Type of bill (e.g., 'hr', 's')
+        bill_number: Bill number
+
+    Returns:
+        List of action data dictionaries
+    """
+    url = f"{BASE_URL}/bill/{congress}/{bill_type.lower()}/{bill_number}/actions"
+    params = {"format": "json"}
+
+    try:
+        logger.info(f"Fetching bill actions from URL: {url}")
+        response = requests.get(url, headers=HEADERS, params=params)
+        response.raise_for_status()
+        response_data = response.json()
+
+        # Log the structure of the response to debug
+        logger.info(
+            f"Actions response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dictionary'}"
+        )
+
+        # Extract actions from the response
+        actions = []
+
+        # Check if response contains actions
+        if "actions" in response_data and isinstance(response_data["actions"], list):
+            for item in response_data["actions"]:
+                action = {
+                    "date": item.get("actionDate"),
+                    "text": item.get("text", ""),
+                    "type": item.get("type", "")
+                }
+                actions.append(action)
+
+        logger.info(f"Found {len(actions)} actions")
+        return actions
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching bill actions: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error fetching bill actions: {e}", exc_info=True)
+        return []
 
 
 def fetch_bill_cosponsors(url: str) -> List[Dict[str, Any]]:
@@ -197,7 +248,7 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
         text_versions = []
 
         # Check if response contains textVersions
-        if "textVersions" in response_data:
+        if "textVersions" in response_data and isinstance(response_data["textVersions"], list):
             for item in response_data["textVersions"]:
                 # Default values for URLs
                 pdf_url = None
@@ -208,28 +259,21 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
                 if "formats" in item:
                     for format_item in item["formats"]:
                         format_type = format_item.get("type", "")
-                        format_url = format_item.get("url", "")
+                        if format_type == "PDF":
+                            pdf_url = format_item.get("url", "")
+                        elif format_type == "XML":
+                            xml_url = format_item.get("url", "")
+                        elif format_type == "HTML":
+                            formatted_text_url = format_item.get("url", "")
 
-                        if "PDF" in format_type:
-                            pdf_url = format_url
-                        elif "XML" in format_type:
-                            xml_url = format_url
-                        elif "Formatted Text" in format_type:
-                            formatted_text_url = format_url
-                text_type = item.get("type")
-                # Parse date
-                date_str = item.get("date", "")
-                date_obj = None
-                if date_str:
-                    try:
-                        # Handle ISO format date
-                        date_obj = datetime.fromisoformat(date_str.replace("Z", "+00:00")).date()
-                    except ValueError:
-                        logger.warning(f"Could not parse date: {date_str}")
+                # Extract date
+                date = None
+                if "date" in item:
+                    date = item["date"]
 
+                # Create text version object
                 text_version = {
-                    "type": text_type,
-                    "date": date_obj.isoformat() if date_obj else None,
+                    "date": date,
                     "pdf_url": pdf_url,
                     "xml_url": xml_url,
                     "formatted_text_url": formatted_text_url,
@@ -315,6 +359,35 @@ def parse_bill_data(bill_data: Dict[str, Any]) -> Dict[str, Any]:
         if "url" in bill_info["textVersions"]:
             text_versions_url = bill_info["textVersions"]["url"]
 
+    # Extract law information if available
+    law_number = None
+    law_type = None
+    law_enacted_date = None
+    law_title = None
+    law_unique_id = None
+
+    if "laws" in bill_info and bill_info["laws"]:
+        # Take the first law in the list
+        law = bill_info["laws"][0]
+        law_number = law.get("number", "").split("-")[-1] if "-" in law.get("number", "") else law.get("number", "")
+        law_type = law.get("type", "")
+
+        # Generate a unique ID for the law
+        if law_number and law_type:
+            law_unique_id = f"{law_type.lower()}-{law_number}-{congress}"
+
+        # Get the law title from the bill title
+        law_title = title
+
+        # Find the date when the bill became law from the actions
+        if "latestAction" in bill_info and "actionDate" in bill_info["latestAction"]:
+            action_text = bill_info["latestAction"].get("text", "")
+            if "Became Public Law" in action_text or "Became Private Law" in action_text:
+                try:
+                    law_enacted_date = datetime.strptime(bill_info["latestAction"]["actionDate"], "%Y-%m-%d").date()
+                except ValueError:
+                    logger.warning(f"Could not parse law enacted date: {bill_info['latestAction']['actionDate']}")
+
     return {
         "congress": congress,
         "type": bill_type,
@@ -328,7 +401,66 @@ def parse_bill_data(bill_data: Dict[str, Any]) -> Dict[str, Any]:
         "cosponsor_url": cosponsor_url,
         "text_versions_count": text_versions_count,
         "text_versions_url": text_versions_url,
+        # Law information
+        "law_enacted_date": law_enacted_date.isoformat() if law_enacted_date else None,
+        "law_number": law_number,
+        "law_type": law_type,
+        "law_unique_id": law_unique_id,
+        "law_title": law_title,
     }
+
+
+def download_and_upload_document(
+    supabase: Client, url: str, bucket_name: str, file_path: str
+) -> Optional[str]:
+    """
+    Download a document from a URL and upload it to Supabase storage.
+
+    Args:
+        supabase: Supabase client
+        url: URL to download the document from
+        bucket_name: Name of the Supabase storage bucket
+        file_path: Path to store the file in the bucket
+
+    Returns:
+        Public URL of the uploaded file, or None if download or upload failed
+    """
+    if not url:
+        return None
+
+    try:
+        logger.info(f"Downloading document from {url}")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+
+        # Create a temporary file to store the downloaded content
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    temp_file.write(chunk)
+            temp_file_path = temp_file.name
+
+        try:
+            # Upload to Supabase storage
+            logger.info(f"Uploading document to {bucket_name}/{file_path}")
+            with open(temp_file_path, "rb") as f:
+                result = supabase.storage.from_(bucket_name).upload(
+                    file_path, f, file_options={"content-type": response.headers.get("content-type", "")}
+                )
+
+            # Get the public URL
+            public_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
+            logger.info(f"Document uploaded successfully to {public_url}")
+            return public_url
+        finally:
+            # Clean up the temporary file
+            os.unlink(temp_file_path)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error downloading document: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error uploading document to Supabase: {e}", exc_info=True)
+        return None
 
 
 def sync_bills_to_supabase(
@@ -393,6 +525,12 @@ def sync_bills_to_supabase(
                         "policy_area": parsed_bill["policy_areas"][0]
                         if len(parsed_bill["policy_areas"]) > 0
                         else None,
+                        # Add law information
+                        "law_enacted_date": parsed_bill["law_enacted_date"],
+                        "law_number": parsed_bill["law_number"],
+                        "law_type": parsed_bill["law_type"],
+                        "law_unique_id": parsed_bill["law_unique_id"],
+                        "law_title": parsed_bill["law_title"],
                     }
                     supabase.table("bill").update(bill_update_data).eq("id", bill_db_id).execute()
                 else:
@@ -410,6 +548,12 @@ def sync_bills_to_supabase(
                         "policy_area": parsed_bill["policy_areas"][0]
                         if len(parsed_bill["policy_areas"]) > 0
                         else None,
+                        # Add law information
+                        "law_enacted_date": parsed_bill["law_enacted_date"],
+                        "law_number": parsed_bill["law_number"],
+                        "law_type": parsed_bill["law_type"],
+                        "law_unique_id": parsed_bill["law_unique_id"],
+                        "law_title": parsed_bill["law_title"],
                     }
 
                     # Insert bill
@@ -420,12 +564,18 @@ def sync_bills_to_supabase(
 
                     bill_db_id = result.data[0]["id"]
 
-                # Clear existing sponsors and cosponsors
-                # Delete from bill_sponsor table
-                supabase.table("sponsored_bills").delete().eq("bill_id", bill_db_id).execute()
+                # Get existing sponsors and cosponsors to avoid duplicates
+                existing_sponsors = supabase.table("sponsored_bills").select("congressman_id").eq("bill_id", bill_db_id).execute()
+                existing_sponsor_ids = set()
+                if existing_sponsors.data:
+                    existing_sponsor_ids = {item["congressman_id"] for item in existing_sponsors.data}
 
-                # Delete from bill_cosponsor table
-                supabase.table("cosponsored_bills").delete().eq("bill_id", bill_db_id).execute()
+                existing_cosponsors = supabase.table("cosponsored_bills").select("congressman_id").eq("bill_id", bill_db_id).execute()
+                existing_cosponsor_ids = set()
+                if existing_cosponsors.data:
+                    existing_cosponsor_ids = {item["congressman_id"] for item in existing_cosponsors.data}
+
+                logger.info(f"Found {len(existing_sponsor_ids)} existing sponsors and {len(existing_cosponsor_ids)} existing cosponsors for bill: {bill_db_id}")
 
                 # Add sponsors
                 if "sponsors" in parsed_bill and parsed_bill["sponsors"]:
@@ -475,9 +625,15 @@ def sync_bills_to_supabase(
                         else:
                             congressman_id = congressman["id"]
 
+                        # Skip if this sponsor relationship already exists
+                        if congressman_id in existing_sponsor_ids:
+                            logger.info(f"Skipping existing sponsor relationship for congressman: {bioguide_id}")
+                            continue
+
                         # Add sponsor relationship
                         sponsor_relation = {"bill_id": bill_db_id, "congressman_id": congressman_id}
                         supabase.table("sponsored_bills").insert(sponsor_relation).execute()
+                        logger.info(f"Added sponsor relationship for congressman: {bioguide_id}")
 
                 # Fetch and add cosponsors if available
                 if "cosponsor_url" in parsed_bill and parsed_bill["cosponsor_url"]:
@@ -526,19 +682,30 @@ def sync_bills_to_supabase(
                         else:
                             congressman_id = congressman["id"]
 
+                        # Skip if this cosponsor relationship already exists
+                        if congressman_id in existing_cosponsor_ids:
+                            logger.info(f"Skipping existing cosponsor relationship for congressman: {bioguide_id}")
+                            continue
+
                         # Add cosponsor relationship
                         cosponsor_relation = {
                             "bill_id": bill_db_id,
                             "congressman_id": congressman_id,
                         }
                         supabase.table("cosponsored_bills").insert(cosponsor_relation).execute()
+                        logger.info(f"Added cosponsor relationship for congressman: {bioguide_id}")
 
                 # Fetch and add text versions if available
                 if "text_versions_url" in parsed_bill and parsed_bill["text_versions_url"]:
                     text_versions = fetch_bill_texts(parsed_bill["text_versions_url"])
 
-                    # Clear existing text versions
-                    supabase.table("bill_text").delete().eq("bill_id", bill_db_id).execute()
+                    # Get existing text versions for this bill to avoid duplicates
+                    existing_text_versions = supabase.table("bill_text").select("date").eq("bill_id", bill_db_id).execute()
+                    existing_dates = set()
+                    if existing_text_versions.data:
+                        existing_dates = {item["date"] for item in existing_text_versions.data if item.get("date")}
+
+                    logger.info(f"Found {len(existing_dates)} existing text versions for bill: {bill_db_id}")
 
                     for text_data in text_versions:
                         # Skip if date is None
@@ -548,6 +715,40 @@ def sync_bills_to_supabase(
                             )
                             continue
 
+                        # Skip if we already have this version
+                        if text_data.get("date") in existing_dates:
+                            logger.info(
+                                f"Skipping existing text version for date {text_data.get('date')} for bill: {bill_db_id}"
+                            )
+                            continue
+
+                        # Generate unique file paths for storage
+                        bill_identifier = f"{parsed_bill['congress']}_{parsed_bill['type']}_{parsed_bill['number']}"
+                        # Extract only year, month, day from the date string
+                        date_str = text_data.get("date", "").split("T")[0].replace("-", "")
+                        # Download and upload PDF, HTML, and XML files to Supabase storage
+                        pdf_storage_url = None
+                        html_storage_url = None
+                        xml_storage_url = None
+
+                        if text_data.get("pdf_url"):
+                            pdf_path = f"{bill_identifier}/{date_str}/bill.pdf"
+                            pdf_storage_url = download_and_upload_document(
+                                supabase, text_data.get("pdf_url"), "bill-pdfs", pdf_path
+                            )
+
+                        if text_data.get("formatted_text_url"):
+                            html_path = f"{bill_identifier}/{date_str}/bill.html"
+                            html_storage_url = download_and_upload_document(
+                                supabase, text_data.get("formatted_text_url"), "bill-htmls", html_path
+                            )
+
+                        if text_data.get("xml_url"):
+                            xml_path = f"{bill_identifier}/{date_str}/bill.xml"
+                            xml_storage_url = download_and_upload_document(
+                                supabase, text_data.get("xml_url"), "bill-xmls", xml_path
+                            )
+
                         # Create text version record
                         bill_text_data = {
                             "bill_id": bill_db_id,
@@ -555,6 +756,9 @@ def sync_bills_to_supabase(
                             "pdf_url": text_data.get("pdf_url"),
                             "xml_url": text_data.get("xml_url"),
                             "html_url": text_data.get("formatted_text_url"),
+                            "pdf_file_path": pdf_path if text_data.get("pdf_url") else None,
+                            "html_file_path": html_path if text_data.get("formatted_text_url") else None,
+                            "xml_file_path": xml_path if text_data.get("xml_url") else None,
                         }
 
                         # Insert text version
@@ -562,6 +766,59 @@ def sync_bills_to_supabase(
                         logger.info(
                             f"Added text version for date {text_data.get('date')} for bill: {bill_db_id}"
                         )
+
+                        if pdf_storage_url or html_storage_url or xml_storage_url:
+                            logger.info(
+                                f"Stored bill documents for {bill_identifier} date {date_str}: "
+                                f"PDF: {'✓' if pdf_storage_url else '✗'}, "
+                                f"HTML: {'✓' if html_storage_url else '✗'}, "
+                                f"XML: {'✓' if xml_storage_url else '✗'}"
+                            )
+
+                # Fetch and add bill actions
+                bill_actions = fetch_bill_actions(
+                    congress, parsed_bill["type"], parsed_bill["number"]
+                )
+
+                # Get existing actions for this bill to avoid duplicates
+                existing_actions = supabase.table("bill_action").select("date, text").eq("bill_id", bill_db_id).execute()
+                existing_action_keys = set()
+                if existing_actions.data:
+                    existing_action_keys = {f"{item['date']}_{item['text']}" for item in existing_actions.data if item.get("date") and item.get("text")}
+
+                logger.info(f"Found {len(existing_action_keys)} existing actions for bill: {bill_db_id}")
+
+                for action_data in bill_actions:
+                    # Skip if date or text is None
+                    if not action_data.get("date") or not action_data.get("text"):
+                        logger.warning(
+                            f"Skipping action with missing date or text for bill: {bill_db_id}"
+                        )
+                        continue
+
+                    # Create a unique key for this action
+                    action_key = f"{action_data['date']}_{action_data['text']}"
+
+                    # Skip if we already have this action
+                    if action_key in existing_action_keys:
+                        logger.info(
+                            f"Skipping existing action for date {action_data.get('date')} for bill: {bill_db_id}"
+                        )
+                        continue
+
+                    # Create action record
+                    bill_action_data = {
+                        "bill_id": bill_db_id,
+                        "date": action_data.get("date"),
+                        "text": action_data.get("text"),
+                        "type": action_data.get("type"),
+                    }
+
+                    # Insert action
+                    supabase.table("bill_action").insert(bill_action_data).execute()
+                    logger.info(
+                        f"Added action for date {action_data.get('date')} for bill: {bill_db_id}"
+                    )
 
                 # Add bill to synced list
                 synced_bills.append(parsed_bill)
