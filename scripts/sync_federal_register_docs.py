@@ -84,21 +84,27 @@ def fetch_documents(
     agency_id: Optional[str] = None,
     document_type: Optional[str] = None,
     page_size: int = 1000,
-    max_pages: Optional[int] = None
+    max_pages: Optional[int] = None,
+    start_page: int = 1
 ) -> List[Dict]:
     """Fetch documents from Federal Register API with rate limiting."""
     documents = []
-    page = 1
-    total_pages = 1
+    page = start_page
+    # Initialize total_pages to a high number to ensure we make at least one request
+    # The actual total_pages will be updated after the first API call
+    total_pages = 1000  
+
+    # Track how many pages we've processed
+    pages_processed = 0
 
     while page <= total_pages:
         # Check if we've reached the maximum number of pages
-        if max_pages and page > max_pages:
+        if max_pages and pages_processed >= max_pages:
             logger.info(f"Reached maximum page limit of {max_pages}")
             break
 
         # Add delay between requests to respect rate limits
-        if page > 1:
+        if pages_processed > 0:
             logger.info(f"Waiting {RATE_LIMIT_DELAY_SECONDS:.2f} seconds before next request...")
             time.sleep(RATE_LIMIT_DELAY_SECONDS)
 
@@ -114,6 +120,7 @@ def fetch_documents(
         params = {k: v for k, v in params.items() if v is not None}
 
         try:
+            logger.info(f"Fetching page {page} from Federal Register API...")
             response = requests.get(
                 f"{FEDERAL_REGISTER_BASE_URL}/documents.json",
                 params=params
@@ -121,16 +128,18 @@ def fetch_documents(
             response.raise_for_status()
 
             data = response.json()
-            documents.extend(data.get('results', []))
+            results = data.get('results', [])
+            documents.extend(results)
 
             # Update total pages from response
             total_pages = data.get('total_pages', 1)
-            logger.info(f"Fetched page {page}/{total_pages} with {len(data.get('results', []))} documents")
+            logger.info(f"Fetched page {page}/{total_pages} with {len(results)} documents")
 
             page += 1
+            pages_processed += 1
 
         except requests.exceptions.RequestException as e:
-            if response.status_code == 429:  # Rate limit exceeded
+            if hasattr(response, 'status_code') and response.status_code == 429:  # Rate limit exceeded
                 retry_after = int(response.headers.get('Retry-After', 60))
                 logger.warning(f"Rate limit exceeded. Waiting {retry_after} seconds before retrying...")
                 time.sleep(retry_after)
@@ -268,8 +277,8 @@ def sync_documents_to_supabase(
     document_type: Optional[str] = None,
     per_page: int = 100,
     max_pages: Optional[int] = None,
-    dry_run: bool = False,
-    skip_storage: bool = False
+    skip_storage: bool = False,
+    start_page: int = 1
 ) -> List[Dict[str, Any]]:
     """
     Sync documents from the Federal Register API to Supabase.
@@ -282,129 +291,59 @@ def sync_documents_to_supabase(
         end_date: End date for filtering (YYYY-MM-DD)
         per_page: Number of results per page
         max_pages: Maximum number of pages to process
-        dry_run: Run in dry-run mode (no database writes)
         skip_storage: Skip downloading and uploading documents to storage
+        start_page: Page number to start fetching from (default: 1)
 
     Returns:
         List of dictionaries representing documents that were created or updated
     """
     synced_documents = []
-    page = 1
+    
+    # Fetch documents starting from the specified page
+    documents_data = fetch_documents(
+        agency_id=agency_id,
+        document_type=document_type,
+        page_size=per_page,
+        max_pages=max_pages,
+        start_page=start_page
+    )
 
-    while True:
-        if max_pages and page > max_pages:
-            break
+    if not documents_data:
+        logger.info(f"No documents found starting from page {start_page}")
+        return synced_documents
 
-        # Fetch documents for the current page
-        documents_data = fetch_documents(
-            agency_id=agency_id,
-            document_type=document_type,
-            page_size=per_page,
-            max_pages=max_pages
-        )
+    for doc in documents_data:
+        try:
+            # Get document details first
+            doc_details = get_document_details(doc['document_number'])
+            if not doc_details:
+                logger.error(f"Could not get document details for {doc['document_number']}")
+                continue
 
-        if not documents_data:
-            break
+            # Extract document data from details response
+            document_number = doc_details.get("document_number")
+            title = doc_details.get("title")
+            doc_type = doc_details.get("type")
+            publication_date = doc_details.get("publication_date")
+            signing_date = doc_details.get("signing_date")
+            pdf_url = doc_details.get("pdf_url")
+            html_url = doc_details.get("body_html_url")
+            xml_url = doc_details.get("full_text_xml_url")
+            abstract = doc_details.get("abstract", "")
+            subtype = doc_details.get("subtype", "")
 
-        for doc in documents_data:
-            try:
-                # Get document details first
-                doc_details = get_document_details(doc['document_number'])
-                if not doc_details:
-                    logger.error(f"Could not get document details for {doc['document_number']}")
-                    continue
+            # Check if document already exists in Supabase
+            result = (
+                supabase.table("agency_document")
+                .select("id")
+                .eq("remote_document_number", document_number)
+                .execute()
+            )
 
-                # Extract document data from details response
-                document_number = doc_details.get("document_number")
-                title = doc_details.get("title")
-                doc_type = doc_details.get("type")
-                publication_date = doc_details.get("publication_date")
-                signing_date = doc_details.get("signing_date")
-                pdf_url = doc_details.get("pdf_url")
-                html_url = doc_details.get("body_html_url")
-                xml_url = doc_details.get("full_text_xml_url")
-                abstract = doc_details.get("abstract", "")
-                subtype = doc_details.get("subtype", "")
+            if result.data:
+                logger.info(f"Document {title} already exists in Supabase, updating...")
+                existing_document_id = result.data[0]["id"]
 
-                # Check if document already exists in Supabase
-                result = (
-                    supabase.table("agency_document")
-                    .select("id")
-                    .eq("remote_document_number", document_number)
-                    .execute()
-                )
-
-                if result.data:
-                    logger.info(f"Document {title} already exists in Supabase, updating...")
-                    existing_document_id = result.data[0]["id"]
-
-                    # Download and upload documents to Supabase storage if not skipped
-                    file_paths = {}
-                    if not skip_storage:
-                        file_paths = download_and_upload_document(
-                            supabase, doc_details, "agency-docs"
-                        )
-
-                    # Update document record
-                    document_data = {
-                        "title": title,
-                        "type": doc_type,
-                        "subtype": subtype,
-                        "publication_date": publication_date,
-                        "signing_date": signing_date,
-                        "pdf_url": pdf_url,
-                        "html_url": html_url,
-                        "xml_url": xml_url,
-                        "pdf_file_path": file_paths.get('pdf_file_path'),
-                        "html_file_path": file_paths.get('html_file_path'),
-                        "xml_file_path": file_paths.get('xml_file_path'),
-                        "abstract": abstract,
-                        "remote_document_number": document_number
-                    }
-
-                    # Add president for Presidential Documents
-                    if doc_type == "Presidential Document":
-                        president = get_president_by_date(signing_date)
-                        if president:
-                            document_data["president"] = president
-                            logger.info(f"Added president: {president} for document: {title}")
-
-                    # Update document
-                    supabase.table("agency_document").update(document_data).eq("id", existing_document_id).execute()
-
-                    # Update agency-document relationships
-                    # Get existing relationships for this document
-                    existing_relationships = supabase.table("agency_agencydocument").select("agency_id").eq("agency_document_id", existing_document_id).execute()
-                    existing_agency_ids = [rel["agency_id"] for rel in existing_relationships.data]
-
-                    # Create new relationships for agencies not already linked
-                    for agency in doc_details.get("agencies", []):
-                        agency_id = agency.get("id")
-                        if agency_id:
-                            # Check if agency exists in our database
-                            agency_result = (
-                                supabase.table("agency")
-                                .select("id")
-                                .eq("remote_agency_id", agency_id)
-                                .execute()
-                            )
-
-                            if agency_result.data:
-                                agency_db_id = agency_result.data[0]["id"]
-                                # Only create relationship if it doesn't exist already
-                                if agency_db_id not in existing_agency_ids:
-                                    relationship_data = {
-                                        "agency_id": agency_db_id,
-                                        "agency_document_id": existing_document_id
-                                    }
-                                    supabase.table("agency_agencydocument").insert(relationship_data).execute()
-                                    logger.info(f"Added new agency relationship for document: {title} with agency ID: {agency_db_id}")
-
-                    synced_documents.append(document_data)
-                    logger.info(f"Updated document: {title}")
-                    continue
-
-                # If document doesn't exist, create new one
                 # Download and upload documents to Supabase storage if not skipped
                 file_paths = {}
                 if not skip_storage:
@@ -412,7 +351,7 @@ def sync_documents_to_supabase(
                         supabase, doc_details, "agency-docs"
                     )
 
-                # Create document record
+                # Update document record
                 document_data = {
                     "title": title,
                     "type": doc_type,
@@ -436,11 +375,15 @@ def sync_documents_to_supabase(
                         document_data["president"] = president
                         logger.info(f"Added president: {president} for document: {title}")
 
-                # Insert document
-                result = supabase.table("agency_document").insert(document_data).execute()
-                document_id = result.data[0]["id"]
+                # Update document
+                supabase.table("agency_document").update(document_data).eq("id", existing_document_id).execute()
 
-                # Create agency-document relationships
+                # Update agency-document relationships
+                # Get existing relationships for this document
+                existing_relationships = supabase.table("agency_agencydocument").select("agency_id").eq("agency_document_id", existing_document_id).execute()
+                existing_agency_ids = [rel["agency_id"] for rel in existing_relationships.data]
+
+                # Create new relationships for agencies not already linked
                 for agency in doc_details.get("agencies", []):
                     agency_id = agency.get("id")
                     if agency_id:
@@ -454,25 +397,82 @@ def sync_documents_to_supabase(
 
                         if agency_result.data:
                             agency_db_id = agency_result.data[0]["id"]
-                            # Create relationship
-                            relationship_data = {
-                                "agency_id": agency_db_id,
-                                "agency_document_id": document_id
-                            }
-                            supabase.table("agency_agencydocument").insert(relationship_data).execute()
+                            # Only create relationship if it doesn't exist already
+                            if agency_db_id not in existing_agency_ids:
+                                relationship_data = {
+                                    "agency_id": agency_db_id,
+                                    "agency_document_id": existing_document_id
+                                }
+                                supabase.table("agency_agencydocument").insert(relationship_data).execute()
+                                logger.info(f"Added new agency relationship for document: {title} with agency ID: {agency_db_id}")
 
                 synced_documents.append(document_data)
-                logger.info(f"Synced document: {title}")
-
-            except Exception as e:
-                logger.error(f"Error processing document: {e}", exc_info=True)
+                logger.info(f"Updated document: {title}")
                 continue
 
-        # Check if there are more pages
-        if not documents_data.get("next_page_url"):
-            break
+            # If document doesn't exist, create new one
+            # Download and upload documents to Supabase storage if not skipped
+            file_paths = {}
+            if not skip_storage:
+                file_paths = download_and_upload_document(
+                    supabase, doc_details, "agency-docs"
+                )
 
-        page += 1
+            # Create document record
+            document_data = {
+                "title": title,
+                "type": doc_type,
+                "subtype": subtype,
+                "publication_date": publication_date,
+                "signing_date": signing_date,
+                "pdf_url": pdf_url,
+                "html_url": html_url,
+                "xml_url": xml_url,
+                "pdf_file_path": file_paths.get('pdf_file_path'),
+                "html_file_path": file_paths.get('html_file_path'),
+                "xml_file_path": file_paths.get('xml_file_path'),
+                "abstract": abstract,
+                "remote_document_number": document_number
+            }
+
+            # Add president for Presidential Documents
+            if doc_type == "Presidential Document":
+                president = get_president_by_date(signing_date)
+                if president:
+                    document_data["president"] = president
+                    logger.info(f"Added president: {president} for document: {title}")
+
+            # Insert document
+            result = supabase.table("agency_document").insert(document_data).execute()
+            document_id = result.data[0]["id"]
+
+            # Create agency-document relationships
+            for agency in doc_details.get("agencies", []):
+                agency_id = agency.get("id")
+                if agency_id:
+                    # Check if agency exists in our database
+                    agency_result = (
+                        supabase.table("agency")
+                        .select("id")
+                        .eq("remote_agency_id", agency_id)
+                        .execute()
+                    )
+
+                    if agency_result.data:
+                        agency_db_id = agency_result.data[0]["id"]
+                        # Create relationship
+                        relationship_data = {
+                            "agency_id": agency_db_id,
+                            "agency_document_id": document_id
+                        }
+                        supabase.table("agency_agencydocument").insert(relationship_data).execute()
+
+            synced_documents.append(document_data)
+            logger.info(f"Synced document: {title}")
+
+        except Exception as e:
+            logger.error(f"Error processing document: {e}", exc_info=True)
+            continue
 
     return synced_documents
 
@@ -502,9 +502,10 @@ def main():
         help="Maximum number of pages to fetch"
     )
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Run in dry-run mode (no database writes)"
+        "--start-page",
+        type=int,
+        default=1,
+        help="Page number to start fetching from (default: 1)"
     )
     parser.add_argument(
         "--skip-storage",
@@ -523,8 +524,8 @@ def main():
         document_type=args.document_type,
         per_page=args.per_page,
         max_pages=args.max_pages,
-        dry_run=args.dry_run,
-        skip_storage=args.skip_storage
+        skip_storage=args.skip_storage,
+        start_page=args.start_page
     )
 
     logger.info(f"Synced {len(synced_documents)} documents to Supabase")
