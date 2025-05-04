@@ -57,7 +57,7 @@ def fetch_bills(congress: int, limit: int = 20, offset: int = 0) -> Dict[str, An
     Returns:
         Dictionary containing bill data
     """
-    url = f"{BASE_URL}/bill/{congress}"
+    url = f"{BASE_URL}/bill?sort=updateDate+desc"
     params = {"limit": limit, "offset": offset, "format": "json"}
 
     try:

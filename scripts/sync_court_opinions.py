@@ -76,17 +76,13 @@ def fetch_clusters(
         List of cluster data
     """
     clusters = []
-    url = f"{COURT_LISTENER_BASE_URL}/clusters/?docket__court={court_id}"
+    url = f"{COURT_LISTENER_BASE_URL}/clusters/?docket__court={court_id}&order_by=-date_filed"
 
     page_count = 0
 
     while url and (max_pages is None or page_count < max_pages):
         try:
             logger.info(f"Fetching clusters page {page_count + 1} from {url}")
-
-            # Add delay between requests to respect rate limits
-            if page_count > 0:
-                time.sleep(RATE_LIMIT_DELAY_SECONDS)
 
             response = requests.get(url, headers=API_HEADERS)
             response.raise_for_status()
@@ -119,9 +115,6 @@ def get_cluster_detail(cluster_id: int) -> Dict:
         Cluster detail dictionary
     """
     try:
-        # Add delay to respect rate limits
-        time.sleep(RATE_LIMIT_DELAY_SECONDS)
-
         url = f"{COURT_LISTENER_BASE_URL}/clusters/{cluster_id}/"
         response = requests.get(url, headers=API_HEADERS)
         response.raise_for_status()
@@ -160,6 +153,22 @@ def get_or_create_cluster(
         if result.data and len(result.data) > 0:
             cluster_id = result.data[0]['id']
             logger.info(f"Found existing cluster with ID {cluster_id}")
+
+            # Update the existing cluster with date_filed if not in dry_run mode
+            if not dry_run:
+                # Check if date_filed exists in the cluster data
+                update_data = {}
+                if 'date_filed' in cluster_data:
+                    update_data['date_filed'] = cluster_data.get('date_filed')
+
+                # Add judges field to update data if it exists
+                if 'judges' in cluster_data:
+                    update_data['judges'] = cluster_data.get('judges')
+
+                if update_data:
+                    logger.info(f"Updating cluster {cluster_id} with: {update_data}")
+                    supabase.table('cluster').update(update_data).eq('id', cluster_id).execute()
+
             return cluster_id
 
         if dry_run:
@@ -178,7 +187,9 @@ def get_or_create_cluster(
             'court_id': court_id,
             'slug': cluster_data.get('slug', ''),
             'case_name': cluster_data.get('case_name', ''),
-            'case_name_short': cluster_data.get('case_name_short', '')
+            'case_name_short': cluster_data.get('case_name_short', ''),
+            'date_filed': cluster_data.get('date_filed', None),
+            'judges': cluster_data.get('judges', None)
         }
 
         result = supabase.table('cluster').insert(cluster_insert).execute()
@@ -208,9 +219,6 @@ def fetch_opinions(
 
     for url in opinion_urls:
         try:
-            # Add delay between requests to respect rate limits
-            time.sleep(RATE_LIMIT_DELAY_SECONDS)
-
             # Extract opinion ID from URL
             opinion_id = url.rstrip('/').split('/')[-1]
 
@@ -243,9 +251,6 @@ def get_opinion_detail(opinion_id: int) -> Dict:
         Opinion detail dictionary
     """
     try:
-        # Add delay to respect rate limits
-        time.sleep(RATE_LIMIT_DELAY_SECONDS)
-
         url = f"{COURT_LISTENER_BASE_URL}/opinions/{opinion_id}/"
         response = requests.get(url, headers=API_HEADERS)
         response.raise_for_status()
@@ -266,8 +271,8 @@ def get_judge_detail(judge_id: int) -> Dict:
         Judge detail dictionary
     """
     try:
+        print(f"Fetching judge detail for {judge_id}")
         # Add delay to respect rate limits
-        time.sleep(RATE_LIMIT_DELAY_SECONDS)
 
         url = f"{COURT_LISTENER_BASE_URL}/people/{judge_id}/"
         response = requests.get(url, headers=API_HEADERS)
@@ -367,30 +372,6 @@ def download_and_upload_content(
             file_paths['text_file_path'] = text_path
 
     return file_paths
-
-def extract_title_from_path(local_path: str) -> str:
-    """
-    Extract and format the title from the local path.
-
-    Args:
-        local_path: Local path of the file
-
-    Returns:
-        Formatted title
-    """
-    if not local_path:
-        return ""
-
-    # Get the filename without extension
-    filename = Path(local_path).stem
-
-    # Replace underscores with spaces
-    title = filename.replace('_', ' ')
-
-    # Capitalize words
-    title = ' '.join(word.capitalize() for word in title.split())
-
-    return title
 
 def get_or_create_judge(
     supabase: Client,
@@ -686,7 +667,7 @@ def main():
     parser = argparse.ArgumentParser(description='Sync court opinions from Court Listener API to Supabase')
     parser.add_argument('--court-id', type=str, default='scotus', help='Court Listener court ID (default: scotus)')
     parser.add_argument('--per-page', type=int, default=20, help='Number of results per page')
-    parser.add_argument('--max-pages', type=int, help='Maximum number of pages to process')
+    parser.add_argument('--max-pages', type=int, default=50,help='Maximum number of pages to process')
     parser.add_argument('--dry-run', action='store_true', help='Run in dry-run mode (no database writes)')
     parser.add_argument('--skip-storage', action='store_true', help='Skip downloading and uploading documents to storage')
 

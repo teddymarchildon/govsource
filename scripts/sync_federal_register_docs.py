@@ -8,7 +8,7 @@ import os
 import sys
 import time
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
@@ -43,6 +43,43 @@ FEDERAL_REGISTER_BASE_URL = "https://www.federalregister.gov/api/v1"
 RATE_LIMIT_REQUESTS_PER_HOUR = 1000
 RATE_LIMIT_DELAY_SECONDS = 36 / RATE_LIMIT_REQUESTS_PER_HOUR  # ~3.6 seconds between requests
 
+# Presidential terms (inauguration and end dates)
+PRESIDENTIAL_TERMS = [
+    {"name": "Donald Trump", "start": date(2025, 1, 20), "end": date(2029, 1, 20)},
+    {"name": "Joe Biden", "start": date(2021, 1, 20), "end": date(2025, 1, 20)},
+    {"name": "Donald Trump", "start": date(2017, 1, 20), "end": date(2021, 1, 20)},
+    {"name": "Barack Obama", "start": date(2009, 1, 20), "end": date(2017, 1, 20)},
+    {"name": "George W. Bush", "start": date(2001, 1, 20), "end": date(2009, 1, 20)},
+    {"name": "Bill Clinton", "start": date(1993, 1, 20), "end": date(2001, 1, 20)}
+]
+
+def get_president_by_date(signing_date: str) -> Optional[str]:
+    """
+    Determine which president was in office on a given date.
+
+    Args:
+        signing_date: Date string in format YYYY-MM-DD
+
+    Returns:
+        Name of the president or None if date is outside the range of defined terms
+    """
+    if not signing_date:
+        return None
+
+    try:
+        # Parse the signing date
+        sign_date = datetime.strptime(signing_date, "%Y-%m-%d").date()
+
+        # Check which president's term contains this date
+        for president in PRESIDENTIAL_TERMS:
+            if president["start"] <= sign_date < president["end"]:
+                return president["name"]
+
+        return None
+    except (ValueError, TypeError):
+        logger.error(f"Invalid signing date format: {signing_date}")
+        return None
+
 def fetch_documents(
     agency_id: Optional[str] = None,
     document_type: Optional[str] = None,
@@ -69,7 +106,8 @@ def fetch_documents(
             'conditions[agencies][]': agency_id,
             'conditions[type][]': document_type,
             'per_page': page_size,
-            'page': page
+            'page': page,
+            'order': 'newest',
         }
 
         # Remove None values from params
@@ -324,14 +362,22 @@ def sync_documents_to_supabase(
                         "remote_document_number": document_number
                     }
 
+                    # Add president for Presidential Documents
+                    if doc_type == "Presidential Document":
+                        president = get_president_by_date(signing_date)
+                        if president:
+                            document_data["president"] = president
+                            logger.info(f"Added president: {president} for document: {title}")
+
                     # Update document
                     supabase.table("agency_document").update(document_data).eq("id", existing_document_id).execute()
 
                     # Update agency-document relationships
-                    # First, delete existing relationships
-                    supabase.table("agency_agencydocument").delete().eq("agency_document_id", existing_document_id).execute()
+                    # Get existing relationships for this document
+                    existing_relationships = supabase.table("agency_agencydocument").select("agency_id").eq("agency_document_id", existing_document_id).execute()
+                    existing_agency_ids = [rel["agency_id"] for rel in existing_relationships.data]
 
-                    # Then create new relationships
+                    # Create new relationships for agencies not already linked
                     for agency in doc_details.get("agencies", []):
                         agency_id = agency.get("id")
                         if agency_id:
@@ -345,12 +391,14 @@ def sync_documents_to_supabase(
 
                             if agency_result.data:
                                 agency_db_id = agency_result.data[0]["id"]
-                                # Create relationship
-                                relationship_data = {
-                                    "agency_id": agency_db_id,
-                                    "agency_document_id": existing_document_id
-                                }
-                                supabase.table("agency_agencydocument").insert(relationship_data).execute()
+                                # Only create relationship if it doesn't exist already
+                                if agency_db_id not in existing_agency_ids:
+                                    relationship_data = {
+                                        "agency_id": agency_db_id,
+                                        "agency_document_id": existing_document_id
+                                    }
+                                    supabase.table("agency_agencydocument").insert(relationship_data).execute()
+                                    logger.info(f"Added new agency relationship for document: {title} with agency ID: {agency_db_id}")
 
                     synced_documents.append(document_data)
                     logger.info(f"Updated document: {title}")
@@ -380,6 +428,13 @@ def sync_documents_to_supabase(
                     "abstract": abstract,
                     "remote_document_number": document_number
                 }
+
+                # Add president for Presidential Documents
+                if doc_type == "Presidential Document":
+                    president = get_president_by_date(signing_date)
+                    if president:
+                        document_data["president"] = president
+                        logger.info(f"Added president: {president} for document: {title}")
 
                 # Insert document
                 result = supabase.table("agency_document").insert(document_data).execute()
