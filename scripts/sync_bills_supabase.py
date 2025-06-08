@@ -15,6 +15,7 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 from supabase import Client, create_client
+import html2text
 
 # Configure logging
 logging.basicConfig(
@@ -71,7 +72,7 @@ def fetch_bills(congress: int, limit: int = 20, offset: int = 0) -> Dict[str, An
         return {"bills": []}
 
 
-def fetch_bill_detail(congress: int, bill_type: str, bill_number: int) -> Dict[str, Any]:
+def fetch_bill_detail(url: str) -> Dict[str, Any]:
     """
     Fetch detailed information for a specific bill
 
@@ -83,11 +84,8 @@ def fetch_bill_detail(congress: int, bill_type: str, bill_number: int) -> Dict[s
     Returns:
         Dictionary containing detailed bill data
     """
-    url = f"{BASE_URL}/bill/{congress}/{bill_type}/{bill_number}"
-    params = {"format": "json"}
-
     try:
-        response = requests.get(url, headers=HEADERS, params=params)
+        response = requests.get(url, headers=HEADERS)
         response.raise_for_status()
         response_data = response.json()
         logger.info(f"Bill detail response structure: {list(response_data.keys())}")
@@ -249,7 +247,7 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
 
         # Check if response contains textVersions
         if "textVersions" in response_data and isinstance(response_data["textVersions"], list):
-            for item in response_data["textVersions"]:
+            for idx, item in enumerate(response_data["textVersions"]):
                 # Default values for URLs
                 pdf_url = None
                 xml_url = None
@@ -261,22 +259,27 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
                         format_type = format_item.get("type", "")
                         if format_type == "PDF":
                             pdf_url = format_item.get("url", "")
-                        elif format_type == "XML":
+                        elif format_type in ["XML", "Formatted XML"]:
                             xml_url = format_item.get("url", "")
-                        elif format_type == "HTML":
+                        elif format_type in ["HTML", "Formatted Text"]:
                             formatted_text_url = format_item.get("url", "")
 
                 # Extract date
-                date = None
-                if "date" in item:
-                    date = item["date"]
+                date = item.get("date") if "date" in item else None
+
+                # If date is None, use a fallback unique key for logging and DB
+                fallback_key = None
+                if not date:
+                    fallback_key = f"{item.get('type', 'unknown')}_{idx}"
 
                 # Create text version object
                 text_version = {
-                    "date": date,
+                    "date": date,  # can be None
                     "pdf_url": pdf_url,
                     "xml_url": xml_url,
                     "formatted_text_url": formatted_text_url,
+                    "fallback_key": fallback_key,
+                    "type": item.get("type", None),
                 }
                 text_versions.append(text_version)
 
@@ -287,6 +290,48 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
         return []
     except Exception as e:
         logger.error(f"Unexpected error fetching bill texts: {e}", exc_info=True)
+        return []
+
+
+def fetch_bill_summaries(url: str) -> List[Dict[str, Any]]:
+    """
+    Fetch summaries for a bill using the provided URL from the bill data.
+    Converts HTML summary text to plain text.
+    Args:
+        url: URL to fetch summaries from
+    Returns:
+        List of summary data dictionaries with plain text
+    """
+    try:
+        # Remove the API base URL if it's included in the URL
+        if url.startswith(BASE_URL):
+            url = url
+        else:
+            if not url.startswith("http"):
+                url = f"{BASE_URL}{url if url.startswith('/') else '/' + url}"
+        if "format=" not in url:
+            url = f"{url}{'&' if '?' in url else '?'}format=json"
+        logger.info(f"Fetching bill summaries from URL: {url}")
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        response_data = response.json()
+        summaries = []
+        if "summaries" in response_data and isinstance(response_data["summaries"], list):
+            for item in response_data["summaries"]:
+                html_text = item.get("text", "")
+                plain_text = html2text.html2text(html_text).strip()
+                summary = {
+                    "date": item.get("actionDate"),
+                    "text": plain_text,
+                }
+                summaries.append(summary)
+        logger.info(f"Found {len(summaries)} summaries")
+        return summaries
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching summaries: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error fetching summaries: {e}", exc_info=True)
         return []
 
 
@@ -388,6 +433,12 @@ def parse_bill_data(bill_data: Dict[str, Any]) -> Dict[str, Any]:
                 except ValueError:
                     logger.warning(f"Could not parse law enacted date: {bill_info['latestAction']['actionDate']}")
 
+    # Extract summaries information
+    summaries_url = None
+    if "summaries" in bill_info and isinstance(bill_info["summaries"], dict):
+        if "url" in bill_info["summaries"]:
+            summaries_url = bill_info["summaries"]["url"]
+
     return {
         "congress": congress,
         "type": bill_type,
@@ -407,6 +458,7 @@ def parse_bill_data(bill_data: Dict[str, Any]) -> Dict[str, Any]:
         "law_type": law_type,
         "law_unique_id": law_unique_id,
         "law_title": law_title,
+        "summaries_url": summaries_url,
     }
 
 
@@ -493,9 +545,7 @@ def sync_bills_to_supabase(
                     logger.warning(f"No URL found for bill: {bill_item}")
                     continue
 
-                bill_data = fetch_bill_detail(
-                    congress, bill_item.get("type", ""), bill_item.get("number", 0)
-                )
+                bill_data = fetch_bill_detail(bill_url)
                 if not bill_data:
                     logger.warning(f"No data found for bill at URL: {bill_url}")
                     continue
@@ -700,32 +750,31 @@ def sync_bills_to_supabase(
                     text_versions = fetch_bill_texts(parsed_bill["text_versions_url"])
 
                     # Get existing text versions for this bill to avoid duplicates
-                    existing_text_versions = supabase.table("bill_text").select("date").eq("bill_id", bill_db_id).execute()
-                    existing_dates = set()
+                    existing_text_versions = supabase.table("bill_text").select("date, type, fallback_key").eq("bill_id", bill_db_id).execute()
+                    existing_keys = set()
                     if existing_text_versions.data:
-                        existing_dates = {item["date"] for item in existing_text_versions.data if item.get("date")}
+                        for item in existing_text_versions.data:
+                            # Use date if present, else fallback_key
+                            if item.get("date"):
+                                existing_keys.add(f"date:{item['date']}")
+                            elif item.get("fallback_key"):
+                                existing_keys.add(f"fallback:{item['fallback_key']}")
 
-                    logger.info(f"Found {len(existing_dates)} existing text versions for bill: {bill_db_id}")
+                    logger.info(f"Found {len(existing_keys)} existing text versions for bill: {bill_db_id}")
 
-                    for text_data in text_versions:
-                        # Skip if date is None
-                        if not text_data.get("date"):
-                            logger.warning(
-                                f"Skipping text version with no date for bill: {bill_db_id}"
-                            )
-                            continue
-
-                        # Skip if we already have this version
-                        if text_data.get("date") in existing_dates:
+                    for idx, text_data in enumerate(text_versions):
+                        # Use date if present, else fallback_key
+                        key = f"date:{text_data['date']}" if text_data.get("date") else f"fallback:{text_data.get('fallback_key', f'unknown_{idx}') }"
+                        if key in existing_keys:
                             logger.info(
-                                f"Skipping existing text version for date {text_data.get('date')} for bill: {bill_db_id}"
+                                f"Skipping existing text version for key {key} for bill: {bill_db_id}"
                             )
                             continue
 
                         # Generate unique file paths for storage
                         bill_identifier = f"{parsed_bill['congress']}_{parsed_bill['type']}_{parsed_bill['number']}"
-                        # Extract only year, month, day from the date string
-                        date_str = text_data.get("date", "").split("T")[0].replace("-", "")
+                        # Use date or fallback_key for path
+                        date_str = text_data.get("date", text_data.get("fallback_key", f"unknown_{idx}")).replace("-", "").replace(":", "").replace("T", "")
                         # Download and upload PDF, HTML, and XML files to Supabase storage
                         pdf_storage_url = None
                         html_storage_url = None
@@ -736,40 +785,48 @@ def sync_bills_to_supabase(
                             pdf_storage_url = download_and_upload_document(
                                 supabase, text_data.get("pdf_url"), "bill-pdfs", pdf_path
                             )
+                        else:
+                            pdf_path = None
 
                         if text_data.get("formatted_text_url"):
                             html_path = f"{bill_identifier}/{date_str}/bill.html"
                             html_storage_url = download_and_upload_document(
                                 supabase, text_data.get("formatted_text_url"), "bill-htmls", html_path
                             )
+                        else:
+                            html_path = None
 
                         if text_data.get("xml_url"):
                             xml_path = f"{bill_identifier}/{date_str}/bill.xml"
                             xml_storage_url = download_and_upload_document(
                                 supabase, text_data.get("xml_url"), "bill-xmls", xml_path
                             )
+                        else:
+                            xml_path = None
 
                         # Create text version record
                         bill_text_data = {
                             "bill_id": bill_db_id,
                             "date": text_data.get("date"),
+                            "type": text_data.get("type"),
+                            "fallback_key": text_data.get("fallback_key"),
                             "pdf_url": text_data.get("pdf_url"),
                             "xml_url": text_data.get("xml_url"),
                             "html_url": text_data.get("formatted_text_url"),
-                            "pdf_file_path": pdf_path if text_data.get("pdf_url") else None,
-                            "html_file_path": html_path if text_data.get("formatted_text_url") else None,
-                            "xml_file_path": xml_path if text_data.get("xml_url") else None,
+                            "pdf_file_path": pdf_path,
+                            "html_file_path": html_path,
+                            "xml_file_path": xml_path,
                         }
 
                         # Insert text version
                         supabase.table("bill_text").insert(bill_text_data).execute()
                         logger.info(
-                            f"Added text version for date {text_data.get('date')} for bill: {bill_db_id}"
+                            f"Added text version for key {key} for bill: {bill_db_id}"
                         )
 
                         if pdf_storage_url or html_storage_url or xml_storage_url:
                             logger.info(
-                                f"Stored bill documents for {bill_identifier} date {date_str}: "
+                                f"Stored bill documents for {bill_identifier} key {date_str}: "
                                 f"PDF: {'✓' if pdf_storage_url else '✗'}, "
                                 f"HTML: {'✓' if html_storage_url else '✗'}, "
                                 f"XML: {'✓' if xml_storage_url else '✗'}"
@@ -820,6 +877,32 @@ def sync_bills_to_supabase(
                         f"Added action for date {action_data.get('date')} for bill: {bill_db_id}"
                     )
 
+                # After bill_db_id is set (after bill creation/update)
+                # Fetch and add bill summaries if available
+                if "summaries_url" in parsed_bill and parsed_bill["summaries_url"]:
+                    summaries = fetch_bill_summaries(parsed_bill["summaries_url"])
+                    # Get existing summaries for this bill to avoid duplicates
+                    existing_summaries = supabase.table("bill_summary").select("date, text").eq("bill", bill_db_id).execute()
+                    existing_summary_keys = set()
+                    if existing_summaries.data:
+                        existing_summary_keys = {f"{item['date']}_{item['text']}" for item in existing_summaries.data if item.get("date") and item.get("text")}
+                    logger.info(f"Found {len(existing_summary_keys)} existing summaries for bill: {bill_db_id}")
+                    for summary in summaries:
+                        if not summary.get("date") or not summary.get("text"):
+                            logger.warning(f"Skipping summary with missing date or text for bill: {bill_db_id}")
+                            continue
+                        summary_key = f"{summary['date']}_{summary['text']}"
+                        if summary_key in existing_summary_keys:
+                            logger.info(f"Skipping existing summary for date {summary.get('date')} for bill: {bill_db_id}")
+                            continue
+                        bill_summary_data = {
+                            "bill": bill_db_id,
+                            "date": summary.get("date"),
+                            "text": summary.get("text"),
+                        }
+                        supabase.table("bill_summary").insert(bill_summary_data).execute()
+                        logger.info(f"Added summary for date {summary.get('date')} for bill: {bill_db_id}")
+
                 # Add bill to synced list
                 synced_bills.append(parsed_bill)
 
@@ -836,7 +919,7 @@ def sync_bills_to_supabase(
 def main():
     """Main function to run the bill sync process."""
     parser = argparse.ArgumentParser(description="Sync bills from the Congress API to Supabase")
-    parser.add_argument("--congress", type=int, default=118, help="Congress number (default: 118)")
+    parser.add_argument("--congress", type=int, default=119, help="Congress number (default: 119)")
     parser.add_argument(
         "--limit",
         type=int,

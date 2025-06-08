@@ -92,7 +92,7 @@ def fetch_documents(
     page = start_page
     # Initialize total_pages to a high number to ensure we make at least one request
     # The actual total_pages will be updated after the first API call
-    total_pages = 1000  
+    total_pages = 1000
 
     # Track how many pages we've processed
     pages_processed = 0
@@ -105,7 +105,6 @@ def fetch_documents(
 
         # Add delay between requests to respect rate limits
         if pages_processed > 0:
-            logger.info(f"Waiting {RATE_LIMIT_DELAY_SECONDS:.2f} seconds before next request...")
             time.sleep(RATE_LIMIT_DELAY_SECONDS)
 
         params = {
@@ -298,7 +297,7 @@ def sync_documents_to_supabase(
         List of dictionaries representing documents that were created or updated
     """
     synced_documents = []
-    
+
     # Fetch documents starting from the specified page
     documents_data = fetch_documents(
         agency_id=agency_id,
@@ -488,7 +487,8 @@ def main():
         "--document-type",
         type=str,
         choices=["RULE", "PRORULE", "NOTICE", "PRESDOCU"],
-        help="Type of document to filter by (RULE: Final Rule, PRORULE: Proposed Rule, NOTICE: Notice, PRESDOCU: Presidential Document)"
+        help="Type of document to filter by (RULE: Final Rule, PRORULE: Proposed Rule, NOTICE: Notice, PRESDOCU: Presidential Document)",
+        default="PRESDOCU",
     )
     parser.add_argument(
         "--per-page",
@@ -499,7 +499,8 @@ def main():
     parser.add_argument(
         "--max-pages",
         type=int,
-        help="Maximum number of pages to fetch"
+        help="Maximum number of pages to fetch",
+        default=50
     )
     parser.add_argument(
         "--start-page",

@@ -22,3 +22,4 @@ pre-commit==3.3.3
 types-requests==0.1.10
 sqlalchemy-stubs==0.1.0
 types-PyYAML==0.1.0
+html2text
