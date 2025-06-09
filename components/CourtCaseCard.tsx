@@ -15,7 +15,7 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
   // Get the most recent opinion date
   const mostRecentDate = cluster.opinions?.length > 0
     ? new Date(Math.max(...cluster.opinions.map((o: CourtOpinion) => new Date(o.date).getTime()))).toLocaleDateString()
-    : cluster.date_filed 
+    : cluster.date_filed
       ? new Date(cluster.date_filed).toLocaleDateString()
       : 'Unknown date';
 
@@ -36,11 +36,6 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
           <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
             {mostRecentDate}
           </span>
-          {cluster.court && (
-            <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 truncate max-w-[180px]">
-              {cluster.court.short_name}
-            </span>
-          )}
         </div>
 
         <Link
