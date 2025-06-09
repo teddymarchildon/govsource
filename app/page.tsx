@@ -496,7 +496,7 @@ function HomeContent() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Recent Executive Orders</h2>
             <Link href="/executive-orders" className="text-sm text-blue-600 hover:underline">
-              View all
+              View executive orders
             </Link>
           </div>
 
