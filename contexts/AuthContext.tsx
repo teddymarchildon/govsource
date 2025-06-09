@@ -13,6 +13,8 @@ type AuthContextType = {
   signUp: (email: string, password: string) => Promise<void>;
   hasCompletedOnboarding: boolean;
   checkOnboardingStatus: () => Promise<boolean>;
+  isPaidSubscriber: boolean;
+  subscription: any | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +23,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
+  const [isPaidSubscriber, setIsPaidSubscriber] = useState(false);
+  const [subscription, setSubscription] = useState<any | null>(null);
 
   const checkOnboardingStatus = async (): Promise<boolean> => {
     if (!user) return false;
@@ -48,6 +52,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Check if the user is a paid subscriber
+  const checkSubscriptionStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('subscription')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setSubscription(data || null);
+
+      if (data) {
+        const status = data.status;
+        const currentPeriodEnd = data.current_period_end ? new Date(data.current_period_end) : null;
+        const now = new Date();
+        const isActive =
+          (status === 'active' || status === 'trialing') &&
+          (!currentPeriodEnd || currentPeriodEnd > now);
+        setIsPaidSubscriber(isActive);
+      } else {
+        setIsPaidSubscriber(false);
+      }
+    } catch (err) {
+      setIsPaidSubscriber(false);
+      setSubscription(null);
+    }
+  };
+
   useEffect(() => {
     // Check for active session on mount
     const checkSession = async () => {
@@ -67,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         // Check onboarding status when user is set
         await checkOnboardingStatus();
+        await checkSubscriptionStatus(supaUser.id);
       }
 
       setLoading(false);
@@ -88,9 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Check onboarding status when auth state changes
           if (event === 'SIGNED_IN') {
             await checkOnboardingStatus();
+            await checkSubscriptionStatus(supaUser.id);
+          } else {
+            await checkSubscriptionStatus(supaUser.id);
           }
         } else {
           setUser(null);
+          setIsPaidSubscriber(false);
+          setSubscription(null);
         }
         setLoading(false);
       }
@@ -109,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check onboarding status after sign in
     await checkOnboardingStatus();
+    if (user) await checkSubscriptionStatus(user.id);
   };
 
   const signUp = async (email: string, password: string) => {
@@ -125,6 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // New users haven't completed onboarding
     setHasCompletedOnboarding(false);
+    setIsPaidSubscriber(false);
+    setSubscription(null);
   };
 
   const signOut = async () => {
@@ -132,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signOut();
     setLoading(false);
     if (error) throw error;
+    setIsPaidSubscriber(false);
+    setSubscription(null);
   };
 
   return (
@@ -142,7 +187,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       signUp,
       hasCompletedOnboarding,
-      checkOnboardingStatus
+      checkOnboardingStatus,
+      isPaidSubscriber,
+      subscription
     }}>
       {children}
     </AuthContext.Provider>

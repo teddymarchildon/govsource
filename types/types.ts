@@ -266,3 +266,28 @@ export interface BillSummary {
   text: string;
   created_at?: string;
 }
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  stripe_customer_id: string;
+  stripe_subscription_id: string;
+  stripe_price_id?: string;
+  status: string;
+  current_period_end?: string;
+  cancel_at_period_end?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  subscription_id?: string;
+  stripe_invoice_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paid_at?: string;
+  created_at?: string;
+}

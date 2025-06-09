@@ -1329,3 +1329,33 @@ export const getBillSummary = async (billId: string): Promise<BillSummary | null
   if (error) throw error;
   return data && data.length > 0 ? data[0] as BillSummary : null;
 };
+
+// Subscription & Payment API
+export const getUserSubscription = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('subscription')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+};
+
+export const getUserPayments = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('payment')
+    .select('*')
+    .eq('user_id', userId)
+    .order('paid_at', { ascending: false })
+    .limit(10);
+  if (error) throw error;
+  return data;
+};
+
+// This is a stub. Actual cancellation should be handled securely on the backend.
+export const cancelSubscription = async (stripeSubscriptionId: string) => {
+  // TODO: Implement via backend API call to Stripe
+  throw new Error('Not implemented: cancelSubscription');
+};

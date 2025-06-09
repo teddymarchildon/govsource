@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { XMarkIcon, DocumentTextIcon, SparklesIcon, ClockIcon, ScaleIcon } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -86,7 +87,7 @@ export default function AiChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auth state
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isPaidSubscriber } = useAuth();
 
   // Get tailored presets for the current documentType
   const PRESETS = getPresets(documentType);
@@ -95,6 +96,10 @@ export default function AiChat({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Router state
+  const router = useRouter();
+  const [subscribing, setSubscribing] = useState(false);
 
   // Function to handle sending a message to the AI API
   const sendMessageToApi = async (messagesToSend: Message[], presetType: PresetType = 'default') => {
@@ -231,40 +236,75 @@ export default function AiChat({
 
           {/* Preset buttons (moved to top, with extra spacing) */}
           <div className="p-2 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-2 justify-center mt-3">
-            {PRESETS.map((preset) => {
-              let IconComponent = null;
-              switch (preset.type) {
-                case 'summarize':
-                  IconComponent = DocumentTextIcon;
-                  break;
-                case 'keyPoints':
-                  IconComponent = SparklesIcon;
-                  break;
-                case 'historicalContext':
-                  IconComponent = ClockIcon;
-                  break;
-                case 'prosAndCons':
-                  IconComponent = ScaleIcon;
-                  break;
-                default:
-                  IconComponent = DocumentTextIcon;
-              }
-              return (
+            {isPaidSubscriber ? (
+              PRESETS.map((preset) => {
+                let IconComponent = null;
+                switch (preset.type) {
+                  case 'summarize':
+                    IconComponent = DocumentTextIcon;
+                    break;
+                  case 'keyPoints':
+                    IconComponent = SparklesIcon;
+                    break;
+                  case 'historicalContext':
+                    IconComponent = ClockIcon;
+                    break;
+                  case 'prosAndCons':
+                    IconComponent = ScaleIcon;
+                    break;
+                  default:
+                    IconComponent = DocumentTextIcon;
+                }
+                return (
+                  <button
+                    key={preset.label}
+                    onClick={() => handlePresetClick(preset)}
+                    disabled={isLoading}
+                    className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-1.5 ${
+                      isLoading
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    <IconComponent className="h-4 w-4" />
+                    {preset.label}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="w-full text-center text-sm text-gray-500 py-2">
+                You must be a paid subscriber to use the AI Assistant. <br />
                 <button
-                  key={preset.label}
-                  onClick={() => handlePresetClick(preset)}
-                  disabled={isLoading || (!user && !authLoading)}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-1.5 ${
-                    isLoading || (!user && !authLoading)
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                  }`}
+                  className="text-blue-700 font-medium underline disabled:opacity-50"
+                  style={{ cursor: user ? 'pointer' : 'not-allowed' }}
+                  disabled={subscribing || !user}
+                  onClick={async () => {
+                    if (!user) return;
+                    setSubscribing(true);
+                    try {
+                      const redirectUrl = window.location.href;
+                      const res = await fetch('/api/create-checkout-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.id, redirectUrl }),
+                      });
+                      const data = await res.json();
+                      if (data.url) {
+                        window.location.href = data.url;
+                      } else {
+                        alert('Failed to create checkout session.');
+                      }
+                    } catch (err) {
+                      alert('Failed to create checkout session.');
+                    } finally {
+                      setSubscribing(false);
+                    }
+                  }}
                 >
-                  <IconComponent className="h-4 w-4" />
-                  {preset.label}
+                  {subscribing ? 'Redirecting...' : 'Subscribe to unlock AI features.'}
                 </button>
-              );
-            })}
+              </div>
+            )}
           </div>
 
           {/* Messages */}
@@ -274,6 +314,12 @@ export default function AiChat({
               <div className="flex justify-center items-center h-full">
                 <div className="max-w-[85%] rounded-lg p-4 bg-yellow-100 text-yellow-900 text-center text-sm border border-yellow-300">
                   <p>You must log in to use the AI Assistant.</p>
+                </div>
+              </div>
+            ) : !isPaidSubscriber ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="max-w-[85%] rounded-lg p-4 bg-blue-100 text-blue-900 text-center text-sm border border-blue-300">
+                  <p>You must be a paid subscriber to use the AI Assistant.</p>
                 </div>
               </div>
             ) : (
@@ -332,16 +378,16 @@ export default function AiChat({
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={`Ask about ${documentTitle || 'this document'}...`}
                 className="flex-1 p-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isLoading || (!user && !authLoading)}
+                disabled={isLoading || (!user && !authLoading) || !isPaidSubscriber}
               />
               <button
                 type="submit"
                 className={`px-3 py-2 rounded-lg text-white text-sm ${
-                  isLoading || !input.trim() || (!user && !authLoading)
+                  isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber
                     ? 'bg-blue-300 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
-                disabled={isLoading || !input.trim() || (!user && !authLoading)}
+                disabled={isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber}
               >
                 Send
               </button>

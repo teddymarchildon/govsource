@@ -6,7 +6,8 @@ import {
   getSavedBills, getSavedCongressmen, getSavedAgencies,
   getSavedJudges, getSavedClusters, getSavedAgencyDocuments,
   unsaveBill, unsaveCongressman, unsaveAgency,
-  unsaveJudge, unsaveCluster, unsaveAgencyDocument
+  unsaveJudge, unsaveCluster, unsaveAgencyDocument,
+  getUserSubscription, getUserPayments, cancelSubscription
 } from '../../services/api';
 import BillCard from '../../components/BillCard';
 import CongressmanCard from '../../components/CongressmanCard';
@@ -16,7 +17,8 @@ import CourtCaseCard from '../../components/CourtCaseCard';
 import AgencyRuleCard from '../../components/AgencyRuleCard';
 import {
   SavedBill, SavedCongressman, SavedAgency,
-  SavedJudge, SavedCluster, SavedAgencyDocument
+  SavedJudge, SavedCluster, SavedAgencyDocument,
+  Subscription, Payment
 } from '../../types/types';
 import Link from 'next/link';
 import UserPreferencesSection from '../../components/UserPreferencesSection';
@@ -31,6 +33,11 @@ export default function ProfilePage() {
   const [savedClusters, setSavedClusters] = useState<SavedCluster[]>([]);
   const [savedAgencyDocuments, setSavedAgencyDocuments] = useState<SavedAgencyDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [subLoading, setSubLoading] = useState(true);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -59,8 +66,30 @@ export default function ProfilePage() {
       setIsLoading(false);
     };
 
+    const fetchSubscription = async () => {
+      if (user) {
+        setSubLoading(true);
+        try {
+          const sub = await getUserSubscription(user.id);
+          setSubscription(sub || null);
+          if (sub) {
+            const pays = await getUserPayments(user.id);
+            setPayments(pays || []);
+          } else {
+            setPayments([]);
+          }
+        } catch (err) {
+          setSubscription(null);
+          setPayments([]);
+        } finally {
+          setSubLoading(false);
+        }
+      }
+    };
+
     if (!loading) {
       fetchSavedItems();
+      if (user) fetchSubscription();
     }
   }, [user, loading]);
 
@@ -130,6 +159,20 @@ export default function ProfilePage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    if (!subscription) return;
+    setCancelLoading(true);
+    setCancelError(null);
+    try {
+      await cancelSubscription(subscription.stripe_subscription_id);
+      // Optionally, refetch subscription status here
+    } catch (err: any) {
+      setCancelError(err.message || 'Failed to cancel subscription');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   if (loading || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -142,10 +185,10 @@ export default function ProfilePage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <h1 className="text-2xl font-bold mb-4">Please sign in to view your profile</h1>
+          <h1 className="text-2xl font-bold mb-4">Sign in to view your profile</h1>
           <Link
             href={`/login?redirect=${encodeURIComponent(pathname)}`}
-            className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="inline-block bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
             Sign In
           </Link>
@@ -163,6 +206,112 @@ export default function ProfilePage() {
         <div>
           <p><strong>Email:</strong> {user.email}</p>
         </div>
+      </div>
+
+      {/* Subscription & Payments Section */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Subscription & Payments</h2>
+
+        {/* Free vs Paid Tiers */}
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="flex-1 border rounded-lg p-4 bg-gray-50">
+            <h3 className="text-lg font-bold mb-2 text-gray-700">Free Tier</h3>
+            <ul className="list-disc pl-5 text-gray-700">
+              <li>Access to GovSource&apos;s information</li>
+            </ul>
+          </div>
+          <div className="flex-1 border rounded-lg p-4 bg-purple-50">
+            <h3 className="text-lg font-bold mb-2 text-purple-700">Paid Tier</h3>
+            <ul className="list-disc pl-5 text-purple-800">
+              <li>Access to AI</li>
+              <li>No ads</li>
+              <li>Notifications (coming soon)</li>
+              <li>Digest (coming soon)</li>
+            </ul>
+          </div>
+        </div>
+
+        {subLoading ? (
+          <div>Loading subscription info...</div>
+        ) : !subscription ? (
+          <div className="text-center">
+            <p className="mb-4">You do not have an active subscription.</p>
+            <button
+              onClick={async () => {
+                if (!user) return;
+                setCancelLoading(true);
+                try {
+                  const res = await fetch('/api/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id }),
+                  });
+                  const data = await res.json();
+                  if (data.url) {
+                    window.location.href = data.url;
+                  } else {
+                    alert('Failed to create checkout session.');
+                  }
+                } catch (err) {
+                  alert('Failed to create checkout session.');
+                } finally {
+                  setCancelLoading(false);
+                }
+              }}
+              className="inline-block bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50"
+              disabled={cancelLoading}
+            >
+              {cancelLoading ? 'Redirecting...' : 'Subscribe through Stripe'}
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="mb-4">
+              <p><strong>Status:</strong> {subscription.status}</p>
+              {subscription.current_period_end && (
+                <p><strong>Current Period Ends:</strong> {new Date(subscription.current_period_end).toLocaleString()}</p>
+              )}
+              {subscription.cancel_at_period_end && (
+                <p className="text-yellow-600">Subscription will cancel at period end.</p>
+              )}
+            </div>
+            <div className="mb-4">
+              <h3 className="font-semibold mb-2">Recent Payments</h3>
+              {payments.length === 0 ? (
+                <p>No payments found.</p>
+              ) : (
+                <table className="min-w-full text-sm border">
+                  <thead>
+                    <tr>
+                      <th className="px-2 py-1 border">Date</th>
+                      <th className="px-2 py-1 border">Amount</th>
+                      <th className="px-2 py-1 border">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.id}>
+                        <td className="px-2 py-1 border">{p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '-'}</td>
+                        <td className="px-2 py-1 border">${(p.amount / 100).toFixed(2)} {p.currency.toUpperCase()}</td>
+                        <td className="px-2 py-1 border">{p.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="mt-4">
+              <button
+                onClick={handleCancelSubscription}
+                className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                disabled={cancelLoading}
+              >
+                {cancelLoading ? 'Cancelling...' : 'Cancel Subscription'}
+              </button>
+              {cancelError && <div className="text-red-600 mt-2">{cancelError}</div>}
+            </div>
+          </div>
+        )}
       </div>
 
       <UserPreferencesSection />
