@@ -24,6 +24,39 @@ import Link from 'next/link';
 import UserPreferencesSection from '../../components/UserPreferencesSection';
 import { usePathname } from 'next/navigation';
 
+function ConfirmModal({ open, onConfirm, onCancel, loading }: {
+  open: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+        <h2 className="text-lg font-bold mb-4">Cancel Subscription</h2>
+        <p className="mb-6">Are you sure you want to cancel your subscription? You will retain access until the end of your billing period.</p>
+        <div className="flex justify-end gap-2">
+          <button
+            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            No, keep it
+          </button>
+          <button
+            className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? "Cancelling..." : "Yes, cancel"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const [savedBills, setSavedBills] = useState<SavedBill[]>([]);
@@ -38,6 +71,7 @@ export default function ProfilePage() {
   const [subLoading, setSubLoading] = useState(true);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -261,7 +295,7 @@ export default function ProfilePage() {
               className="inline-block bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50"
               disabled={cancelLoading}
             >
-              {cancelLoading ? 'Redirecting...' : 'Subscribe through Stripe'}
+              {cancelLoading ? 'Redirecting...' : 'Subscribe'}
             </button>
           </div>
         ) : (
@@ -302,13 +336,31 @@ export default function ProfilePage() {
             </div>
             <div className="mt-4">
               <button
-                onClick={handleCancelSubscription}
+                onClick={() => setShowCancelModal(true)}
                 className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
                 disabled={cancelLoading}
               >
                 {cancelLoading ? 'Cancelling...' : 'Cancel Subscription'}
               </button>
               {cancelError && <div className="text-red-600 mt-2">{cancelError}</div>}
+              <ConfirmModal
+                open={showCancelModal}
+                loading={cancelLoading}
+                onCancel={() => setShowCancelModal(false)}
+                onConfirm={async () => {
+                  setCancelLoading(true);
+                  setCancelError(null);
+                  try {
+                    await handleCancelSubscription();
+                    setShowCancelModal(false);
+                    // Optionally, refetch subscription status here
+                  } catch (err: any) {
+                    setCancelError(err.message || 'Failed to cancel subscription');
+                  } finally {
+                    setCancelLoading(false);
+                  }
+                }}
+              />
             </div>
           </div>
         )}

@@ -1355,6 +1355,12 @@ export const getUserPayments = async (userId: string) => {
 
 // This is a stub. Actual cancellation should be handled securely on the backend.
 export const cancelSubscription = async (stripeSubscriptionId: string) => {
-  // TODO: Implement via backend API call to Stripe
-  throw new Error('Not implemented: cancelSubscription');
+  const res = await fetch('/api/cancel-subscription', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stripeSubscriptionId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription');
+  return data;
 };
