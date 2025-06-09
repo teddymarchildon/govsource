@@ -1337,10 +1337,9 @@ export const getUserSubscription = async (userId: string) => {
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
+    .limit(1);
+  if (error) throw error;
+  return data && data.length > 0 ? data[0] : null;
 };
 
 export const getUserPayments = async (userId: string) => {
