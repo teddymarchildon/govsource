@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         break;
       }
       default:
-        console.log(`Unhandled event type ${event.type}`);
+        return new Response('Unknown event type', { status: 500 });
     }
   } catch (err) {
     console.error('Error handling Stripe webhook event:', err);
