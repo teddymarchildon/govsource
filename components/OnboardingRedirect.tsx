@@ -17,7 +17,7 @@ export default function OnboardingRedirect({ children }: OnboardingRedirectProps
     const checkAndRedirect = async () => {
       if (!loading && user) {
         // Double-check onboarding status to make sure it's up to date
-        const completed = await checkOnboardingStatus();
+        const completed = await checkOnboardingStatus(user.id);
         if (!completed) {
           // Redirect to onboarding if saw_onboarding_flow_at is null
           router.push('/onboarding');
