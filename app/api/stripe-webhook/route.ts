@@ -80,7 +80,6 @@ export async function POST(req: NextRequest) {
           await supabase.from('subscription').upsert({
             user_id: userId,
             stripe_customer_id: stripeCustomerId,
-            updated_at: new Date().toISOString(),
           }, { onConflict: 'stripe_customer_id' });
         }
         break;
