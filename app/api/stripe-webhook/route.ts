@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       user_id: userSub?.user_id,
-      updated_at: new Date().toISOString(),
     }, { onConflict: 'stripe_subscription_id' });
   }
 
@@ -83,6 +82,7 @@ export async function POST(req: NextRequest) {
             stripe_subscription_id: session.subscription,
             status: 'active',
             cancel_at_period_end: false,
+            tier: 'paid',
           }, { onConflict: 'stripe_customer_id' });
         }
         break;

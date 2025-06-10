@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import UserPreferencesSection from '../../components/UserPreferencesSection';
 import { usePathname } from 'next/navigation';
+import { CheckCircleIcon } from '@heroicons/react/24/solid';
 
 function ConfirmModal({ open, onConfirm, onCancel, loading }: {
   open: boolean;
@@ -73,6 +74,7 @@ export default function ProfilePage() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const pathname = usePathname();
+  const [selectedTier, setSelectedTier] = useState<'free' | 'paid' | null>(null);
 
   useEffect(() => {
     const fetchSavedItems = async () => {
@@ -126,6 +128,16 @@ export default function ProfilePage() {
       if (user) fetchSubscription();
     }
   }, [user, loading]);
+
+  // Only update selectedTier when subscription.tier changes and only if needed
+  useEffect(() => {
+    if (subscription?.tier && selectedTier !== subscription.tier) {
+      setSelectedTier(subscription.tier);
+    }
+    if (!subscription?.tier && selectedTier !== 'free') {
+      setSelectedTier('free');
+    }
+  }, [subscription?.tier]);
 
   const handleDeleteSavedBill = async (savedBill: SavedBill) => {
     if (!user) return;
@@ -246,16 +258,40 @@ export default function ProfilePage() {
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Subscription & Payments</h2>
 
-        {/* Free vs Paid Tiers */}
+        {/* Modern Card Style for Tiers */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 border rounded-lg p-4 bg-gray-50">
-            <h3 className="text-lg font-bold mb-2 text-gray-700">Free Tier</h3>
+          {/* Free Tier Card */}
+          <div
+            className={`flex-1 border rounded-lg p-6 cursor-pointer transition-all relative ${selectedTier === 'free' ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-gray-50 hover:ring-1 hover:ring-blue-300'}`}
+            onClick={() => setSelectedTier('free')}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold text-gray-700">Free Tier</h3>
+              {subscription?.tier === 'free' && (
+                <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
+                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />
+                  Current
+                </span>
+              )}
+            </div>
             <ul className="list-disc pl-5 text-gray-700">
               <li>Access to GovSource&apos;s information</li>
             </ul>
           </div>
-          <div className="flex-1 border rounded-lg p-4 bg-purple-50">
-            <h3 className="text-lg font-bold mb-2 text-purple-700">Paid Tier</h3>
+          {/* Paid Tier Card */}
+          <div
+            className={`flex-1 border rounded-lg p-6 cursor-pointer transition-all relative ${selectedTier === 'paid' ? 'ring-2 ring-purple-500 bg-purple-50' : 'bg-purple-50 hover:ring-1 hover:ring-purple-300'}`}
+            onClick={() => setSelectedTier('paid')}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold text-purple-700">Paid Tier</h3>
+              {subscription?.tier === 'paid' && (
+                <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
+                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />
+                  Current
+                </span>
+              )}
+            </div>
             <ul className="list-disc pl-5 text-purple-800">
               <li>Access to AI</li>
               <li>No ads</li>
@@ -265,76 +301,43 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Tier Action Buttons */}
         {subLoading ? (
           <div>Loading subscription info...</div>
-        ) : !subscription ? (
-          <div className="text-center">
-            <p className="mb-4">You do not have an active subscription.</p>
-            <button
-              onClick={async () => {
-                if (!user) return;
-                setCancelLoading(true);
-                try {
-                  const res = await fetch('/api/create-checkout-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id }),
-                  });
-                  const data = await res.json();
-                  if (data.url) {
-                    window.location.href = data.url;
-                  } else {
-                    alert('Failed to create checkout session.');
-                  }
-                } catch (err) {
-                  alert('Failed to create checkout session.');
-                } finally {
-                  setCancelLoading(false);
-                }
-              }}
-              className="inline-block bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50"
-              disabled={cancelLoading}
-            >
-              {cancelLoading ? 'Redirecting...' : 'Subscribe'}
-            </button>
-          </div>
         ) : (
-          <div>
-            <div className="mb-4">
-              <p><strong>Status:</strong> {subscription.status}</p>
-              {subscription.current_period_end && (
-                <p><strong>Current Period Ends:</strong> {new Date(subscription.current_period_end).toLocaleString()}</p>
-              )}
-              {subscription.cancel_at_period_end && (
-                <p className="text-yellow-600">Subscription will cancel at period end.</p>
-              )}
-            </div>
-            <div className="mb-4">
-              <h3 className="font-semibold mb-2">Recent Payments</h3>
-              {payments.length === 0 ? (
-                <p>No payments found.</p>
-              ) : (
-                <table className="min-w-full text-sm border">
-                  <thead>
-                    <tr>
-                      <th className="px-2 py-1 border">Date</th>
-                      <th className="px-2 py-1 border">Amount</th>
-                      <th className="px-2 py-1 border">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((p) => (
-                      <tr key={p.id}>
-                        <td className="px-2 py-1 border">{p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '-'}</td>
-                        <td className="px-2 py-1 border">${(p.amount / 100).toFixed(2)} {p.currency.toUpperCase()}</td>
-                        <td className="px-2 py-1 border">{p.status}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className="mt-4">
+          <div className="text-center mb-4">
+            {/* Show Subscribe button if user is on free and selects paid */}
+            {subscription?.tier === 'free' && selectedTier === 'paid' && (
+              <button
+                onClick={async () => {
+                  if (!user) return;
+                  setCancelLoading(true);
+                  try {
+                    const res = await fetch('/api/create-checkout-session', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: user.id }),
+                    });
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    } else {
+                      alert('Failed to create checkout session.');
+                    }
+                  } catch (err) {
+                    alert('Failed to create checkout session.');
+                  } finally {
+                    setCancelLoading(false);
+                  }
+                }}
+                className="inline-block bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50"
+                disabled={cancelLoading}
+              >
+                {cancelLoading ? 'Redirecting...' : 'Subscribe'}
+              </button>
+            )}
+            {/* Show Cancel Subscription button if user is on paid and selects free */}
+            {subscription?.tier === 'paid' && selectedTier === 'free' && (
               <button
                 onClick={() => setShowCancelModal(true)}
                 className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
@@ -342,28 +345,42 @@ export default function ProfilePage() {
               >
                 {cancelLoading ? 'Cancelling...' : 'Cancel Subscription'}
               </button>
-              {cancelError && <div className="text-red-600 mt-2">{cancelError}</div>}
-              <ConfirmModal
-                open={showCancelModal}
-                loading={cancelLoading}
-                onCancel={() => setShowCancelModal(false)}
-                onConfirm={async () => {
-                  setCancelLoading(true);
-                  setCancelError(null);
-                  try {
-                    await handleCancelSubscription();
-                    setShowCancelModal(false);
-                    // Optionally, refetch subscription status here
-                  } catch (err: any) {
-                    setCancelError(err.message || 'Failed to cancel subscription');
-                  } finally {
-                    setCancelLoading(false);
-                  }
-                }}
-              />
-            </div>
+            )}
           </div>
         )}
+
+        {/* Current Period End and Cancel Notice */}
+        {subscription && (
+          <div className="mb-4 text-center">
+            {subscription.current_period_end && (
+              <p><strong>Current Period Ends:</strong> {new Date(subscription.current_period_end).toLocaleString()}</p>
+            )}
+            {subscription.cancel_at_period_end && (
+              <p className="text-yellow-600">Subscription will cancel at period end.</p>
+            )}
+          </div>
+        )}
+
+        {/* Cancel Modal */}
+        <ConfirmModal
+          open={showCancelModal}
+          loading={cancelLoading}
+          onCancel={() => setShowCancelModal(false)}
+          onConfirm={async () => {
+            setCancelLoading(true);
+            setCancelError(null);
+            try {
+              await handleCancelSubscription();
+              setShowCancelModal(false);
+              // Optionally, refetch subscription status here
+            } catch (err: any) {
+              setCancelError(err.message || 'Failed to cancel subscription');
+            } finally {
+              setCancelLoading(false);
+            }
+          }}
+        />
+        {cancelError && <div className="text-red-600 mt-2 text-center">{cancelError}</div>}
       </div>
 
       <UserPreferencesSection />
