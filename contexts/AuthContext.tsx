@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '../lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import type { User as AppUser } from '../types/types';
+import { createFreeSubscription } from '../services/api';
 
 type AuthContextType = {
   user: AppUser | null;
@@ -162,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -176,6 +177,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setHasCompletedOnboarding(false);
     setIsPaidSubscriber(false);
     setSubscription(null);
+
+    // Create free subscription row if user is available
+    if (data?.user?.id) {
+      try {
+        await createFreeSubscription(data.user.id);
+      } catch (subErr) {
+        // Optionally log or handle subscription creation error
+        console.error('Failed to create free subscription:', subErr);
+      }
+    }
   };
 
   const signOut = async () => {

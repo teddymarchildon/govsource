@@ -1353,6 +1353,19 @@ export const getUserPayments = async (userId: string) => {
   return data;
 };
 
+// Create a free subscription row for a new user
+export const createFreeSubscription = async (userId: string) => {
+  const res = await fetch('/api/create-subscription', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to create subscription');
+  }
+};
+
 // This is a stub. Actual cancellation should be handled securely on the backend.
 export const cancelSubscription = async (stripeSubscriptionId: string) => {
   const res = await fetch('/api/cancel-subscription', {
