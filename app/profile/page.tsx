@@ -284,7 +284,7 @@ export default function ProfilePage() {
             onClick={() => setSelectedTier('paid')}
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-bold text-purple-700">Paid Tier</h3>
+              <h3 className="text-lg font-bold text-purple-700">Paid Tier ($4.99/month)</h3>
               {subscription?.tier === 'paid' && (
                 <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
                   <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />
