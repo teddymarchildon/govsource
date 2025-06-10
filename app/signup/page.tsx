@@ -17,6 +17,27 @@ export default function SignupPage() {
   const { signUp, user } = useAuth();
   const [showConfirmNotice, setShowConfirmNotice] = useState(false);
   const pathname = usePathname();
+  // Password strength state
+  const [passwordStrength, setPasswordStrength] = useState<{score: number, label: string, colorClass: string}>({score: 0, label: '', colorClass: ''});
+
+  // Password strength algorithm
+  function getPasswordStrength(pw: string) {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[a-z]/.test(pw)) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    // Score: 0-5
+    if (pw.length === 0) return {score: 0, label: '', colorClass: ''};
+    if (score <= 2) return {score, label: 'Weak', colorClass: 'bg-red-500 text-red-600'};
+    if (score === 3 || score === 4) return {score, label: 'Medium', colorClass: 'bg-yellow-400 text-yellow-700'};
+    return {score, label: 'Strong', colorClass: 'bg-green-500 text-green-700'};
+  }
+
+  useEffect(() => {
+    setPasswordStrength(getPasswordStrength(password));
+  }, [password]);
 
   useEffect(() => {
     if (user && user.email_confirmed_at) {
@@ -115,6 +136,22 @@ export default function SignupPage() {
                 required
                 minLength={6}
               />
+              {/* Password strength meter */}
+              {password && (
+                <div className="mt-2">
+                  <div className="w-full h-2 rounded bg-gray-200">
+                    <div
+                      className={`h-2 rounded ${
+                        passwordStrength.label === 'Weak' ? 'bg-red-500' : passwordStrength.label === 'Medium' ? 'bg-yellow-400' : passwordStrength.label === 'Strong' ? 'bg-green-500' : ''
+                      }`}
+                      style={{ width: `${(passwordStrength.score/5)*100}%`, transition: 'width 0.3s' }}
+                    ></div>
+                  </div>
+                  <div className={`text-xs mt-1 font-medium ${
+                    passwordStrength.label === 'Weak' ? 'text-red-600' : passwordStrength.label === 'Medium' ? 'text-yellow-700' : passwordStrength.label === 'Strong' ? 'text-green-700' : ''
+                  }`}>{passwordStrength.label}</div>
+                </div>
+              )}
             </div>
 
             <div className="mb-6">
