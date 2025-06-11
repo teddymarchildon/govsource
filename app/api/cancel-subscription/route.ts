@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseServer } from '../../../lib/supabase-server';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-05-28.basil' });
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: NextRequest) {
   const { userId, stripeSubscriptionId } = await req.json();
@@ -16,7 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     // If userId is provided, look up the subscription in Supabase
     if (!subscriptionId && userId) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseServer
         .from('subscription')
         .select('stripe_subscription_id')
         .eq('user_id', userId)
@@ -41,7 +37,7 @@ export async function POST(req: NextRequest) {
     const stripeSubData = stripeSub.items.data[0]
 
     // Update the subscription row in Supabase
-    await supabase
+    await supabaseServer
       .from('subscription')
       .update({
         cancel_at_period_end: true,
