@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AgencyRuleCard from "@/components/AgencyRuleCard";
 import { Agency, AgencyDocument } from "@/types/types";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
 
@@ -32,6 +32,7 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   const [endDate, setEndDate] = useState(currentEndDate);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
   const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
+  const supabase = createClient();
 
   const fetchRules = async (page: number) => {
     if (page === 1) {

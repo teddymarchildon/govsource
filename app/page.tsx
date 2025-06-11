@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { supabase } from '../lib/supabase';
+import { createClient } from '../lib/supabase';
 import BillCard from '../components/BillCard';
 import LawCard from '../components/LawCard';
-import CongressmanSearchSelect, { CongressmanSearchSelectRef } from '../components/CongressmanSearchSelect';
+import { CongressmanSearchSelectRef } from '../components/CongressmanSearchSelect';
 import { Bill, Congressman, UserPreferences, SavedBill, SavedCongressman, SavedJudge, SavedAgency, SavedAgencyDocument, SavedCluster, AgencyDocument, Law } from '../types/types';
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
@@ -14,13 +14,10 @@ import {
   getSavedCongressmen,
   getSavedJudges,
   getSavedAgencies,
-  getSavedAgencyDocuments,
-  getSavedClusters,
   getUserPreferences,
   getBills,
   getAgencyRules
 } from '../services/api';
-import { POLICY_AREAS } from '../constants/policyAreas';
 
 function HomeContent() {
   const router = useRouter();
@@ -50,6 +47,7 @@ function HomeContent() {
   const [recentLaws, setRecentLaws] = useState<Law[]>([]);
   const [recentLegislationLoading, setRecentLegislationLoading] = useState(false);
 
+  const supabase = createClient();
   // Fetch user data when logged in
   useEffect(() => {
     const fetchUserData = async () => {

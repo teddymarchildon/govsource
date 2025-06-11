@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { createClient } from '../lib/supabase';
 import { UserPreferences } from '../types/types';
 
 // Extended UserPreferences for the onboarding flow
@@ -40,6 +40,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
+  const supabase = createClient();
 
   const totalSteps = 2; // Total number of onboarding steps (states and policy areas)
 

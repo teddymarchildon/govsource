@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bill, Congressman } from '../types/types';
-import { supabase } from '../lib/supabase';
+import { createClient } from '../lib/supabase';
 
 interface BillCardProps {
   bill: Bill;
@@ -15,6 +15,7 @@ export default function BillCard({ bill }: BillCardProps) {
 
   // Format bill identifier (e.g., HR. 2139)
   const billIdentifier = `${bill.type.toUpperCase()}. ${bill.number}`;
+  const supabase = createClient();
 
   useEffect(() => {
     // Only fetch sponsor if not already available in the bill data

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { supabase } from '../lib/supabase';
+import { createClient } from '../lib/supabase';
 import { Congressman } from '../types/types';
 
 interface CongressmanSearchSelectProps {
@@ -27,6 +27,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState<Congressman | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
 
   // Expose clear method to parent components
   useImperativeHandle(ref, () => ({
