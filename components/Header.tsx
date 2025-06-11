@@ -14,7 +14,6 @@ export default function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const pathname = usePathname();
 
   // Use our custom search hook
@@ -86,9 +85,6 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [mobileMenuOpen]);
-
-  // Debugging logs
-  console.log('[Header] Render:', { loading, user });
 
   return (
     <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-10">
