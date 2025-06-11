@@ -428,6 +428,7 @@ export const getSavedCongressmen = async (userId: string): Promise<SavedCongress
 
 export const getSavedBills = async (userId: string): Promise<SavedBill[]> => {
   const supabase = createClient();
+  console.log('getSavedBills', supabase);
   const { data, error } = await supabase
     .from('saved_bill')
     .select('*, bill:bill_id(*)')
