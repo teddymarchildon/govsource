@@ -633,8 +633,6 @@ export const getAgencyRules = async (params: {
 
     // Filter by type if provided
     if (params.type) {
-      // Log the type filter being applied
-      console.log('Applying type filter:', params.type);
       query = query.eq('type', params.type);
     }
 
@@ -678,17 +676,7 @@ export const getAgencyRules = async (params: {
       query = query.in('id', documentIds);
     }
 
-    // Log the final query parameters for debugging
-    console.log('Final query parameters:', params);
-
     const { data, error } = await query;
-
-    // Log the results
-    console.log(`Query returned ${data?.length || 0} results`);
-    if (data && data.length > 0) {
-      console.log('First result type:', data[0].type);
-      console.log('Available types in results:', [...new Set(data.map(doc => doc.type))]);
-    }
 
     if (error) {
       throw error;
