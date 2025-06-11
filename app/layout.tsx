@@ -52,7 +52,7 @@ export default function RootLayout({
             </main>
           </div>
         </AuthProvider>
-        {/* <Analytics /> */}
+        <Analytics />
         <SpeedInsights />
       </body>
     </html>
