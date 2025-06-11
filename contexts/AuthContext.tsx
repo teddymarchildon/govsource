@@ -89,14 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for active session on mount
     const checkSession = async () => {
       console.log('[AuthProvider] checkSession start');
-      console.log('[AuthProvider] typeof window:', typeof window);
+      console.log('[AuthProvider] supabase:', supabase);
       try {
-        console.log('[AuthProvider] checkSession start 2');
-        console.log('[AuthProvider] supabase:', supabase);
-        const { data: dummydata, error: dummyerror } = await supabase.from('bill').select('*').limit(1);
-        console.log('[AuthProvider] test query:', { dummydata, dummyerror });
         const { data, error } = await supabase.auth.getSession();
-        console.log('[AuthProvider] getSession result:', { data, error });
         if (error) {
           console.error('Error checking auth session:', error);
         }
@@ -117,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[AuthProvider] checkSession error:', err);
       }
       setLoading(false);
-      console.log('[AuthProvider] setLoading(false) called');
     };
     checkSession();
 
