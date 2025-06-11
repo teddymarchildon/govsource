@@ -71,7 +71,6 @@ export async function POST(request: Request) {
 
     // Process and truncate the content if available
     if (content) {
-      console.log('Processing document content');
       content = processDocumentContent(content);
       content = truncateContent(content, 50000); // Limit to ~50K chars to stay within token limits
       systemMessage.content += `\n\nHere is the content of the document:\n\n${content}`;
@@ -97,7 +96,6 @@ export async function POST(request: Request) {
       // Prepare messages for OpenAI API with web search tool
       const apiMessages = [systemMessage, ...messages];
 
-      console.log('API Messages with web search');
       // Call OpenAI API with web search tool enabled
       const completion = await openai.responses.create({
         model: 'gpt-4o',

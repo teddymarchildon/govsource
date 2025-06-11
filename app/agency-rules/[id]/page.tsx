@@ -49,7 +49,6 @@ export default function AgencyRuleDetailPage() {
         agency: data.agencies?.[0]?.agency || null
       } : null;
 
-      console.log('Fetched agency rule:', transformedData);
       setRule(transformedData);
       setLoading(false);
     };
