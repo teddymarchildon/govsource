@@ -87,27 +87,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check for active session on mount
     const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error('Error checking auth session:', error);
+      console.log('[AuthProvider] checkSession start');
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        console.log('[AuthProvider] getSession result:', { data, error });
+        if (error) {
+          console.error('Error checking auth session:', error);
+        }
+        if (data?.session) {
+          const supaUser = data.session.user as SupabaseUser;
+          const appUser = {
+            id: supaUser.id,
+            email: supaUser.email ?? '',
+            email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
+            confirmed_at: (supaUser as any).confirmed_at ?? null,
+          };
+          setUser(appUser);
+          // Fetch onboarding and subscription status after user is set
+          await checkOnboardingStatus(appUser.id);
+          await checkSubscriptionStatus(appUser.id);
+        }
+      } catch (err) {
+        console.error('[AuthProvider] checkSession error:', err);
       }
-
-      if (data?.session) {
-        const supaUser = data.session.user as SupabaseUser;
-        const appUser = {
-          id: supaUser.id,
-          email: supaUser.email ?? '',
-          email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
-          confirmed_at: (supaUser as any).confirmed_at ?? null,
-        };
-        setUser(appUser);
-        // Fetch onboarding and subscription status after user is set
-        await checkOnboardingStatus(appUser.id);
-        await checkSubscriptionStatus(appUser.id);
-      }
-
       setLoading(false);
+      console.log('[AuthProvider] setLoading(false) called');
     };
 
     checkSession();
