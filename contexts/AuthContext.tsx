@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { User as AppUser } from '../types/types';
 import { createFreeSubscription } from '../services/api';
 
@@ -21,12 +21,35 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
+type AuthProviderProps = {
+  children: ReactNode;
+  initialSession?: Session | null;
+};
+
+type Subscription = {
+  id: string;
+  user_id: string;
+  status: string;
+  current_period_end?: string;
+  created_at?: string;
+  [key: string]: any;
+};
+
+export function AuthProvider({ children, initialSession }: AuthProviderProps) {
+  const [user, setUser] = useState<AppUser | null>(
+    initialSession?.user
+      ? {
+          id: initialSession.user.id,
+          email: initialSession.user.email ?? '',
+          email_confirmed_at: (initialSession.user as any).email_confirmed_at ?? null,
+          confirmed_at: (initialSession.user as any).confirmed_at ?? null,
+        }
+      : null
+  );
+  const [loading, setLoading] = useState(!initialSession);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
   const [isPaidSubscriber, setIsPaidSubscriber] = useState(false);
-  const [subscription, setSubscription] = useState<any | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
   const checkOnboardingStatus = async (userId: string): Promise<boolean> => {
     if (!userId) return false;
@@ -86,40 +109,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Check for active session on mount
-    const checkSession = async () => {
-      console.log('[AuthProvider] checkSession start');
-      console.log('[AuthProvider] supabase:', supabase);
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error checking auth session:', error);
+    // Only check session on client if not hydrated from SSR
+    if (!user) {
+      const checkSession = async () => {
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (error) {
+            console.error('Error checking auth session:', error);
+          }
+          if (data?.session) {
+            const supaUser = data.session.user as SupabaseUser;
+            const appUser = {
+              id: supaUser.id,
+              email: supaUser.email ?? '',
+              email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
+              confirmed_at: (supaUser as any).confirmed_at ?? null,
+            };
+            setUser(appUser);
+            await checkOnboardingStatus(appUser.id);
+            await checkSubscriptionStatus(appUser.id);
+          }
+        } catch (err) {
+          console.error('[AuthProvider] checkSession error:', err);
         }
-        if (data?.session) {
-          const supaUser = data.session.user as SupabaseUser;
-          const appUser = {
-            id: supaUser.id,
-            email: supaUser.email ?? '',
-            email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
-            confirmed_at: (supaUser as any).confirmed_at ?? null,
-          };
-          setUser(appUser);
-          // Fetch onboarding and subscription status after user is set
-          await checkOnboardingStatus(appUser.id);
-          await checkSubscriptionStatus(appUser.id);
-        }
-      } catch (err) {
-        console.error('[AuthProvider] checkSession error:', err);
-      }
+        setLoading(false);
+      };
+      checkSession();
+    } else {
+      // If user is already set from SSR, fetch onboarding/subscription
+      checkOnboardingStatus(user.id);
+      checkSubscriptionStatus(user.id);
       setLoading(false);
-    };
-    checkSession();
+    }
 
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AuthProvider] authListener event:', event);
-        console.log('[AuthProvider] authListener session:', session);
         if (session?.user) {
           const supaUser = session.user as SupabaseUser;
           const appUser = {
@@ -129,7 +154,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             confirmed_at: (supaUser as any).confirmed_at ?? null,
           };
           setUser(appUser);
-          // Always fetch onboarding and subscription after user is set
           await checkOnboardingStatus(appUser.id);
           await checkSubscriptionStatus(appUser.id);
         } else {
