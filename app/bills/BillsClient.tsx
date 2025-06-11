@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase";
 import BillCard from "@/components/BillCard";
 import CongressmanSearchSelect, { CongressmanSearchSelectRef } from "@/components/CongressmanSearchSelect";
 import { Bill, Congressman, PolicyArea } from "@/types/types";
@@ -38,6 +38,7 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
   // Fetch sponsor details if sponsor_id is in URL
   useEffect(() => {
     const fetchSponsor = async () => {
+      const supabase = createClient();
       if (currentSponsorId && !selectedSponsor) {
         try {
           const { data, error } = await supabase
@@ -65,6 +66,7 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
     }
 
     try {
+      const supabase = createClient();
       // Calculate range for pagination
       const from = (page - 1) * 50;
       const to = from + 49;

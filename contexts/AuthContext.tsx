@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
+import { createClient } from '../lib/supabase';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { User as AppUser } from '../types/types';
 import { createFreeSubscription } from '../services/api';
@@ -52,6 +52,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
   const checkOnboardingStatus = async (userId: string): Promise<boolean> => {
+    const supabase = createClient();
     if (!userId) return false;
     try {
       const { data, error } = await supabase
@@ -81,6 +82,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
       return;
     }
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from('subscription')
         .select('*')
@@ -113,6 +115,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
     if (!user) {
       const checkSession = async () => {
         try {
+          const supabase = createClient();
           const { data, error } = await supabase.auth.getSession();
           if (error) {
             console.error('Error checking auth session:', error);
@@ -141,7 +144,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
       checkSubscriptionStatus(user.id);
       setLoading(false);
     }
-
+    const supabase = createClient();
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -171,6 +174,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    const supabase = createClient();
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
@@ -191,6 +195,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
   };
 
   const signUp = async (email: string, password: string) => {
+    const supabase = createClient();
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -219,6 +224,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
   };
 
   const signOut = async () => {
+    const supabase = createClient();
     setLoading(true);
     const { error } = await supabase.auth.signOut();
     setLoading(false);

@@ -1,10 +1,10 @@
-import { supabase } from '../lib/supabase';
+import { createClient } from '../lib/supabase';
 import { Agency, AgencyDocument, Bill, Congressman, Judge, BillText, CongressmanTerm, SavedCongressman, SavedBill, BillSummary } from '../types/types';
 
 // Storage API
 export const getStoragePublicUrl = (bucket: string, path: string): string | null => {
   if (!path) return null;
-
+  const supabase = createClient();
   try {
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
@@ -17,6 +17,7 @@ export const getStoragePublicUrl = (bucket: string, path: string): string | null
 
 // Bills API
 export const getBills = async (params: any = {}) => {
+  const supabase = createClient();
   // Enhanced query to include sponsor information and most recent action
   let query = supabase.from('bill').select(`
     *,
@@ -85,6 +86,7 @@ export const getBills = async (params: any = {}) => {
 };
 
 export const getBillById = async (billId: string): Promise<Bill> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('bill')
     .select(`
@@ -123,6 +125,7 @@ export const getBillById = async (billId: string): Promise<Bill> => {
 };
 
 export const getBillTexts = async (billId: string): Promise<BillText[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('bill_text')
     .select('*')
@@ -133,6 +136,7 @@ export const getBillTexts = async (billId: string): Promise<BillText[]> => {
 };
 
 export const getBillSponsors = async (billId: string): Promise<Congressman[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('sponsored_bills')
     .select('congressman_id, congressman:congressman(*)')
@@ -143,6 +147,7 @@ export const getBillSponsors = async (billId: string): Promise<Congressman[]> =>
 };
 
 export const getBillCosponsors = async (billId: string): Promise<Congressman[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('cosponsored_bills')
     .select('congressman_id, congressman:congressman(*)')
@@ -154,6 +159,7 @@ export const getBillCosponsors = async (billId: string): Promise<Congressman[]> 
 
 // Congressmen API
 export const getCongressmen = async (params: any = {}) => {
+  const supabase = createClient();
   let query = supabase.from('congressman').select('*');
 
   if (params.limit) {
@@ -201,6 +207,7 @@ export const getCongressmen = async (params: any = {}) => {
 };
 
 export const getCongressmanById = async (congressmanId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('congressman')
     .select('*')
@@ -212,6 +219,7 @@ export const getCongressmanById = async (congressmanId: string) => {
 };
 
 export const getCongressmanSponsoredBills = async (congressmanId: string): Promise<Bill[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('sponsored_bills')
     .select(`
@@ -244,6 +252,7 @@ export const getCongressmanSponsoredBills = async (congressmanId: string): Promi
 };
 
 export const getCongressmanCosponsoredBills = async (congressmanId: string): Promise<Bill[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('cosponsored_bills')
     .select(`
@@ -276,6 +285,7 @@ export const getCongressmanCosponsoredBills = async (congressmanId: string): Pro
 };
 
 export const getCongressmanTerms = async (congressmanId: string): Promise<CongressmanTerm[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('congressman_term')
     .select('*')
@@ -289,6 +299,7 @@ export const getCongressmanTerms = async (congressmanId: string): Promise<Congre
 // Save/Unsave Congressmen
 export const saveCongressman = async (userId: string, congressmanId: string) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('saved_congressman')
       .insert([
@@ -308,6 +319,7 @@ export const saveCongressman = async (userId: string, congressmanId: string) => 
 
 export const unsaveCongressman = async (userId: string, congressmanId: string) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('saved_congressman')
       .delete()
@@ -326,6 +338,7 @@ export const unsaveCongressman = async (userId: string, congressmanId: string) =
 
 export const isCongressmanSaved = async (userId: string, congressmanId: string) => {
   try {
+    const supabase = createClient();
     const { error, count } = await supabase
       .from('saved_congressman')
       .select('*', { count: 'exact' })
@@ -345,6 +358,7 @@ export const isCongressmanSaved = async (userId: string, congressmanId: string) 
 // Save/Unsave Bills
 export const saveBill = async (userId: string, billId: string) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('saved_bill')
       .insert([
@@ -364,6 +378,7 @@ export const saveBill = async (userId: string, billId: string) => {
 
 export const unsaveBill = async (userId: string, billId: string) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('saved_bill')
       .delete()
@@ -382,6 +397,7 @@ export const unsaveBill = async (userId: string, billId: string) => {
 
 export const isBillSaved = async (userId: string, billId: string) => {
   try {
+    const supabase = createClient();
     const { error, count } = await supabase
       .from('saved_bill')
       .select('*', { count: 'exact' })
@@ -400,6 +416,7 @@ export const isBillSaved = async (userId: string, billId: string) => {
 
 // Get Saved Items
 export const getSavedCongressmen = async (userId: string): Promise<SavedCongressman[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('saved_congressman')
     .select('*, congressman:congressman_id(*)')
@@ -410,6 +427,7 @@ export const getSavedCongressmen = async (userId: string): Promise<SavedCongress
 };
 
 export const getSavedBills = async (userId: string): Promise<SavedBill[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('saved_bill')
     .select('*, bill:bill_id(*)')
@@ -420,6 +438,7 @@ export const getSavedBills = async (userId: string): Promise<SavedBill[]> => {
 };
 
 export async function getBillActions(billId: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('bill_action')
     .select('*')
@@ -435,6 +454,7 @@ export async function getBillActions(billId: string) {
 
 // Agencies API
 export const getAgencies = async (params: any = {}) => {
+  const supabase = createClient();
   let query = supabase.from('agency').select('*, parent:parent_id(id, name, short_name)');
 
   if (params.limit) {
@@ -463,6 +483,7 @@ export const getAgencies = async (params: any = {}) => {
 };
 
 export const getAgencyById = async (agencyId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('agency')
     .select('*, parent:parent_id(id, name, short_name)')
@@ -474,6 +495,7 @@ export const getAgencyById = async (agencyId: string) => {
 };
 
 export const getChildAgencies = async (parentId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('agency')
     .select('*')
@@ -486,6 +508,7 @@ export const getChildAgencies = async (parentId: string) => {
 // Save/Unsave Agency
 export const saveAgency = async (userId: string, agencyId: string) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('saved_agency')
       .insert([
@@ -505,6 +528,7 @@ export const saveAgency = async (userId: string, agencyId: string) => {
 
 export const unsaveAgency = async (userId: string, agencyId: string) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('saved_agency')
       .delete()
@@ -522,6 +546,7 @@ export const unsaveAgency = async (userId: string, agencyId: string) => {
 };
 
 export const isAgencySaved = async (userId: string, agencyId: string) => {
+  const supabase = createClient();
   try {
     const { data, error, count } = await supabase
       .from('saved_agency')
@@ -540,6 +565,7 @@ export const isAgencySaved = async (userId: string, agencyId: string) => {
 };
 
 export const getSavedAgencies = async (userId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('saved_agency')
     .select('*, agency:agency_id(*)')
@@ -552,6 +578,7 @@ export const getSavedAgencies = async (userId: string) => {
 export const getAgencyDocuments = async (agencyId: string): Promise<AgencyDocument[]> => {
   try {
     // First, get all document IDs for this agency
+    const supabase = createClient();
     const { data: agencyDocuments, error: agencyError } = await supabase
       .from('agency_agencydocument')
       .select('agency_document_id')
@@ -587,6 +614,7 @@ export const getAgencyDocuments = async (agencyId: string): Promise<AgencyDocume
 
 export const getTopLevelAgencies = async (): Promise<Agency[]> => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('agency')
       .select('*')
@@ -616,6 +644,7 @@ export const getAgencyRules = async (params: {
 } = {}): Promise<AgencyDocument[]> => {
   try {
     // First, get all agency documents that are of type 'Rule'
+    const supabase = createClient();
     let query = supabase
       .from('agency_document')
       .select(`
@@ -658,6 +687,7 @@ export const getAgencyRules = async (params: {
     // Filter by agency if provided
     if (params.agencyId) {
       // Get documents linked to this agency
+      const supabase = createClient();
       const { data: agencyDocuments, error: agencyError } = await supabase
         .from('agency_agencydocument')
         .select('agency_document_id')
@@ -693,6 +723,7 @@ export const getAgencyRules = async (params: {
 
 export const getClusterJoinedJudges = async (clusterId: string): Promise<Judge[]> => {
   // Get all unique judges who have joined any opinion in this cluster
+  const supabase = createClient();
   const { data: opinions, error: opinionsError } = await supabase
     .from('court_opinion')
     .select(`
@@ -727,6 +758,7 @@ export const getCourtOpinions = async (params: {
   start_date?: string;
   end_date?: string;
 } = {}) => {
+  const supabase = createClient();
   let query = supabase
     .from('court_opinion')
     .select(`
@@ -777,6 +809,7 @@ export const getCourtOpinions = async (params: {
 };
 
 export async function getCourtOpinionById(id: string) {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('court_opinion')
     .select(`
@@ -798,6 +831,7 @@ export async function getCourtOpinionById(id: string) {
 
 export const getClusters = async (params: string | { court_id?: number; search?: string; limit?: number; oldest_first?: boolean } = {}) => {
   try {
+    const supabase = createClient();
     let query = supabase
       .from('cluster')
       .select(`
@@ -852,6 +886,7 @@ export const getClusters = async (params: string | { court_id?: number; search?:
 // User Preferences API
 export const getUserPreferences = async (userId: string) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('user_preferences')
       .select('*')
@@ -870,6 +905,7 @@ export const getUserPreferences = async (userId: string) => {
 
 export const createUserPreferences = async (userId: string, preferences: { states?: string[], policy_areas?: string[] }) => {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('user_preferences')
       .insert({
@@ -896,7 +932,7 @@ export const updateUserPreferences = async (userId: string, preferences: { state
 
     if (existing) {
       // If preferences exist, update them
-
+      const supabase = createClient();
       const { error: updateError } = await supabase
         .from('user_preferences')
         .update({
@@ -919,6 +955,7 @@ export const updateUserPreferences = async (userId: string, preferences: { state
 
 // Judges API
 export const getJudges = async (params: { limit?: number; search?: string } = {}) => {
+  const supabase = createClient();
   let query = supabase.from('judge').select('*');
 
   if (params.limit) {
@@ -940,6 +977,7 @@ export const getJudges = async (params: { limit?: number; search?: string } = {}
 };
 
 export const getJudgeById = async (judgeId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('judge')
     .select('*')
@@ -952,6 +990,7 @@ export const getJudgeById = async (judgeId: string) => {
 
 // Global Search
 export const globalSearch = async (query: string, limit = 5) => {
+  const supabase = createClient();
   if (!query || query.trim() === '') return { bills: [], congressmen: [], agencies: [], cases: [], judges: [], agencyDocuments: [] };
 
   const searchTerm = query.trim();
@@ -1043,6 +1082,7 @@ export const globalSearch = async (query: string, limit = 5) => {
 
 // Save/Unsave Judge
 export const saveJudge = async (userId: string, judgeId: string) => {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from('saved_judge')
@@ -1063,6 +1103,7 @@ export const saveJudge = async (userId: string, judgeId: string) => {
 };
 
 export const unsaveJudge = async (userId: string, judgeId: string) => {
+  const supabase = createClient();
   try {
     const { error } = await supabase
       .from('saved_judge')
@@ -1081,6 +1122,7 @@ export const unsaveJudge = async (userId: string, judgeId: string) => {
 };
 
 export const isJudgeSaved = async (userId: string, judgeId: string) => {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from('saved_judge')
@@ -1100,6 +1142,7 @@ export const isJudgeSaved = async (userId: string, judgeId: string) => {
 
 // Save/Unsave Cluster
 export const saveCluster = async (userId: string, clusterId: string) => {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from('saved_cluster')
@@ -1120,6 +1163,7 @@ export const saveCluster = async (userId: string, clusterId: string) => {
 };
 
 export const unsaveCluster = async (userId: string, clusterId: string) => {
+  const supabase = createClient();
   try {
     const { error } = await supabase
       .from('saved_cluster')
@@ -1138,6 +1182,7 @@ export const unsaveCluster = async (userId: string, clusterId: string) => {
 };
 
 export const isClusterSaved = async (userId: string, clusterId: string) => {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from('saved_cluster')
@@ -1157,6 +1202,7 @@ export const isClusterSaved = async (userId: string, clusterId: string) => {
 
 // Save/Unsave Agency Document
 export const saveAgencyDocument = async (userId: string, agencyDocumentId: string) => {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from('saved_agencydocument')
@@ -1177,6 +1223,7 @@ export const saveAgencyDocument = async (userId: string, agencyDocumentId: strin
 };
 
 export const unsaveAgencyDocument = async (userId: string, agencyDocumentId: string) => {
+  const supabase = createClient();
   try {
     const { error } = await supabase
       .from('saved_agencydocument')
@@ -1195,6 +1242,7 @@ export const unsaveAgencyDocument = async (userId: string, agencyDocumentId: str
 };
 
 export const isAgencyDocumentSaved = async (userId: string, agencyDocumentId: string) => {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from('saved_agencydocument')
@@ -1214,6 +1262,7 @@ export const isAgencyDocumentSaved = async (userId: string, agencyDocumentId: st
 
 // Get Saved Items for new types
 export const getSavedJudges = async (userId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('saved_judge')
     .select('*, judge(*)')
@@ -1224,6 +1273,7 @@ export const getSavedJudges = async (userId: string) => {
 };
 
 export const getSavedClusters = async (userId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('saved_cluster')
     .select(`
@@ -1244,6 +1294,7 @@ export const getSavedClusters = async (userId: string) => {
 };
 
 export const getSavedAgencyDocuments = async (userId: string) => {
+  const supabase = createClient();
   // First, get the saved agency documents with their document details
   const { data: savedDocs, error } = await supabase
     .from('saved_agencydocument')
@@ -1308,6 +1359,7 @@ export const getSavedAgencyDocuments = async (userId: string) => {
 };
 
 export const getBillSummary = async (billId: string): Promise<BillSummary | null> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('bill_summary')
     .select('*')
@@ -1320,6 +1372,7 @@ export const getBillSummary = async (billId: string): Promise<BillSummary | null
 
 // Subscription & Payment API
 export const getUserSubscription = async (userId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('subscription')
     .select('*')
@@ -1331,6 +1384,7 @@ export const getUserSubscription = async (userId: string) => {
 };
 
 export const getUserPayments = async (userId: string) => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('payment')
     .select('*')
