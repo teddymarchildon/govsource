@@ -23,7 +23,6 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   const currentStartDate = searchParams.get('start_date') || '';
   const currentEndDate = searchParams.get('end_date') || '';
   const currentSortOrder = searchParams.get('sort_order') || 'desc';
-  const supabase = createClient();
   const [laws, setLaws] = useState<Law[]>(initialLaws);
   const [loading, setLoading] = useState(false);
   const [selectedPolicyArea, setSelectedPolicyArea] = useState<PolicyArea | ''>(currentPolicyArea as PolicyArea | '');
@@ -38,6 +37,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   // Fetch sponsor details if sponsor_id is in URL
   useEffect(() => {
     const fetchSponsor = async () => {
+      const supabase = createClient();
       if (currentSponsorId && !selectedSponsor) {
         try {
           const { data, error } = await supabase
@@ -60,6 +60,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   }, [currentSponsorId, selectedSponsor]);
 
   const fetchLaws = async (page: number) => {
+    const supabase = createClient();
     if (page === 1) {
       setLaws([]);
     }

@@ -27,7 +27,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState<Congressman | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+
 
   // Expose clear method to parent components
   useImperativeHandle(ref, () => ({
@@ -41,6 +41,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
   // Fetch congressman by ID if selectedId is provided
   useEffect(() => {
     const fetchSelectedCongressman = async () => {
+      const supabase = createClient();
       if (selectedId) {
         setLoading(true);
         try {
@@ -69,6 +70,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
   // Search for congressmen when the search term changes
   useEffect(() => {
     const fetchCongressmen = async () => {
+      const supabase = createClient();
       if (search.length < 2) {
         setCongressmen([]);
         return;

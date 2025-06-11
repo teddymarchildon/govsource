@@ -47,10 +47,10 @@ function HomeContent() {
   const [recentLaws, setRecentLaws] = useState<Law[]>([]);
   const [recentLegislationLoading, setRecentLegislationLoading] = useState(false);
 
-  const supabase = createClient();
   // Fetch user data when logged in
   useEffect(() => {
     const fetchUserData = async () => {
+      const supabase = createClient();
       if (!user) return;
 
       try {
@@ -143,6 +143,7 @@ function HomeContent() {
   // Fetch recent legislation in user's policy areas
   useEffect(() => {
     const fetchRecentLegislation = async () => {
+      const supabase = createClient();
       if (!user || !userPreferences || !userPreferences.policy_areas || userPreferences.policy_areas.length === 0) return;
 
       setRecentLegislationLoading(true);
