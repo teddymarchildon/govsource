@@ -1,12 +1,15 @@
+'use server'
+
 import { Suspense } from 'react';
-import { supabaseServer } from '@/lib/supabase-server';
+import { createClient } from '@/lib/supabase-server';
 import { AgencyDocument } from '@/types/types';
 import ExecutiveOrdersClient  from './ExecutiveOrdersClient';
 
 // Server Component
 async function fetchInitialOrders() {
+  const supabase = await createClient()
   try {
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabase
       .from('agency_document')
       .select(`
         id,
@@ -49,8 +52,9 @@ async function fetchInitialOrders() {
 }
 
 async function fetchPresidents() {
+  const supabase = await createClient()
   try {
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabase
       .from('agency_document')
       .select('president')
       .eq('subtype', 'Executive Order')
