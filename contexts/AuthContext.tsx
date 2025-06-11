@@ -91,6 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthProvider] checkSession start');
       console.log('[AuthProvider] typeof window:', typeof window);
       try {
+        console.log('[AuthProvider] checkSession start 2');
+        console.log('[AuthProvider] supabase:', supabase);
         const { data: dummydata, error: dummyerror } = await supabase.from('bill').select('*').limit(1);
         console.log('[AuthProvider] test query:', { dummydata, dummyerror });
         const { data, error } = await supabase.auth.getSession();
