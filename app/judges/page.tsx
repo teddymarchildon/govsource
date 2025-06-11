@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 import JudgeCard from '@/components/JudgeCard';
 import { Judge } from '@/types/types';
 
@@ -14,7 +14,7 @@ function JudgesContent() {
   const [judges, setJudges] = useState<Judge[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery);
-
+  const supabase = createClient();
   useEffect(() => {
     const fetchJudges = async () => {
       setLoading(true);

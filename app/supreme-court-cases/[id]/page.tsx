@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '../../../lib/supabase';
+import { createClient } from '../../../lib/supabase';
 import { Cluster } from '../../../types/types';
 import SaveButton from '../../../components/SaveButton';
 import Breadcrumbs from '../../../components/Breadcrumbs';
@@ -17,7 +17,7 @@ export default function SupremeCourtCaseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
-
+  const supabase = createClient();
   useEffect(() => {
     const fetchCluster = async () => {
       setLoading(true);

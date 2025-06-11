@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { createClient } from '../../lib/supabase';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -16,6 +16,7 @@ export default function SignupPage() {
   const { signUp, user } = useAuth();
   const [showConfirmNotice, setShowConfirmNotice] = useState(false);
   const pathname = usePathname();
+  const supabase = createClient();
   // Password strength state
   const [passwordStrength, setPasswordStrength] = useState<{score: number, label: string, colorClass: string}>({score: 0, label: '', colorClass: ''});
 

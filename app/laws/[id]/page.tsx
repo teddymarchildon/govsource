@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 import { getBillActions } from '@/services/api';
 import BillOrLawDetail from '@/components/BillOrLawDetail';
 
@@ -17,7 +17,7 @@ export default function LawDetailPage() {
   const [cosponsors, setCosponsors] = useState<any[]>([]);
   const [actions, setActions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const supabase = createClient();
   useEffect(() => {
     const fetchLawDetails = async () => {
       if (!lawId) return;

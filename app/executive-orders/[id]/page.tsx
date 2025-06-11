@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 import PdfViewer from '@/components/PdfViewer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import SaveButton from '@/components/SaveButton';
@@ -34,6 +34,7 @@ export default function ExecutiveOrderDetailPage() {
   const [order, setOrder] = useState<ExecutiveOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('text');
+  const supabase = createClient();
 
   useEffect(() => {
     const fetchOrder = async () => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 import LawCard from '@/components/LawCard';
 import CongressmanSearchSelect, { CongressmanSearchSelectRef } from '@/components/CongressmanSearchSelect';
 import { Law, Congressman, PolicyArea } from '@/types/types';
@@ -23,7 +23,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   const currentStartDate = searchParams.get('start_date') || '';
   const currentEndDate = searchParams.get('end_date') || '';
   const currentSortOrder = searchParams.get('sort_order') || 'desc';
-
+  const supabase = createClient();
   const [laws, setLaws] = useState<Law[]>(initialLaws);
   const [loading, setLoading] = useState(false);
   const [selectedPolicyArea, setSelectedPolicyArea] = useState<PolicyArea | ''>(currentPolicyArea as PolicyArea | '');
