@@ -240,20 +240,6 @@ function HomeContent() {
   if (user) {
     return (
       <div className="container mx-auto px-4 py-8">
-        {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-lg shadow-md p-6 mb-8 text-white">
-          <h1 className="text-2xl font-bold mb-2">Welcome back</h1>
-          <p className="mb-4">See what&apos;s new</p>
-          {userPreferences && (!userPreferences.policy_areas || userPreferences.policy_areas.length === 0) && (
-            <Link href="/profile" className="inline-flex items-center px-4 py-2 bg-white text-blue-700 rounded-md font-medium hover:bg-blue-50 transition-colors">
-              Complete your profile
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          )}
-        </div>
-
         {/* Recent Legislation in Your Policy Areas */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
