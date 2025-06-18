@@ -88,7 +88,6 @@ def fetch_bill_detail(url: str) -> Dict[str, Any]:
         response = requests.get(url, headers=HEADERS)
         response.raise_for_status()
         response_data = response.json()
-        logger.info(f"Bill detail response structure: {list(response_data.keys())}")
         return response_data
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching bill detail: {e}")
@@ -115,11 +114,6 @@ def fetch_bill_actions(congress: int, bill_type: str, bill_number: int) -> List[
         response = requests.get(url, headers=HEADERS, params=params)
         response.raise_for_status()
         response_data = response.json()
-
-        # Log the structure of the response to debug
-        logger.info(
-            f"Actions response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dictionary'}"
-        )
 
         # Extract actions from the response
         actions = []

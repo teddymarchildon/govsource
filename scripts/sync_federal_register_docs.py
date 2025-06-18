@@ -213,8 +213,6 @@ def download_and_upload_document(
     if body_html_url:
         try:
             logger.info(f"Fetching HTML content from {body_html_url}")
-            # Add delay to respect rate limits
-            time.sleep(RATE_LIMIT_DELAY_SECONDS)
 
             response = requests.get(body_html_url)
             response.raise_for_status()

@@ -128,7 +128,6 @@ def get_or_create_cluster(
     supabase: Client,
     cluster_data: Dict,
     court_remote_id: str = 'scotus',
-    dry_run: bool = False
 ) -> Optional[int]:
     """
     Get an existing cluster or create a new one if not found.
@@ -137,7 +136,6 @@ def get_or_create_cluster(
         supabase: Supabase client
         cluster_data: Cluster data from Court Listener API
         court_remote_id: Court Listener court ID (e.g., 'scotus')
-        dry_run: If True, don't create new records
 
     Returns:
         Cluster ID in Supabase or None if not found/created
@@ -154,26 +152,20 @@ def get_or_create_cluster(
             cluster_id = result.data[0]['id']
             logger.info(f"Found existing cluster with ID {cluster_id}")
 
-            # Update the existing cluster with date_filed if not in dry_run mode
-            if not dry_run:
-                # Check if date_filed exists in the cluster data
-                update_data = {}
-                if 'date_filed' in cluster_data:
-                    update_data['date_filed'] = cluster_data.get('date_filed')
+            # Update the existing cluster with date_filed and judges
+            update_data = {}
+            if 'date_filed' in cluster_data:
+                update_data['date_filed'] = cluster_data.get('date_filed')
 
-                # Add judges field to update data if it exists
-                if 'judges' in cluster_data:
-                    update_data['judges'] = cluster_data.get('judges')
+            # Add judges field to update data if it exists
+            if 'judges' in cluster_data:
+                update_data['judges'] = cluster_data.get('judges')
 
-                if update_data:
-                    logger.info(f"Updating cluster {cluster_id} with: {update_data}")
-                    supabase.table('cluster').update(update_data).eq('id', cluster_id).execute()
+            if update_data:
+                logger.info(f"Updating cluster {cluster_id} with: {update_data}")
+                supabase.table('cluster').update(update_data).eq('id', cluster_id).execute()
 
             return cluster_id
-
-        if dry_run:
-            logger.info(f"[DRY RUN] Would create new cluster for {remote_id}")
-            return None
 
         # Get the court ID from the remote_id
         court_id = get_court_id_by_remote_id(supabase, court_remote_id)
@@ -376,7 +368,6 @@ def download_and_upload_content(
 def get_or_create_judge(
     supabase: Client,
     judge_data: Dict,
-    dry_run: bool = False
 ) -> Optional[int]:
     """
     Get an existing judge or create a new one if not found.
@@ -384,7 +375,6 @@ def get_or_create_judge(
     Args:
         supabase: Supabase client
         judge_data: Judge data from Court Listener API
-        dry_run: If True, don't create new records
 
     Returns:
         Judge ID in Supabase or None if not found/created
@@ -419,11 +409,6 @@ def get_or_create_judge(
             return judge_id
     except Exception as e:
         logger.error(f"Error checking for existing judge by name: {e}")
-        return None
-
-    # If we're in dry-run mode, stop here
-    if dry_run:
-        logger.info(f"[DRY RUN] Would create new judge: {judge_name} with remote_id {remote_id}")
         return None
 
     # Judge not found, create a new one
@@ -520,7 +505,6 @@ def sync_opinions_to_supabase(
     supabase: Client,
     court_remote_id: str = 'scotus',
     max_pages: Optional[int] = None,
-    dry_run: bool = False,
     skip_storage: bool = False
 ) -> List[Dict[str, Any]]:
     """
@@ -530,7 +514,6 @@ def sync_opinions_to_supabase(
         supabase: Supabase client
         court_remote_id: Court Listener court ID (e.g., 'scotus')
         max_pages: Maximum number of pages to process
-        dry_run: Run in dry-run mode (no database writes)
         skip_storage: Skip downloading and uploading documents to storage
 
     Returns:
@@ -555,8 +538,8 @@ def sync_opinions_to_supabase(
             continue
 
         # Get or create cluster in Supabase
-        cluster_id_db = get_or_create_cluster(supabase, cluster_detail, court_remote_id=court_remote_id, dry_run=dry_run)
-        if not cluster_id_db and not dry_run:
+        cluster_id_db = get_or_create_cluster(supabase, cluster_detail, court_remote_id=court_remote_id)
+        if not cluster_id_db:
             logger.warning(f"Could not create/get cluster {cluster_id}, skipping")
             continue
 
@@ -585,7 +568,7 @@ def sync_opinions_to_supabase(
                     judge_id_str = author_url.rstrip('/').split('/')[-1]
                     judge_data = get_judge_detail(int(judge_id_str))
                     if judge_data:
-                        judge_id = get_or_create_judge(supabase, judge_data, dry_run)
+                        judge_id = get_or_create_judge(supabase, judge_data)
                 except Exception as e:
                     logger.error(f"Error processing author {author_url}: {e}")
 
@@ -598,15 +581,15 @@ def sync_opinions_to_supabase(
                     joined_judge_id = joined_url.rstrip('/').split('/')[-1]
                     judge_data = get_judge_detail(int(joined_judge_id))
                     if judge_data:
-                        db_judge_id = get_or_create_judge(supabase, judge_data, dry_run)
+                        db_judge_id = get_or_create_judge(supabase, judge_data)
                         if db_judge_id:
                             joined_by_ids.append(db_judge_id)
                 except Exception as e:
                     logger.error(f"Error processing joined_by judge {joined_url}: {e}")
 
-            # Download and upload content if not in dry-run mode
+            # Download and upload content
             file_paths = {}
-            if not dry_run and not skip_storage:
+            if not skip_storage:
                 file_paths = download_and_upload_content(
                     supabase,
                     opinion,
@@ -614,51 +597,48 @@ def sync_opinions_to_supabase(
                 )
 
             # Create opinion record in Supabase
-            if not dry_run:
-                try:
-                    # Check if opinion already exists
-                    opinion_date = opinion.get('date_created', '').split('T')[0]
-                    opinion_id_db = check_opinion_exists(
-                        supabase,
-                        str(opinion_id),
-                        cluster_id_db,
-                        judge_id,
-                        opinion_date
-                    )
+            try:
+                # Check if opinion already exists
+                opinion_date = opinion.get('date_created', '').split('T')[0]
+                opinion_id_db = check_opinion_exists(
+                    supabase,
+                    str(opinion_id),
+                    cluster_id_db,
+                    judge_id,
+                    opinion_date
+                )
 
-                    court_opinion_data = {
-                        'remote_id': str(opinion_id),
-                        'date': opinion_date,
-                        'author_id': judge_id,
-                        'cluster_id': cluster_id_db,
-                        'type': opinion.get('type', ''),
-                        'joined_by': joined_by_ids if joined_by_ids else None,
-                        'pdf_file_path': file_paths.get('pdf_file_path', ''),
-                        'html_file_path': file_paths.get('html_file_path', ''),
-                        'text_file_path': file_paths.get('text_file_path', '')
-                    }
+                court_opinion_data = {
+                    'remote_id': str(opinion_id),
+                    'date': opinion_date,
+                    'author_id': judge_id,
+                    'cluster_id': cluster_id_db,
+                    'type': opinion.get('type', ''),
+                    'joined_by': joined_by_ids if joined_by_ids else None,
+                    'pdf_file_path': file_paths.get('pdf_file_path', ''),
+                    'html_file_path': file_paths.get('html_file_path', ''),
+                    'text_file_path': file_paths.get('text_file_path', '')
+                }
 
-                    # Remove None values
-                    court_opinion_data = {k: v for k, v in court_opinion_data.items() if v is not None}
+                # Remove None values
+                court_opinion_data = {k: v for k, v in court_opinion_data.items() if v is not None}
 
-                    if opinion_id_db:
-                        # Update existing opinion
-                        logger.info(f"Updating existing court opinion with ID {opinion_id_db}")
-                        result = supabase.table('court_opinion').update(court_opinion_data).eq('id', opinion_id_db).execute()
-                        if result.data and len(result.data) > 0:
-                            logger.info(f"Updated court opinion with ID {opinion_id_db}")
-                            synced_opinions.append(result.data[0])
-                    else:
-                        # Create new opinion
-                        logger.info(f"Creating new court opinion record for opinion {opinion_id}")
-                        result = supabase.table('court_opinion').insert(court_opinion_data).execute()
-                        if result.data and len(result.data) > 0:
-                            logger.info(f"Created court opinion with ID {result.data[0]['id']}")
-                            synced_opinions.append(result.data[0])
-                except Exception as e:
-                    logger.error(f"Error creating court opinion record: {e}")
-            else:
-                logger.info(f"[DRY RUN] Would create court opinion for {opinion_id}")
+                if opinion_id_db:
+                    # Update existing opinion
+                    logger.info(f"Updating existing court opinion with ID {opinion_id_db}")
+                    result = supabase.table('court_opinion').update(court_opinion_data).eq('id', opinion_id_db).execute()
+                    if result.data and len(result.data) > 0:
+                        logger.info(f"Updated court opinion with ID {opinion_id_db}")
+                        synced_opinions.append(result.data[0])
+                else:
+                    # Create new opinion
+                    logger.info(f"Creating new court opinion record for opinion {opinion_id}")
+                    result = supabase.table('court_opinion').insert(court_opinion_data).execute()
+                    if result.data and len(result.data) > 0:
+                        logger.info(f"Created court opinion with ID {result.data[0]['id']}")
+                        synced_opinions.append(result.data[0])
+            except Exception as e:
+                logger.error(f"Error creating court opinion record: {e}")
 
     return synced_opinions
 
@@ -668,7 +648,6 @@ def main():
     parser.add_argument('--court-id', type=str, default='scotus', help='Court Listener court ID (default: scotus)')
     parser.add_argument('--per-page', type=int, default=20, help='Number of results per page')
     parser.add_argument('--max-pages', type=int, default=50,help='Maximum number of pages to process')
-    parser.add_argument('--dry-run', action='store_true', help='Run in dry-run mode (no database writes)')
     parser.add_argument('--skip-storage', action='store_true', help='Skip downloading and uploading documents to storage')
 
     args = parser.parse_args()
@@ -681,7 +660,6 @@ def main():
         supabase,
         court_remote_id=args.court_id,
         max_pages=args.max_pages,
-        dry_run=args.dry_run,
         skip_storage=args.skip_storage
     )
 
