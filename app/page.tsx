@@ -5,8 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { createClient } from '../lib/supabase';
 import BillCard from '../components/BillCard';
 import LawCard from '../components/LawCard';
-import { CongressmanSearchSelectRef } from '../components/CongressmanSearchSelect';
-import { Bill, Congressman, UserPreferences, SavedBill, SavedCongressman, SavedJudge, SavedAgency, SavedAgencyDocument, SavedCluster, AgencyDocument, Law } from '../types/types';
+import { Bill, Congressman, UserPreferences, SavedBill, SavedCongressman, SavedJudge, SavedAgency, AgencyDocument, Law } from '../types/types';
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import {
@@ -31,7 +30,6 @@ function HomeContent() {
   const [loading, setLoading] = useState(true);
   const [selectedPolicyArea, setSelectedPolicyArea] = useState(currentPolicyArea || '');
   const [selectedSponsor, setSelectedSponsor] = useState<Congressman | null>(null);
-  const congressmanSearchRef = useRef<CongressmanSearchSelectRef>(null);
 
   // State for logged-in experience
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
@@ -50,7 +48,6 @@ function HomeContent() {
   // Fetch user data when logged in
   useEffect(() => {
     const fetchUserData = async () => {
-      const supabase = createClient();
       if (!user) return;
 
       try {
@@ -206,35 +203,6 @@ function HomeContent() {
 
     fetchRecentLegislation();
   }, [user, userPreferences]);
-
-  const handlePolicyAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setSelectedPolicyArea(value);
-
-    // Update URL query params
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) {
-      params.set('policy_area', value);
-    } else {
-      params.delete('policy_area');
-    }
-
-    router.push(`/?${params.toString()}`);
-  };
-
-  const handleSponsorSelect = (congressman: Congressman | null) => {
-    setSelectedSponsor(congressman);
-  };
-
-  const clearFilters = () => {
-    setSelectedPolicyArea('');
-    setSelectedSponsor(null);
-    // Clear the congressman search input
-    if (congressmanSearchRef.current) {
-      congressmanSearchRef.current.clear();
-    }
-    router.push('/');
-  };
 
   // Render logged-in user experience
   if (user) {
