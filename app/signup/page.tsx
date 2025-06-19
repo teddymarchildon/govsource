@@ -67,24 +67,6 @@ export default function SignupPage() {
     }
   };
 
-  // Poll for email confirmation every 5 seconds when waiting for confirmation
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (showConfirmNotice && user && !user.confirmed_at) {
-      interval = setInterval(async () => {
-        // Refetch the user from Supabase
-        const { data, error } = await supabase.auth.getUser();
-        if (data?.user?.email_confirmed_at) {
-          // Optionally, you can update the AuthContext user here if needed
-          window.location.reload(); // Reload to trigger redirect
-        }
-      }, 5000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [showConfirmNotice, user]);
-
   if (user && user.email_confirmed_at) {
     // Optionally, render nothing or a loading spinner while redirecting
     return null;

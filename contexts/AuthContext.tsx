@@ -3,20 +3,19 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { createClient } from '../utils/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import type { User as AppUser } from '../types/types';
 import { createFreeSubscription } from '../services/api';
-
+import { User } from '../types/types';
 
 type AuthContextType = {
-  user: AppUser | null;
+  user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   hasCompletedOnboarding: boolean;
   checkOnboardingStatus: (userId: string) => Promise<boolean>;
-  isPaidSubscriber: boolean;
-  subscription: any | null;
+  // isPaidSubscriber: boolean;
+  // subscription: any | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,7 +35,8 @@ type Subscription = {
 };
 
 export function AuthProvider({ children, initialSession }: AuthProviderProps) {
-  const [user, setUser] = useState<AppUser | null>(
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(
     initialSession?.user
       ? {
           id: initialSession.user.id,
@@ -75,47 +75,46 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
     }
   };
 
-  const checkSubscriptionStatus = async (userId: string) => {
-    if (!userId) {
-      setIsPaidSubscriber(false);
-      setSubscription(null);
-      return;
-    }
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('subscription')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  // const checkSubscriptionStatus = async (userId: string) => {
+  //   if (!userId) {
+  //     setIsPaidSubscriber(false);
+  //     setSubscription(null);
+  //     return;
+  //   }
+  //   try {
+  //     const supabase = createClient();
+  //     const { data, error } = await supabase
+  //       .from('subscription')
+  //       .select('*')
+  //       .eq('user_id', userId)
+  //       .order('created_at', { ascending: false })
+  //       .limit(1)
+  //       .maybeSingle();
 
-      setSubscription(data || null);
+  //     setSubscription(data || null);
 
-      if (data) {
-        const status = data.status;
-        const currentPeriodEnd = data.current_period_end ? new Date(data.current_period_end) : null;
-        const now = new Date();
-        const isActive =
-          (status === 'active' || status === 'trialing') &&
-          (!currentPeriodEnd || currentPeriodEnd > now);
-        setIsPaidSubscriber(isActive);
-      } else {
-        setIsPaidSubscriber(false);
-      }
-    } catch (err) {
-      setIsPaidSubscriber(false);
-      setSubscription(null);
-    }
-  };
+  //     if (data) {
+  //       const status = data.status;
+  //       const currentPeriodEnd = data.current_period_end ? new Date(data.current_period_end) : null;
+  //       const now = new Date();
+  //       const isActive =
+  //         (status === 'active' || status === 'trialing') &&
+  //         (!currentPeriodEnd || currentPeriodEnd > now);
+  //       setIsPaidSubscriber(isActive);
+  //     } else {
+  //       setIsPaidSubscriber(false);
+  //     }
+  //   } catch (err) {
+  //     setIsPaidSubscriber(false);
+  //     setSubscription(null);
+  //   }
+  // };
 
   useEffect(() => {
     // Only check session on client if not hydrated from SSR
     if (!user) {
       const checkSession = async () => {
         try {
-          const supabase = createClient();
           const { data, error } = await supabase.auth.getSession();
           if (error) {
             console.error('Error checking auth session:', error);
@@ -130,7 +129,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
             };
             setUser(appUser);
             await checkOnboardingStatus(appUser.id);
-            await checkSubscriptionStatus(appUser.id);
+            // await checkSubscriptionStatus(appUser.id);
           }
         } catch (err) {
           console.error('[AuthProvider] checkSession error:', err);
@@ -141,10 +140,9 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
     } else {
       // If user is already set from SSR, fetch onboarding/subscription
       checkOnboardingStatus(user.id);
-      checkSubscriptionStatus(user.id);
+      // checkSubscriptionStatus(user.id);
       setLoading(false);
     }
-    const supabase = createClient();
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -158,11 +156,11 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
           };
           setUser(appUser);
           await checkOnboardingStatus(appUser.id);
-          await checkSubscriptionStatus(appUser.id);
+          // await checkSubscriptionStatus(appUser.id);
         } else {
           setUser(null);
-          setIsPaidSubscriber(false);
-          setSubscription(null);
+          // setIsPaidSubscriber(false);
+          // setSubscription(null);
         }
         setLoading(false);
       }
@@ -190,7 +188,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
       };
       setUser(appUser);
       await checkOnboardingStatus(appUser.id);
-      await checkSubscriptionStatus(appUser.id);
+      // await checkSubscriptionStatus(appUser.id);
     }
   };
 
@@ -242,8 +240,8 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
       signUp,
       hasCompletedOnboarding,
       checkOnboardingStatus: () => user ? checkOnboardingStatus(user.id) : Promise.resolve(false),
-      isPaidSubscriber,
-      subscription
+      // isPaidSubscriber,
+      // subscription
     }}>
       {children}
     </AuthContext.Provider>

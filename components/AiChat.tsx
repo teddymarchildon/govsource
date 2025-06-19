@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react';
 import { XMarkIcon, DocumentTextIcon, SparklesIcon, ClockIcon, ScaleIcon } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -97,8 +96,6 @@ export default function AiChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Router state
-  const router = useRouter();
   const [subscribing, setSubscribing] = useState(false);
 
   // Function to handle sending a message to the AI API
