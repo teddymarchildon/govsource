@@ -55,6 +55,7 @@ export default function BillOrLawDetail({
   isLaw = false
 }: BillOrLawDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
+  const [showFullSummary, setShowFullSummary] = useState(false);
   const latestText = texts.length > 0 ? texts[0] : null;
 
   const itemType = isLaw ? 'law' : 'bill';
@@ -62,6 +63,21 @@ export default function BillOrLawDetail({
   const number = isLaw ? `Public Law ${item.law_number || `${item.congress}-${item.number}`}` : `${item.type.toUpperCase()}. ${item.number}`;
   const dateLabel = isLaw ? 'Enacted' : 'Introduced';
   const date = isLaw ? item.law_enacted_date : item.introduced_date;
+
+  // Function to truncate text to 1000 characters
+  const truncateText = (text: string, maxLength: number = 1000) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  // Get the summary text to display
+  const getSummaryText = () => {
+    if (!summary?.text) return '';
+    return showFullSummary ? summary.text : truncateText(summary.text);
+  };
+
+  // Check if summary text needs truncation
+  const needsTruncation = summary?.text && summary.text.length > 1000;
 
   return (
     <div className="container mx-auto px-4 py-8 relative">
@@ -161,8 +177,16 @@ export default function BillOrLawDetail({
               {summary && summary.text ? (
                 <div className="prose max-w-none mb-6">
                   <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
-                    {summary.text}
+                    {getSummaryText()}
                   </div>
+                  {needsTruncation && (
+                    <button
+                      onClick={() => setShowFullSummary(!showFullSummary)}
+                      className="text-blue-500 hover:text-blue-700 text-sm font-medium mt-2"
+                    >
+                      {showFullSummary ? 'See less' : 'See more'}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="text-gray-500 italic">No summary available for this bill.</div>

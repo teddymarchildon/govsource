@@ -336,8 +336,8 @@ export default function ProfilePage() {
                 {cancelLoading ? 'Redirecting...' : 'Subscribe'}
               </button>
             )}
-            {/* Show Cancel Subscription button if user is on paid and selects free */}
-            {subscription?.tier === 'paid' && selectedTier === 'free' && (
+            {/* Show Cancel Subscription button if user is a paid subscriber */}
+            {subscription?.tier === 'paid' && (
               <button
                 onClick={() => setShowCancelModal(true)}
                 className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
