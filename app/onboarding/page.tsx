@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { OnboardingProvider } from '../../contexts/OnboardingContext';
@@ -8,7 +8,7 @@ import OnboardingContainer from '../../components/onboarding/OnboardingContainer
 import { createFreeSubscription } from '../../services/api';
 import { supabase } from '../../utils/supabase/client';
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,7 +20,7 @@ export default function OnboardingPage() {
 
       // Check if this is a new user signup (has newUser=true query param)
       const isNewUser = searchParams.get('newUser') === 'true';
-
+      
       try {
         // Check if user already has a subscription
         const { data: existingSubscription, error: checkError } = await supabase
@@ -70,5 +70,17 @@ export default function OnboardingPage() {
     <OnboardingProvider>
       <OnboardingContainer />
     </OnboardingProvider>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   );
 }
