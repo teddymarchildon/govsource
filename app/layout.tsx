@@ -6,7 +6,7 @@ import Sidebar from '../components/Sidebar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { createClient } from '../lib/supabase-server';
+import { createClient } from '../utils/supabase/server';
 
 const inter = Inter({
   subsets: ['latin'],

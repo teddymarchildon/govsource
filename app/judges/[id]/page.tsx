@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/client';
 import { Judge, CourtOpinion } from '@/types/types';
 import SaveButton from '@/components/SaveButton';
 import Link from 'next/link';

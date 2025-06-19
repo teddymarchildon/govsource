@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/client';
 import { getBillActions } from '@/services/api';
 import BillOrLawDetail from '@/components/BillOrLawDetail';
 

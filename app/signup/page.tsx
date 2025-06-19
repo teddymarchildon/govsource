@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
-import { createClient } from '../../lib/supabase';
+import { createClient } from '../../utils/supabase/client';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');

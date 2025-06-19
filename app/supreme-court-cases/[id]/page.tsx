@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '../../../lib/supabase';
+import { createClient } from '../../../utils/supabase/client';
 import { Cluster } from '../../../types/types';
 import SaveButton from '../../../components/SaveButton';
 import Breadcrumbs from '../../../components/Breadcrumbs';

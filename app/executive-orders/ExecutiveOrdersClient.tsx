@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/client';
 import ExecutiveOrderCard from '@/components/ExecutiveOrderCard';
 import { AgencyDocument } from '@/types/types';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';

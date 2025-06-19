@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AgencyRuleCard from "@/components/AgencyRuleCard";
 import { Agency, AgencyDocument } from "@/types/types";
-import { createClient } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/client";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
 

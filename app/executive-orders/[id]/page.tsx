@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/client';
 import PdfViewer from '@/components/PdfViewer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import SaveButton from '@/components/SaveButton';

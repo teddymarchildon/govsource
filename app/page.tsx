@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { createClient } from '../lib/supabase';
+import { createClient } from '../utils/supabase/client';
 import BillCard from '../components/BillCard';
 import LawCard from '../components/LawCard';
 import { Bill, Congressman, UserPreferences, SavedBill, SavedCongressman, SavedJudge, SavedAgency, AgencyDocument, Law } from '../types/types';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { formatDate } from '@/lib/utils';
+import { formatDate } from '@/utils/utils';
 import SaveButton from '@/components/SaveButton';
 import PdfViewer from '@/components/PdfViewer';
 import Breadcrumbs from './Breadcrumbs';

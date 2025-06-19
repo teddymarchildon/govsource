@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/client";
 import BillCard from "@/components/BillCard";
 import CongressmanSearchSelect, { CongressmanSearchSelectRef } from "@/components/CongressmanSearchSelect";
 import { Bill, Congressman, PolicyArea } from "@/types/types";

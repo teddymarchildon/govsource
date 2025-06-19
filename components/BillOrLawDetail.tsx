@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { formatDate } from '@/lib/utils';
+import { formatDate } from '@/utils/utils';
 import SaveButton from './SaveButton';
 import PdfViewer from './PdfViewer';
 import Breadcrumbs from './Breadcrumbs';

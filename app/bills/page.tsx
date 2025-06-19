@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { createClient } from '@/lib/supabase-server';
+import { createClient } from '@/utils/supabase/server';
 import { Bill } from '@/types/types';
 import { POLICY_AREAS } from '@/constants/policyAreas';
 import type { PolicyArea } from '@/types/types';

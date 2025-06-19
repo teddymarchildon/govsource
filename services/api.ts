@@ -1,4 +1,4 @@
-import { createClient } from '../lib/supabase';
+import { createClient } from '../utils/supabase/client';
 import { Agency, AgencyDocument, Bill, Congressman, Judge, BillText, CongressmanTerm, SavedCongressman, SavedBill, BillSummary } from '../types/types';
 
 // Storage API

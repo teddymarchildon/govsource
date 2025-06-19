@@ -1,7 +1,7 @@
 'use server'
 
 import { Suspense } from 'react';
-import { createClient } from '@/lib/supabase-server';
+import { createClient } from '@/utils/supabase/server';
 import { AgencyDocument } from '@/types/types';
 import ExecutiveOrdersClient  from './ExecutiveOrdersClient';
 

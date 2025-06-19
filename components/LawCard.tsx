@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { formatDate } from '@/lib/utils';
+import { formatDate } from '@/utils/utils';
 import { Law } from '@/types/types';
 
 interface LawCardProps {
