@@ -59,6 +59,7 @@ export default function ExecutiveOrdersClient({
           )
         `)
         .eq('subtype', 'Executive Order')
+        .not('signing_date', 'is', null)
         .order('signing_date', { ascending: sortOrder === 'asc' })
         .range(from, to);
 
@@ -131,12 +132,10 @@ export default function ExecutiveOrdersClient({
       const url = queryString ? `/executive-orders?${queryString}` : '/executive-orders';
       router.push(url, { scroll: false });
 
-      // Only fetch if any filter is applied
-      if (searchQuery || startDate || endDate || sortOrder !== 'desc' || selectedPresident) {
-        setLoading(true);
-        resetScroll();
-        fetchOrders(1);
-      }
+      // Always fetch when any filter changes
+      setLoading(true);
+      resetScroll();
+      fetchOrders(1);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, startDate, endDate, sortOrder, selectedPresident, initialLoadComplete, router]);

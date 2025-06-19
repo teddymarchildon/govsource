@@ -31,6 +31,7 @@ async function fetchInitialOrders() {
         )
       `)
       .eq('subtype', 'Executive Order')
+      .not('signing_date', 'is', null)
       .order('signing_date', { ascending: false })
       .range(0, 49);
 
