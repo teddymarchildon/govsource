@@ -57,7 +57,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           .from('user_usage')
           .select('saw_onboarding_flow_at')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (usageError && usageError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
           console.error('Error fetching user usage:', usageError);
@@ -82,7 +82,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           .from('user_preferences')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (prefsError && prefsError.code !== 'PGRST116') {
           console.error('Error fetching user preferences:', prefsError);
