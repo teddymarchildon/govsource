@@ -170,12 +170,6 @@ export default function Header() {
                 >
                   Sign In
                 </Link>
-                <Link
-                  href="/signup"
-                  className="text-sm font-medium text-white bg-blue-700 hover:bg-blue-700 px-4 py-2 rounded-md"
-                >
-                  Sign Up
-                </Link>
               </div>
             )}
 
@@ -275,13 +269,6 @@ export default function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Sign In
-              </Link>
-              <Link
-                href="/signup"
-                className="text-sm font-medium text-white bg-blue-700 hover:bg-blue-700 px-4 py-2 rounded-md text-center"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sign Up
               </Link>
             </div>
           )}

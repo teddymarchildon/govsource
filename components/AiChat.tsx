@@ -310,7 +310,7 @@ export default function AiChat({
             {!user && !authLoading ? (
               <div className="flex justify-center items-center h-full">
                 <div className="max-w-[85%] rounded-lg p-4 bg-yellow-100 text-yellow-900 text-center text-sm border border-yellow-300">
-                  <p>You must log in to use the AI Assistant.</p>
+                  <p>You must sign in to use the AI Assistant.</p>
                 </div>
               </div>
             ) : !isPaidSubscriber ? (

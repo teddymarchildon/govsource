@@ -1400,6 +1400,19 @@ export const createFreeSubscription = async (userId: string) => {
   }
 };
 
+// Upsert a free subscription - creates if doesn't exist, does nothing if it exists
+export const upsertFreeSubscription = async (userId: string) => {
+  const res = await fetch('/api/upsert-subscription', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to upsert subscription');
+  }
+};
+
 // This is a stub. Actual cancellation should be handled securely on the backend.
 export const cancelSubscription = async (stripeSubscriptionId: string) => {
   const res = await fetch('/api/cancel-subscription', {

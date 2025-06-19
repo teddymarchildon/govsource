@@ -7,13 +7,18 @@ export async function POST(req: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
+
+    // Use upsert to create subscription if it doesn't exist, or do nothing if it exists
     const { error } = await supabase
       .from('subscription')
-      .insert({
+      .upsert({
         user_id: userId,
         status,
         tier,
+      }, {
+        onConflict: 'user_id' // Assuming user_id is unique
       });
+
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -21,4 +26,4 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Unknown error' }, { status: 500 });
   }
-}
+} 

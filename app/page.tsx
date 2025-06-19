@@ -503,15 +503,14 @@ function HomeContent() {
 
       {/* Why Sign Up Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8 border border-gray-200">
-        <h2 className="text-xl font-semibold mb-2 text-gray-900">Sign up to:</h2>
+        <h2 className="text-xl font-semibold mb-2 text-gray-900">Sign in to:</h2>
         <ul className="list-disc pl-5 mb-4 text-gray-700">
           <li>Save and track government information</li>
           <li>Access advanced AI-powered analysis on laws, bills, executive orders, and more</li>
           <li>Get personalized legislative updates (coming soon)</li>
         </ul>
         <div className="flex space-x-3">
-          <Link href="/signup" className="inline-block px-4 py-2 bg-blue-700 text-white rounded-md font-medium hover:bg-blue-700 transition-colors">Sign Up</Link>
-          <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="inline-block px-4 py-2 bg-gray-100 text-blue-700 rounded-md font-medium hover:bg-gray-200 transition-colors">Log In</Link>
+          <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="inline-block px-4 py-2 bg-gray-100 text-blue-700 rounded-md font-medium hover:bg-gray-200 transition-colors">Sign In</Link>
         </div>
       </div>
 

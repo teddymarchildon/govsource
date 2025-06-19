@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { OnboardingProvider } from '../../contexts/OnboardingContext';
 import OnboardingContainer from '../../components/onboarding/OnboardingContainer';
-import { createFreeSubscription } from '../../services/api';
-import { supabase } from '../../utils/supabase/client';
+import { upsertFreeSubscription } from '../../services/api';
 
 function OnboardingContent() {
   const { user, loading } = useAuth();
@@ -14,45 +13,24 @@ function OnboardingContent() {
   const searchParams = useSearchParams();
   const hasAttemptedSubscriptionCreation = useRef(false);
 
-  // Create free subscription for new users when they land on onboarding with newUser=true
+  // Upsert free subscription for users when they land on onboarding
   useEffect(() => {
-    const createSubscriptionForNewUser = async () => {
+    const upsertSubscriptionForUser = async () => {
       if (!user || loading || hasAttemptedSubscriptionCreation.current) return;
-
-      // Check if this is a new user signup (has newUser=true query param)
-      const isNewUser = searchParams.get('newUser') === 'true';
-      
-      // Only proceed if this is actually a new user
-      if (!isNewUser) return;
 
       // Mark that we've attempted to create a subscription
       hasAttemptedSubscriptionCreation.current = true;
       
       try {
-        // Check if user already has a subscription
-        const { data: existingSubscription, error: checkError } = await supabase
-          .from('subscription')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (checkError) {
-          console.error('Error checking existing subscription:', checkError);
-          return;
-        }
-
-        // If no subscription exists, create a free one
-        if (!existingSubscription) {
-          await createFreeSubscription(user.id);
-          console.log('Created free subscription for new user:', user.id);
-        }
+        await upsertFreeSubscription(user.id);
+        console.log('Upserted free subscription for user:', user.id);
       } catch (error) {
-        console.error('Error creating free subscription:', error);
+        console.error('Error upserting free subscription:', error);
       }
     };
 
-    createSubscriptionForNewUser();
-  }, [user, loading]); // Removed searchParams from dependencies
+    upsertSubscriptionForUser();
+  }, [user, loading]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

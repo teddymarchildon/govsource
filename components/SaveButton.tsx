@@ -68,7 +68,7 @@ export default function SaveButton({ itemId, itemType, className = '' }: SaveBut
   const handleToggleSave = async () => {
     if (!user) {
       // TODO: Redirect to login or show login modal
-      alert('Please log in to save items');
+      alert('Please sign in to save items');
       return;
     }
 
