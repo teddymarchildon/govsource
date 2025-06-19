@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: 'http://localhost:3000/onboarding'
+        emailRedirectTo: process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding'
       }
     });
     setLoading(false);

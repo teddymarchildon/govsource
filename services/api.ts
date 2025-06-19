@@ -1387,19 +1387,6 @@ export const getUserPayments = async (userId: string) => {
   return data;
 };
 
-// Create a free subscription row for a new user
-export const createFreeSubscription = async (userId: string) => {
-  const res = await fetch('/api/create-subscription', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId }),
-  });
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error || 'Failed to create subscription');
-  }
-};
-
 // Upsert a free subscription - creates if doesn't exist, does nothing if it exists
 export const upsertFreeSubscription = async (userId: string) => {
   const res = await fetch('/api/upsert-subscription', {
