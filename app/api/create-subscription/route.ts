@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '../../../utils/supabase/server';
+import { supabaseServer as supabase } from '../../../utils/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient()
     const { userId, status = 'active', tier = 'free' } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });

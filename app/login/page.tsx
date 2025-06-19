@@ -21,7 +21,7 @@ function LoginPageInner() {
     const checkAndRedirect = async () => {
       if (user) {
         // Re-check onboarding status to ensure it's up to date
-        const completed = await checkOnboardingStatus(user.id);
+        const completed = await checkOnboardingStatus();
 
         if (!completed) {
           // Redirect to onboarding, passing along the redirect param if present

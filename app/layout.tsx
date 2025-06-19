@@ -6,7 +6,6 @@ import Sidebar from '../components/Sidebar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { createClient } from '../utils/supabase/server';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -41,17 +40,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // SSR: fetch session and pass to AuthProvider
-  const supabase = await createClient();
-
-  const {
-    data: { session: initialSession },
-  } = await supabase.auth.getSession();
 
   return (
     <html lang="en" className={`${inter.variable}`}>
       <body className={`${inter.className} font-sans`}>
-        <AuthProvider initialSession={initialSession}>
+        <AuthProvider>
           <div className="min-h-screen bg-gray-50">
             <Header />
             <Sidebar />

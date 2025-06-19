@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import { Judge, CourtOpinion } from '@/types/types';
 import SaveButton from '@/components/SaveButton';
 import Link from 'next/link';
@@ -16,7 +16,7 @@ export default function JudgeDetailPage() {
   const [judge, setJudge] = useState<Judge | null>(null);
   const [opinions, setOpinions] = useState<CourtOpinion[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+    
   useEffect(() => {
     const fetchJudgeDetails = async () => {
       setLoading(true);

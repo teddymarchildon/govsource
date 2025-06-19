@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import ExecutiveOrderCard from '@/components/ExecutiveOrderCard';
 import { AgencyDocument } from '@/types/types';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
@@ -34,7 +34,6 @@ export default function ExecutiveOrdersClient({
   const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
   const [presidents] = useState<string[]>(initialPresidents);
   const [selectedPresident, setSelectedPresident] = useState(currentPresident);
-  const supabase = createClient();
 
   const fetchOrders = async (page: number) => {
     if (page === 1) {

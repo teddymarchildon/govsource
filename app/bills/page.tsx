@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { createClient } from '@/utils/supabase/server';
+import { supabaseServer as supabase } from '@/utils/supabase/server';
 import { Bill } from '@/types/types';
 import { POLICY_AREAS } from '@/constants/policyAreas';
 import type { PolicyArea } from '@/types/types';
@@ -8,7 +8,6 @@ import BillsClient from './BillsClient';
 // Server Component
 async function fetchInitialBills() {
   try {
-    const supabase = await createClient()
     const { data, error } = await supabase
       .from('bill')
       .select(`

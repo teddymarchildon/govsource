@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import LawCard from '@/components/LawCard';
 import CongressmanSearchSelect, { CongressmanSearchSelectRef } from '@/components/CongressmanSearchSelect';
 import { Law, Congressman, PolicyArea } from '@/types/types';
@@ -37,7 +37,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   // Fetch sponsor details if sponsor_id is in URL
   useEffect(() => {
     const fetchSponsor = async () => {
-      const supabase = createClient();
+        
       if (currentSponsorId && !selectedSponsor) {
         try {
           const { data, error } = await supabase
@@ -60,7 +60,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   }, [currentSponsorId, selectedSponsor]);
 
   const fetchLaws = async (page: number) => {
-    const supabase = createClient();
+      
     if (page === 1) {
       setLaws([]);
     }

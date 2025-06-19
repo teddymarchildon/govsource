@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { createClient } from '../utils/supabase/client';
+import { supabase } from '../utils/supabase/client';
 import { Congressman } from '../types/types';
 
 interface CongressmanSearchSelectProps {
@@ -41,7 +41,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
   // Fetch congressman by ID if selectedId is provided
   useEffect(() => {
     const fetchSelectedCongressman = async () => {
-      const supabase = createClient();
+        
       if (selectedId) {
         setLoading(true);
         try {
@@ -70,7 +70,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
   // Search for congressmen when the search term changes
   useEffect(() => {
     const fetchCongressmen = async () => {
-      const supabase = createClient();
+        
       if (search.length < 2) {
         setCongressmen([]);
         return;

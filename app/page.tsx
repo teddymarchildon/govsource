@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { createClient } from '../utils/supabase/client';
+import { supabase } from '../utils/supabase/client';
 import BillCard from '../components/BillCard';
 import LawCard from '../components/LawCard';
 import { Bill, Congressman, UserPreferences, SavedBill, SavedCongressman, SavedJudge, SavedAgency, AgencyDocument, Law } from '../types/types';
@@ -140,7 +140,6 @@ function HomeContent() {
   // Fetch recent legislation in user's policy areas
   useEffect(() => {
     const fetchRecentLegislation = async () => {
-      const supabase = createClient();
       if (!user || !userPreferences || !userPreferences.policy_areas || userPreferences.policy_areas.length === 0) return;
 
       setRecentLegislationLoading(true);

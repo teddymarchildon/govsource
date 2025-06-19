@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '../../utils/supabase/client';
+import { supabase } from '../../utils/supabase/client';
 import CourtCaseCard from '../../components/CourtCaseCard';
 import { Cluster, Judge } from '../../types/types';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
@@ -30,7 +30,7 @@ function SupremeCourtCasesContent() {
   const [endDate, setEndDate] = useState(currentEndDate);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const supabase = createClient();
+    
   // Fetch judges for the dropdown
   useEffect(() => {
     const fetchJudges = async () => {

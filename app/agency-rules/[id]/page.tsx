@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import AgencyRuleDetail from '@/components/AgencyRuleDetail';
 import { AgencyDocument } from '@/types/types';
 
@@ -10,7 +10,6 @@ export default function AgencyRuleDetailPage() {
   const { id } = useParams();
   const [rule, setRule] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchRule = async () => {
