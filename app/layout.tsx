@@ -43,6 +43,8 @@ export default async function RootLayout({
 }>) {
   // SSR: fetch session and pass to AuthProvider
   const supabase = await createClient();
+  console.log('supabase AUTH', (await supabase.auth.getUser()).data);
+
   const {
     data: { session: initialSession },
   } = await supabase.auth.getSession();
