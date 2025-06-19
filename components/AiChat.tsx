@@ -220,14 +220,14 @@ export default function AiChat({
           {!htmlFilePath && (
             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 text-xs border-b border-blue-100">
               <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
-              <span>Document text is not available. The AI will also search the web to find additional information.</span>
+              <span>Document text is not available. The assistant will search the web to find additional information.</span>
             </div>
           )}
           {/* Info indicator if htmlFilePath is defined */}
           {htmlFilePath && (
             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 text-xs border-b border-blue-100">
             <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
-            <span>The AI will only use the contents of this document. No web searching or other sources are included.</span>
+            <span>The AI will objectively analyze the contents of this document. No other sources are considered.</span>
           </div>
         )}
 
