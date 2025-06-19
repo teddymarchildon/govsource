@@ -3,7 +3,7 @@ import { supabaseServer as supabase } from '../../../utils/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, status = 'active', tier = 'free' } = await req.json();
+    const { userId, status = 'active' } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
@@ -14,7 +14,6 @@ export async function POST(req: NextRequest) {
       .upsert({
         user_id: userId,
         status,
-        tier,
       }, {
         onConflict: 'user_id' // Assuming user_id is unique
       });
