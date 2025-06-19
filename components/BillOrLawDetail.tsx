@@ -65,7 +65,7 @@ export default function BillOrLawDetail({
   const date = isLaw ? item.law_enacted_date : item.introduced_date;
 
   // Function to truncate text to 1000 characters
-  const truncateText = (text: string, maxLength: number = 1000) => {
+  const truncateText = (text: string, maxLength = 1000) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
