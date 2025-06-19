@@ -1,14 +1,51 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { OnboardingProvider } from '../../contexts/OnboardingContext';
 import OnboardingContainer from '../../components/onboarding/OnboardingContainer';
+import { createFreeSubscription } from '../../services/api';
+import { supabase } from '../../utils/supabase/client';
 
 export default function OnboardingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Create free subscription for new users when they land on onboarding with newUser=true
+  useEffect(() => {
+    const createSubscriptionForNewUser = async () => {
+      if (!user || loading) return;
+
+      // Check if this is a new user signup (has newUser=true query param)
+      const isNewUser = searchParams.get('newUser') === 'true';
+
+      try {
+        // Check if user already has a subscription
+        const { data: existingSubscription, error: checkError } = await supabase
+          .from('subscription')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('Error checking existing subscription:', checkError);
+          return;
+        }
+
+        // If no subscription exists, create a free one
+        if (!existingSubscription && isNewUser) {
+          await createFreeSubscription(user.id);
+          console.log('Created free subscription for new user:', user.id);
+        }
+      } catch (error) {
+        console.error('Error creating free subscription:', error);
+      }
+    };
+
+    createSubscriptionForNewUser();
+  }, [user, loading, searchParams]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

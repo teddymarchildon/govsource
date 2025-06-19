@@ -66,13 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscription(data || null);
 
       if (data) {
-        const status = data.status;
-        const currentPeriodEnd = data.current_period_end ? new Date(data.current_period_end) : null;
-        const now = new Date();
-        const isActive =
-          (status === 'active' || status === 'trialing') &&
-          (!currentPeriodEnd || currentPeriodEnd > now);
-        setIsPaidSubscriber(isActive);
+        const tier = data.tier;
+        setIsPaidSubscriber(tier === 'paid');
       } else {
         setIsPaidSubscriber(false);
       }
@@ -157,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: 'https://govsrc.com/onboarding'
+        emailRedirectTo: 'https://govsrc.com/onboarding?newUser=true'
       }
     });
     setLoading(false);
