@@ -498,7 +498,7 @@ function HomeContent() {
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-700 to-indigo-700 rounded-lg shadow-md p-6 mb-8 text-white">
         <h1 className="text-2xl font-bold mb-2">Welcome to GovSource!</h1>
-        <p className="mb-4">Discover, track, and understand US federal legislation, court cases, and more.</p>
+        <p className="mb-4">Use AI to discover, track, and understand US federal legislation, court cases, and more.</p>
       </div>
 
       {/* Why Sign Up Section */}
