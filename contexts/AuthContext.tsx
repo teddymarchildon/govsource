@@ -8,9 +8,8 @@ import type { User as AppUser } from '../types/types';
 type AuthContextType = {
   user: AppUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signInWithMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
   hasCompletedOnboarding: boolean;
   checkOnboardingStatus: () => Promise<boolean>;
   isPaidSubscriber: boolean;
@@ -132,33 +131,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signInWithMagicLink = async (email: string) => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) throw error;
-
-    // Check onboarding status after sign in
-    await checkOnboardingStatus();
-    if (user) await checkSubscriptionStatus(user.id);
-  };
-
-  const signUp = async (email: string, password: string) => {
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
-        emailRedirectTo: 'https://govsrc.com/onboarding?newUser=true'
+        emailRedirectTo: process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding'
       }
     });
     setLoading(false);
     if (error) throw error;
-
-    // New users haven't completed onboarding
-    setHasCompletedOnboarding(false);
-    setIsPaidSubscriber(false);
-    setSubscription(null);
   };
 
   const signOut = async () => {
@@ -174,9 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       loading,
-      signIn,
+      signInWithMagicLink,
       signOut,
-      signUp,
       hasCompletedOnboarding,
       checkOnboardingStatus,
       isPaidSubscriber,
