@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { OnboardingProvider } from '../../contexts/OnboardingContext';
@@ -12,14 +12,21 @@ function OnboardingContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const hasAttemptedSubscriptionCreation = useRef(false);
 
   // Create free subscription for new users when they land on onboarding with newUser=true
   useEffect(() => {
     const createSubscriptionForNewUser = async () => {
-      if (!user || loading) return;
+      if (!user || loading || hasAttemptedSubscriptionCreation.current) return;
 
       // Check if this is a new user signup (has newUser=true query param)
       const isNewUser = searchParams.get('newUser') === 'true';
+      
+      // Only proceed if this is actually a new user
+      if (!isNewUser) return;
+
+      // Mark that we've attempted to create a subscription
+      hasAttemptedSubscriptionCreation.current = true;
       
       try {
         // Check if user already has a subscription
@@ -35,7 +42,7 @@ function OnboardingContent() {
         }
 
         // If no subscription exists, create a free one
-        if (!existingSubscription && isNewUser) {
+        if (!existingSubscription) {
           await createFreeSubscription(user.id);
           console.log('Created free subscription for new user:', user.id);
         }
@@ -45,7 +52,7 @@ function OnboardingContent() {
     };
 
     createSubscriptionForNewUser();
-  }, [user, loading, searchParams]);
+  }, [user, loading]); // Removed searchParams from dependencies
 
   // Redirect to login if not authenticated
   useEffect(() => {
