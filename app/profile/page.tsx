@@ -74,7 +74,6 @@ export default function ProfilePage() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const pathname = usePathname();
-  const [selectedTier, setSelectedTier] = useState<'free' | 'paid' | null>(null);
 
   useEffect(() => {
     const fetchSavedItems = async () => {
@@ -128,16 +127,6 @@ export default function ProfilePage() {
       if (user) fetchSubscription();
     }
   }, [user, loading]);
-
-  // Only update selectedTier when subscription.tier changes and only if needed
-  useEffect(() => {
-    if (subscription?.tier && selectedTier !== subscription.tier) {
-      setSelectedTier(subscription.tier);
-    }
-    if (!subscription?.tier && selectedTier !== 'free') {
-      setSelectedTier('free');
-    }
-  }, [subscription?.tier]);
 
   const handleDeleteSavedBill = async (savedBill: SavedBill) => {
     if (!user) return;
@@ -262,29 +251,36 @@ export default function ProfilePage() {
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           {/* Free Tier Card */}
           <div
-            className={`flex-1 border rounded-lg p-6 cursor-pointer transition-all relative ${selectedTier === 'free' ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-gray-50 hover:ring-1 hover:ring-blue-300'}`}
-            onClick={() => setSelectedTier('free')}
+            className={`flex-1 flex flex-col border rounded-lg p-6 transition-all relative ${
+              !subscription || subscription.tier === 'free'
+                ? 'ring-2 ring-blue-500 bg-blue-50'
+                : 'bg-gray-50'
+            }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-bold text-gray-700">Free Tier</h3>
-              {subscription?.tier === 'free' && (
+              <h3 className="text-xl font-semibold text-gray-700">Basic</h3>
+              {(!subscription || subscription.tier === 'free') && (
                 <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
                   <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />
                   Current
                 </span>
               )}
             </div>
-            <ul className="list-disc pl-5 text-gray-700">
+            <p className="text-3xl font-bold mb-4">Free</p>
+            <ul className="list-disc pl-5 text-gray-700 mb-4">
               <li>Access to GovSource&apos;s information</li>
             </ul>
           </div>
           {/* Paid Tier Card */}
           <div
-            className={`flex-1 border rounded-lg p-6 cursor-pointer transition-all relative ${selectedTier === 'paid' ? 'ring-2 ring-purple-500 bg-purple-50' : 'bg-purple-50 hover:ring-1 hover:ring-purple-300'}`}
-            onClick={() => setSelectedTier('paid')}
+            className={`flex-1 flex flex-col border rounded-lg p-6 transition-all relative ${
+              subscription?.tier === 'paid'
+                ? 'ring-2 ring-purple-500 bg-purple-50'
+                : 'bg-purple-50'
+            }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-bold text-purple-700">Paid Tier ($4.99/month)</h3>
+              <h3 className="text-xl font-semibold text-purple-700">Pro</h3>
               {subscription?.tier === 'paid' && (
                 <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
                   <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />
@@ -292,62 +288,67 @@ export default function ProfilePage() {
                 </span>
               )}
             </div>
-            <ul className="list-disc pl-5 text-purple-800">
+            <p className="text-3xl font-bold mb-4">$4.99<span className="text-lg font-medium text-gray-500">/month</span></p>
+            <ul className="list-disc pl-5 text-purple-800 mb-4">
               <li>Access to AI</li>
               <li>No ads</li>
               <li>Notifications (coming soon)</li>
               <li>Digest (coming soon)</li>
             </ul>
+            
+            {/* Action Button in Paid Plan Box */}
+            {subLoading ? (
+              <div className="text-sm text-purple-600">Loading...</div>
+            ) : (
+              <div className="mt-auto pt-4">
+                {/* Show Subscribe button if user is on free plan */}
+                {(!subscription || subscription.tier === 'free') && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!user) return;
+                      setCancelLoading(true);
+                      try {
+                        const res = await fetch('/api/create-checkout-session', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: user.id }),
+                        });
+                        const data = await res.json();
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else {
+                          alert('Failed to create checkout session.');
+                        }
+                      } catch (err) {
+                        alert('Failed to create checkout session.');
+                      } finally {
+                        setCancelLoading(false);
+                      }
+                    }}
+                    className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50"
+                    disabled={cancelLoading}
+                  >
+                    {cancelLoading ? 'Redirecting...' : 'Subscribe'}
+                  </button>
+                )}
+                {/* Show Cancel Subscription button if user is on paid plan */}
+                {subscription?.tier === 'paid' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCancelModal(true);
+                    }}
+                    className="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                    disabled={cancelLoading}
+                  >
+                    {cancelLoading ? 'Cancelling...' : 'Cancel Subscription'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Tier Action Buttons */}
-        {subLoading ? (
-          <div>Loading subscription info...</div>
-        ) : (
-          <div className="text-center mb-4">
-            {/* Show Subscribe button if user is on free and selects paid */}
-            {subscription?.tier === 'free' && selectedTier === 'paid' && (
-              <button
-                onClick={async () => {
-                  if (!user) return;
-                  setCancelLoading(true);
-                  try {
-                    const res = await fetch('/api/create-checkout-session', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ userId: user.id }),
-                    });
-                    const data = await res.json();
-                    if (data.url) {
-                      window.location.href = data.url;
-                    } else {
-                      alert('Failed to create checkout session.');
-                    }
-                  } catch (err) {
-                    alert('Failed to create checkout session.');
-                  } finally {
-                    setCancelLoading(false);
-                  }
-                }}
-                className="inline-block bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50"
-                disabled={cancelLoading}
-              >
-                {cancelLoading ? 'Redirecting...' : 'Subscribe'}
-              </button>
-            )}
-            {/* Show Cancel Subscription button if user is a paid subscriber */}
-            {subscription?.tier === 'paid' && (
-              <button
-                onClick={() => setShowCancelModal(true)}
-                className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
-                disabled={cancelLoading}
-              >
-                {cancelLoading ? 'Cancelling...' : 'Cancel Subscription'}
-              </button>
-            )}
-          </div>
-        )}
 
         {/* Current Period End and Cancel Notice */}
         {subscription && (
