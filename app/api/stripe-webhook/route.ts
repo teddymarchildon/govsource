@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  // Upsert subscription
-  async function upsertSubscription(subscription: any) {
+  // Update subscription
+  async function updateSubscription(subscription: any) {
     // Find user by stripe_customer_id
     const { data: userSub } = await supabase
       .from('subscription')
@@ -27,17 +27,17 @@ export async function POST(req: NextRequest) {
       .eq('stripe_customer_id', subscription.customer)
       .maybeSingle();
 
-    await supabase.from('subscription').upsert({
-      stripe_customer_id: subscription.customer,
-      stripe_subscription_id: subscription.id,
-      stripe_price_id: subscription.items?.data?.[0]?.price?.id,
-      status: subscription.status,
-      current_period_end: subscription.current_period?.end
-        ? new Date(subscription.current_period.end * 1000).toISOString()
-        : null,
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      user_id: userSub?.user_id,
-    }, { onConflict: 'stripe_subscription_id' });
+    if (userSub?.user_id) {
+      await supabase.from('subscription').update({
+        stripe_subscription_id: subscription.id,
+        stripe_price_id: subscription.items?.data?.[0]?.price?.id,
+        status: subscription.status,
+        current_period_end: subscription.current_period?.end
+          ? new Date(subscription.current_period.end * 1000).toISOString()
+          : null,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+      }).eq('user_id', userSub.user_id);
+    }
   }
 
   // Upsert payment
@@ -71,15 +71,14 @@ export async function POST(req: NextRequest) {
         const userId = session.client_reference_id;
         const stripeCustomerId = session.customer;
         if (userId && stripeCustomerId) {
-          // Upsert the mapping in the subscription table
-          await supabase.from('subscription').upsert({
-            user_id: userId,
+          // Update the existing subscription row
+          await supabase.from('subscription').update({
             stripe_customer_id: stripeCustomerId,
             stripe_subscription_id: session.subscription,
             status: 'active',
             cancel_at_period_end: false,
             tier: 'paid',
-          }, { onConflict: 'stripe_customer_id' });
+          }).eq('user_id', userId);
         }
         break;
       }
@@ -87,7 +86,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        await upsertSubscription(subscription);
+        await updateSubscription(subscription);
         break;
       }
       case 'invoice.paid':
