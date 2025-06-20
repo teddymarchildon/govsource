@@ -59,7 +59,7 @@ function LoginPageInner() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">Sign In</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">Sign in to GovSource</h1>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -69,7 +69,7 @@ function LoginPageInner() {
 
         {showConfirmNotice && (
           <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
-            Check your email for a link to sign in. Click the link to continue.
+            Check your email for a link to sign in. Click the link to continue. It will take you back here.
           </div>
         )}
 
@@ -85,6 +85,7 @@ function LoginPageInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Your email address"
                 required
               />
             </div>
