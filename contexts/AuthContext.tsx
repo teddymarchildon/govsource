@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('user_usage')
         .select('saw_onboarding_flow_at')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
         console.error('Error checking onboarding status:', error);
