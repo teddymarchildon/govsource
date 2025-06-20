@@ -132,14 +132,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithMagicLink = async (email: string) => {
-    setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding'
       }
     });
-    setLoading(false);
     if (error) throw error;
   };
 
