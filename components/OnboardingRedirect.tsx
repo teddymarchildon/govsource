@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useOnboarding } from '../contexts/OnboardingContext';
+import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 
 interface OnboardingRedirectProps {
@@ -10,16 +11,22 @@ interface OnboardingRedirectProps {
 }
 
 export default function OnboardingRedirect({ children }: OnboardingRedirectProps) {
-  const { userPreferences, isLoading } = useOnboarding();
+  const { user, loading: authLoading } = useAuth();
+  const { userPreferences, isLoading: onboardingLoading } = useOnboarding();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // If we're not loading, and onboarding is not completed, and we're not on the onboarding or login page
-    if (!isLoading && !userPreferences.onboarding_completed && pathname !== '/onboarding' && pathname !== '/login') {
+    // Only redirect if a user is logged in but hasn't completed onboarding
+    const shouldRedirect = !authLoading && user && !onboardingLoading && !userPreferences.onboarding_completed;
+
+    if (shouldRedirect && pathname !== '/onboarding' && pathname !== '/login') {
       router.push('/onboarding');
     }
-  }, [isLoading, userPreferences.onboarding_completed, pathname, router]);
+  }, [authLoading, user, onboardingLoading, userPreferences.onboarding_completed, pathname, router]);
+
+  // The page is loading if either auth or onboarding state is loading
+  const isLoading = authLoading || onboardingLoading;
 
   if (isLoading) {
     return (
@@ -29,8 +36,9 @@ export default function OnboardingRedirect({ children }: OnboardingRedirectProps
     );
   }
 
-  // If on a page other than onboarding/login and onboarding is not complete, show loading spinner while redirecting
-  if (pathname !== '/onboarding' && pathname !== '/login' && !userPreferences.onboarding_completed) {
+  // If a logged-in user hasn't completed onboarding, show a spinner while redirecting
+  // This prevents flashing the page content before the redirect happens
+  if (user && !userPreferences.onboarding_completed && pathname !== '/onboarding' && pathname !== '/login') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner />
