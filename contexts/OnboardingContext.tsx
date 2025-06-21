@@ -40,7 +40,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
-
   const totalSteps = 2; // Total number of onboarding steps (states and policy areas)
 
   // Check if user has already completed onboarding
@@ -58,21 +57,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           .select('saw_onboarding_flow_at')
           .eq('user_id', user.id)
           .maybeSingle();
-
+        
         if (usageError && usageError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
           console.error('Error fetching user usage:', usageError);
         }
 
-        // If user has seen onboarding, redirect to home
-        if (usageData && usageData.saw_onboarding_flow_at) {
+        const completed = !!(usageData && usageData.saw_onboarding_flow_at);
+
+        if (completed) {
           setUserPreferences(prev => ({
             ...prev,
+            user_id: user.id,
             onboarding_completed: true
           }));
-
-          if (window.location.pathname.includes('/onboarding')) {
-            router.push('/');
-          }
           setIsLoading(false);
           return;
         }
@@ -94,7 +91,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
             user_id: prefsData.user_id || user.id,
             states: prefsData.states || [],
             policy_areas: prefsData.policy_areas || [],
-            onboarding_completed: false // Still show onboarding if saw_onboarding_flow_at is null
+            onboarding_completed: false
           });
         } else if (user) {
           // If no preferences exist yet, set user_id

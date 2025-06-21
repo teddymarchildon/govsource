@@ -10,8 +10,6 @@ type AuthContextType = {
   loading: boolean;
   signInWithMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  hasCompletedOnboarding: boolean;
-  checkOnboardingStatus: () => Promise<boolean>;
   isPaidSubscriber: boolean;
   subscription: any | null;
 };
@@ -21,35 +19,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
   const [isPaidSubscriber, setIsPaidSubscriber] = useState(false);
   const [subscription, setSubscription] = useState<any | null>(null);
-
-  const checkOnboardingStatus = async (): Promise<boolean> => {
-    if (!user) return false;
-
-    try {
-      // Check user_usage table for saw_onboarding_flow_at
-      const { data, error } = await supabase
-        .from('user_usage')
-        .select('saw_onboarding_flow_at')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-        console.error('Error checking onboarding status:', error);
-        return false;
-      }
-
-      // User has completed onboarding if saw_onboarding_flow_at is not null
-      const completed = !!(data && data.saw_onboarding_flow_at);
-      setHasCompletedOnboarding(completed);
-      return completed;
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-      return false;
-    }
-  };
 
   // Check if the user is a paid subscriber
   const checkSubscriptionStatus = async (userId: string) => {
@@ -90,8 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
           confirmed_at: (supaUser as any).confirmed_at ?? null,
         });
-        // Check onboarding status when user is set
-        await checkOnboardingStatus();
         await checkSubscriptionStatus(supaUser.id);
       }
 
@@ -113,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           // Check onboarding status when auth state changes
           if (event === 'SIGNED_IN') {
-            await checkOnboardingStatus();
+            await checkSubscriptionStatus(supaUser.id);
           } else {
             await checkSubscriptionStatus(supaUser.id);
           }
@@ -156,8 +125,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithMagicLink,
       signOut,
-      hasCompletedOnboarding,
-      checkOnboardingStatus,
       isPaidSubscriber,
       subscription
     }}>

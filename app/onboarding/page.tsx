@@ -3,7 +3,6 @@
 import { useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
-import { OnboardingProvider } from '../../contexts/OnboardingContext';
 import OnboardingContainer from '../../components/onboarding/OnboardingContainer';
 import { upsertFreeSubscription } from '../../services/api';
 
@@ -23,7 +22,6 @@ function OnboardingContent() {
       
       try {
         await upsertFreeSubscription(user.id);
-        console.log('Upserted free subscription for user:', user.id);
       } catch (error) {
         console.error('Error upserting free subscription:', error);
       }
@@ -52,9 +50,7 @@ function OnboardingContent() {
   }
 
   return (
-    <OnboardingProvider>
       <OnboardingContainer />
-    </OnboardingProvider>
   );
 }
 
