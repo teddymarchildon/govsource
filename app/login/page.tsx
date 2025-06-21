@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 function LoginPageInner() {
   const [email, setEmail] = useState('');
@@ -11,30 +12,24 @@ function LoginPageInner() {
   const [showConfirmNotice, setShowConfirmNotice] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get('redirect') || '/profile';
-  const { signInWithMagicLink, hasCompletedOnboarding, user, checkOnboardingStatus } = useAuth();
+  const redirectPath = searchParams.get('redirect') || '/';
+  const { signInWithMagicLink, user, loading: isAuthLoading } = useAuth();
+  const { userPreferences, isLoading: isOnboardingLoading } = useOnboarding();
 
-  // Check if user has completed onboarding when they're authenticated
+  // Redirect if user is already logged in
   useEffect(() => {
-    const checkAndRedirect = async () => {
-      if (user) {
-        // Re-check onboarding status to ensure it's up to date
-        const completed = await checkOnboardingStatus();
-
-        if (!completed) {
-          // Redirect to onboarding, passing along the redirect param if present
-          router.push(`/onboarding${redirectPath ? `?redirect=${encodeURIComponent(redirectPath)}` : ''}`);
-        } else {
-          // Otherwise redirect to the original page or profile
-          router.push(redirectPath);
-        }
+    // Wait for auth and onboarding states to be loaded
+    if (!isAuthLoading && user && !isOnboardingLoading) {
+      if (!userPreferences.onboarding_completed) {
+        // Redirect to onboarding, preserving the original redirect path
+        const onboardingUrl = `/onboarding${redirectPath !== '/' ? `?redirect=${encodeURIComponent(redirectPath)}` : ''}`;
+        router.push(onboardingUrl);
+      } else {
+        // Onboarding is complete, redirect to the originally intended path or homepage
+        router.push(redirectPath);
       }
-    };
-
-    if (user) {
-      checkAndRedirect();
     }
-  }, [user, hasCompletedOnboarding, checkOnboardingStatus, router, redirectPath]);
+  }, [user, isAuthLoading, userPreferences.onboarding_completed, isOnboardingLoading, router, redirectPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
