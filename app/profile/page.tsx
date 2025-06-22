@@ -24,6 +24,7 @@ import { usePathname } from 'next/navigation';
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
 import { Button } from '../../components/ui/button';
 import { BookmarkMinus } from 'lucide-react';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 function ConfirmModal({ open, onConfirm, onCancel, loading }: {
   open: boolean;
@@ -68,7 +69,6 @@ export default function ProfilePage() {
   const [savedAgencyDocuments, setSavedAgencyDocuments] = useState<SavedAgencyDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const pathname = usePathname();
@@ -189,7 +189,7 @@ export default function ProfilePage() {
   if (loading || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-xl">Loading...</div>
+        <LoadingIndicator size="large" />
       </div>
     );
   }
@@ -279,7 +279,9 @@ export default function ProfilePage() {
         </div>
 
         {loading ? (
-          <div className="text-sm text-purple-600">Loading...</div>
+          <div className="text-sm text-purple-600">
+            <LoadingIndicator size="small" />
+          </div>
         ) : isPaidSubscriber ? (
           <div className="mt-6">
             <div className="bg-gray-50 rounded-lg p-4">

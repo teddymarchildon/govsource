@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { supabase } from '../utils/supabase/client';
 import { Congressman } from '../types/types';
+import LoadingIndicator from './ui/LoadingIndicator';
 
 interface CongressmanSearchSelectProps {
   onSelect: (congressman: Congressman | null) => void;
@@ -171,7 +172,9 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
       {isOpen && !selected && (
         <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
           {loading ? (
-            <div className="p-2 text-center text-gray-500">Loading...</div>
+            <div className="p-2 text-center text-gray-500">
+              <LoadingIndicator size="small" />
+            </div>
           ) : congressmen.length > 0 ? (
             <ul>
               {congressmen.map((congressman) => (

@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { createClient } from '@/utils/supabase/server';
 import AgencyRulesClient from './AgencyRulesClient';
 import { Agency, AgencyDocument } from '@/types/types';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 // Server-side fetch for initial rules
 async function fetchInitialRules() {
@@ -64,7 +65,7 @@ export default async function AgencyRulesPage() {
 
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <div className="text-xl">Loading...</div>
+      <LoadingIndicator size="large" />
     </div>}>
       <AgencyRulesClient
         initialRules={initialRules}

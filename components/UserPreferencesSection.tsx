@@ -12,8 +12,8 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import LoadingSpinner from './LoadingSpinner';
 import { XIcon } from 'lucide-react';
+import LoadingIndicator from './ui/LoadingIndicator';
 
 const UserPreferencesSection = () => {
   const { user } = useAuth();
@@ -114,7 +114,7 @@ const UserPreferencesSection = () => {
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center h-32">
-            <LoadingSpinner />
+            <LoadingIndicator size="large" />
           </div>
         </CardContent>
       </Card>

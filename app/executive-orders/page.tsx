@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { createClient } from '@/utils/supabase/server';
 import { AgencyDocument } from '@/types/types';
 import ExecutiveOrdersClient  from './ExecutiveOrdersClient';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 // Server Component
 async function fetchInitialOrders() {
@@ -84,7 +85,7 @@ export default async function ExecutiveOrdersPage() {
 
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <div className="text-xl">Loading...</div>
+      <LoadingIndicator size="large" />
     </div>}>
       <ExecutiveOrdersClient
         initialOrders={initialOrders}

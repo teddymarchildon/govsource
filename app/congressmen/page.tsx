@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 export default function CongressmenPage() {
   const [congressmen, setCongressmen] = useState<Congressman[]>([]);
@@ -214,7 +215,7 @@ export default function CongressmenPage() {
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       ) : (
         <>

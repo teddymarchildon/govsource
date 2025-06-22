@@ -8,6 +8,7 @@ import SaveButton from '@/components/SaveButton';
 import Link from 'next/link';
 import { getCourtOpinions } from '@/services/api';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 export default function JudgeDetailPage() {
   const params = useParams();
@@ -54,7 +55,7 @@ export default function JudgeDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       </div>
     );

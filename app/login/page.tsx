@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 function LoginPageInner() {
   const [email, setEmail] = useState('');
@@ -118,7 +119,9 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex justify-center items-center h-64">
+      <LoadingIndicator size="large" />
+    </div>}>
       <OnboardingProvider>
         <LoginPageInner />
       </OnboardingProvider>

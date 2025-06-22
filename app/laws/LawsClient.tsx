@@ -298,7 +298,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       ) : (
         <>

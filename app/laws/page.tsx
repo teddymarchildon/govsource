@@ -6,6 +6,7 @@ import { Law } from '@/types/types';
 import { POLICY_AREAS } from '@/constants/policyAreas';
 import type { PolicyArea } from '@/types/types';
 import LawsClient from './LawsClient';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 // Server Component
 async function fetchInitialLaws() {
@@ -45,7 +46,7 @@ export default async function LawsPage() {
 
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <div className="text-xl">Loading...</div>
+      <LoadingIndicator size="large" />
     </div>}>
       <LawsClient
         initialLaws={initialLaws}

@@ -7,6 +7,7 @@ import BillCard from '../../../components/BillCard';
 import Breadcrumbs from '../../../components/Breadcrumbs';
 import { Bill, Congressman, CongressmanTerm } from '../../../types/types';
 import SaveButton from '../../../components/SaveButton';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 type TabType = 'bills' | 'terms' | 'statistics';
 
@@ -186,7 +187,7 @@ export default function CongressmanDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       </div>
     );
@@ -265,7 +266,7 @@ export default function CongressmanDetailPage() {
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       ) : congressman ? (
         <div>

@@ -10,6 +10,7 @@ import Breadcrumbs from '../../../components/Breadcrumbs';
 import PdfViewer from '../../../components/PdfViewer';
 import AiChat from '../../../components/AiChat';
 import { AuthProvider } from '@/contexts/AuthContext';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 export default function SupremeCourtCaseDetailPage() {
   const params = useParams();
@@ -82,7 +83,7 @@ export default function SupremeCourtCaseDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       </div>
     );

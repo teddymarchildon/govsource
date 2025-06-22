@@ -8,6 +8,7 @@ import { Judge } from '@/types/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 function JudgesContent() {
   const router = useRouter();
@@ -121,7 +122,7 @@ function JudgesContent() {
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       ) : (
         <>
@@ -148,7 +149,7 @@ function JudgesContent() {
 export default function JudgesPage() {
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <div className="text-xl">Loading...</div>
+      <LoadingIndicator size="large" />
     </div>}>
       <JudgesContent />
     </Suspense>

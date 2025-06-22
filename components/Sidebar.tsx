@@ -17,6 +17,7 @@ import {
   Briefcase,
   Menu,
 } from 'lucide-react';
+import LoadingIndicator from './ui/LoadingIndicator';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -284,7 +285,9 @@ export default function Sidebar() {
           <div className="mb-6">
             <h3 className="text-xs uppercase font-semibold text-gray-500 mb-3">WATCHING</h3>
             {loading ? (
-              <div className="text-sm text-gray-500 px-3 py-2">Loading...</div>
+              <div className="text-sm text-gray-500 px-3 py-2">
+                <LoadingIndicator size="small" />
+              </div>
             ) : !user ? (
               <div className="text-sm text-gray-500 px-3 py-2">Sign in to see saved items</div>
             ) : savedItems.length === 0 ? (

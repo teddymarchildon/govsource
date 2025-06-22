@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getBillById, getBillTexts, getBillSponsors, getBillCosponsors, getBillActions, getBillSummary } from '../../../services/api';
 import BillOrLawDetail from '@/components/BillOrLawDetail';
 import { useParams } from 'next/navigation';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 export default function BillDetailPage() {
   const params = useParams();
@@ -47,7 +48,7 @@ export default function BillDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       </div>
     );

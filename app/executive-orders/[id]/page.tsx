@@ -8,6 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import SaveButton from '@/components/SaveButton';
 import AiChat from '@/components/AiChat';
 import { AuthProvider } from '@/contexts/AuthContext';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 interface ExecutiveOrder {
   id: string;
@@ -81,7 +82,7 @@ export default function ExecutiveOrderDetailPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
+        <LoadingIndicator size="large" />
       </div>
     );
   }

@@ -17,6 +17,7 @@ import {
   getBills,
   getAgencyRules
 } from '../services/api';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 function HomeContent() {
   const router = useRouter();
@@ -218,7 +219,7 @@ function HomeContent() {
           {userPreferences?.policy_areas && userPreferences.policy_areas.length > 0 ? (
             recentLegislationLoading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="text-xl">Loading...</div>
+                <LoadingIndicator size="large" />
               </div>
             ) : (
               <div>
@@ -570,7 +571,7 @@ function HomeContent() {
       </div>
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       ) : (
         <>
@@ -596,7 +597,7 @@ function HomeContent() {
 export default function HomePage() {
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <div className="text-xl">Loading...</div>
+      <LoadingIndicator size="large" />
     </div>}>
       <HomeContent />
     </Suspense>

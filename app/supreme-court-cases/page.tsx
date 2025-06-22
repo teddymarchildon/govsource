@@ -335,7 +335,7 @@ function SupremeCourtCasesContent() {
 
       {loading && clusters.length === 0 ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading...</div>
+          <LoadingIndicator size="large" />
         </div>
       ) : (
         <>
@@ -370,7 +370,7 @@ function SupremeCourtCasesContent() {
 export default function SupremeCourtCasesPage() {
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <div className="text-xl">Loading...</div>
+      <LoadingIndicator size="large" />
     </div>}>
       <SupremeCourtCasesContent />
     </Suspense>

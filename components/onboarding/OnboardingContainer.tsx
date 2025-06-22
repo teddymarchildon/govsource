@@ -3,9 +3,9 @@
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import StateSelection from './StateSelection';
 import PolicyAreaSelection from './PolicyAreaSelection';
-import LoadingSpinner from '../../components/LoadingSpinner';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingIndicator from '../ui/LoadingIndicator';
 
 export default function OnboardingContainer() {
   const { currentStep, totalSteps, isLoading, skipOnboarding, userPreferences } = useOnboarding();
@@ -20,7 +20,7 @@ export default function OnboardingContainer() {
   if (isLoading || (userPreferences && userPreferences.onboarding_completed)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner />
+        <LoadingIndicator size="large" />
       </div>
     );
   }

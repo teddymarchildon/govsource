@@ -6,6 +6,7 @@ import { Bill } from '@/types/types';
 import { POLICY_AREAS } from '@/constants/policyAreas';
 import type { PolicyArea } from '@/types/types';
 import BillsClient from './BillsClient';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 // Server Component
 async function fetchInitialBills() {
@@ -44,7 +45,7 @@ export default async function BillsPage() {
 
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <div className="text-xl">Loading...</div>
+      <LoadingIndicator size="large" />
     </div>}>
       <BillsClient
         initialBills={initialBills}
