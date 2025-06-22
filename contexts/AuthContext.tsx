@@ -45,52 +45,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Check for active session on mount
-    const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error('Error checking auth session:', error);
-      }
-
-      if (data?.session) {
-        const supaUser = data.session.user as SupabaseUser;
-        setUser({
-          id: supaUser.id,
-          email: supaUser.email ?? '',
-          email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
-          confirmed_at: (supaUser as any).confirmed_at ?? null,
-        });
-        await checkSubscriptionStatus(supaUser.id);
-      }
-
-      setLoading(false);
-    };
-
-    checkSession();
-
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('auth state change', event, session);
-        if (session?.user) {
-          const supaUser = session.user as SupabaseUser;
-          setUser({
-            id: supaUser.id,
-            email: supaUser.email ?? '',
-            email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
-            confirmed_at: (supaUser as any).confirmed_at ?? null,
-          });
-          // Check onboarding status when auth state changes
-          if (event === 'SIGNED_IN') {
-            await checkSubscriptionStatus(supaUser.id);
+      (event, session) => {
+        setTimeout(async () => {
+          if (session?.user) {
+            const supaUser = session.user as SupabaseUser;
+            setUser({
+              id: supaUser.id,
+              email: supaUser.email ?? '',
+              email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
+              confirmed_at: (supaUser as any).confirmed_at ?? null,
+            });
+            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+              await checkSubscriptionStatus(supaUser.id);
+            }
+          } else {
+            setUser(null);
+            setIsPaidSubscriber(false);
+            setSubscription(null);
           }
-        } else {
-          setUser(null);
-          setIsPaidSubscriber(false);
-          setSubscription(null);
-        }
-        setLoading(false);
+          setLoading(false);
+        }, 0);
       }
     );
 
