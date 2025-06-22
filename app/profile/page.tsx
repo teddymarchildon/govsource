@@ -24,6 +24,8 @@ import Link from 'next/link';
 import UserPreferencesSection from '../../components/UserPreferencesSection';
 import { usePathname } from 'next/navigation';
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
+import { Button } from '../../components/ui/button';
+import { BookmarkMinus } from 'lucide-react';
 
 function ConfirmModal({ open, onConfirm, onCancel, loading }: {
   open: boolean;
@@ -305,7 +307,7 @@ export default function ProfilePage() {
           <div className="mt-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="font-medium">
-                You're on the <span>{subscription.tier === 'paid' ? 'pro' : 'free'} plan</span>.
+                You&apos;re on the <span>{subscription.tier === 'paid' ? 'pro' : 'free'} plan</span>.
                 {subscription.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
               </p>
               {subscription.tier === 'paid' && (
@@ -360,23 +362,20 @@ export default function ProfilePage() {
         {savedBills.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedBills.map((savedBill) => (
-              <div key={savedBill.id} className="relative group">
+              <div key={savedBill.id} className="relative">
                 {savedBill.bill && <BillCard bill={savedBill.bill} />}
-                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSavedBill(savedBill);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center shadow-md transition-all pointer-events-auto"
-                    aria-label="Unsave this bill"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Unsave
-                  </button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSavedBill(savedBill);
+                  }}
+                  className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/50 hover:bg-red-500 hover:text-white"
+                  aria-label="Unsave this bill"
+                >
+                  <BookmarkMinus className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
@@ -395,23 +394,20 @@ export default function ProfilePage() {
         {savedCongressmen.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedCongressmen.map((savedCongressman) => (
-              <div key={savedCongressman.id} className="relative group">
+              <div key={savedCongressman.id} className="relative">
                 {savedCongressman.congressman && <CongressmanCard congressman={savedCongressman.congressman} />}
-                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSavedCongressman(savedCongressman);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center shadow-md transition-all pointer-events-auto"
-                    aria-label="Unsave this congressmember"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Unsave
-                  </button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSavedCongressman(savedCongressman);
+                  }}
+                  className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/50 hover:bg-red-500 hover:text-white"
+                  aria-label="Unsave this congressmember"
+                >
+                  <BookmarkMinus className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
@@ -430,23 +426,20 @@ export default function ProfilePage() {
         {savedAgencies.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedAgencies.map((savedAgency) => (
-              <div key={savedAgency.id} className="relative group">
+              <div key={savedAgency.id} className="relative">
                 {savedAgency.agency && <AgencyCard agency={savedAgency.agency} />}
-                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSavedAgency(savedAgency);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center shadow-md transition-all pointer-events-auto"
-                    aria-label="Unsave this agency"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Unsave
-                  </button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSavedAgency(savedAgency);
+                  }}
+                  className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/50 hover:bg-red-500 hover:text-white"
+                  aria-label="Unsave this agency"
+                >
+                  <BookmarkMinus className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
@@ -465,23 +458,20 @@ export default function ProfilePage() {
         {savedJudges.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedJudges.map((savedJudge) => (
-              <div key={savedJudge.id} className="relative group">
+              <div key={savedJudge.id} className="relative">
                 {savedJudge.judge && <JudgeCard judge={savedJudge.judge} />}
-                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSavedJudge(savedJudge);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center shadow-md transition-all pointer-events-auto"
-                    aria-label="Unsave this judge"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Unsave
-                  </button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSavedJudge(savedJudge);
+                  }}
+                  className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/50 hover:bg-red-500 hover:text-white"
+                  aria-label="Unsave this judge"
+                >
+                  <BookmarkMinus className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
@@ -500,23 +490,20 @@ export default function ProfilePage() {
         {savedClusters.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedClusters.map((savedCluster) => (
-              <div key={savedCluster.id} className="relative group">
+              <div key={savedCluster.id} className="relative">
                 {savedCluster.cluster && <CourtCaseCard cluster={savedCluster.cluster} />}
-                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSavedCluster(savedCluster);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center shadow-md transition-all pointer-events-auto"
-                    aria-label="Unsave this court case"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Unsave
-                  </button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSavedCluster(savedCluster);
+                  }}
+                  className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/50 hover:bg-red-500 hover:text-white"
+                  aria-label="Unsave this court case"
+                >
+                  <BookmarkMinus className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
@@ -535,25 +522,22 @@ export default function ProfilePage() {
         {savedAgencyDocuments.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedAgencyDocuments.map((savedDocument) => (
-              <div key={savedDocument.id} className="relative group">
+              <div key={savedDocument.id} className="relative">
                 {savedDocument.agency_document && (
                   <AgencyRuleCard rule={savedDocument.agency_document} />
                 )}
-                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSavedAgencyDocument(savedDocument);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center shadow-md transition-all pointer-events-auto"
-                    aria-label="Unsave this document"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Unsave
-                  </button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSavedAgencyDocument(savedDocument);
+                  }}
+                  className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/50 hover:bg-red-500 hover:text-white"
+                  aria-label="Unsave this document"
+                >
+                  <BookmarkMinus className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
