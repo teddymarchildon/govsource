@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Suspense } from 'react';
 import { createClient } from '@/utils/supabase/server';
 import { Bill } from '@/types/types';

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useState, useRef, useEffect } from 'react';
 import SearchResults from './SearchResults';
 import useSearch from '../hooks/useSearch';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const { user, signOut, loading } = useAuth();
