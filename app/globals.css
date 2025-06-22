@@ -12,10 +12,10 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 215 39% 22%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary-foreground: 215 39% 22%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 210 40% 96.1%;
@@ -72,11 +72,11 @@
   }
   
   .bill-tag-status {
-    @apply bill-tag bg-blue-100 text-blue-800;
+    @apply bill-tag bg-secondary text-secondary-foreground;
   }
   
   .bill-tag-party-democrat {
-    @apply bill-tag bg-blue-100 text-blue-800;
+    @apply bill-tag bg-secondary text-secondary-foreground;
   }
   
   .bill-tag-party-republican {
@@ -157,7 +157,7 @@ body {
 }
 
 .markdown-content a {
-  @apply text-blue-600 hover:underline;
+  @apply text-primary hover:underline;
 }
 
 .markdown-content blockquote {

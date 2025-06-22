@@ -223,7 +223,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-bold mb-4">Sign in to view your profile</h1>
           <Link
             href={`/login?redirect=${encodeURIComponent(pathname)}`}
-            className="inline-block bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="inline-block bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
           >
             Sign In
           </Link>
@@ -248,140 +248,115 @@ export default function ProfilePage() {
         <h2 className="text-xl font-semibold mb-4">Subscription & Payments</h2>
 
         {/* Modern Card Style for Tiers */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          {/* Free Tier Card */}
-          <div
-            className={`flex-1 flex flex-col border rounded-lg p-6 transition-all relative ${
-              !subscription || subscription.tier === 'free'
-                ? 'ring-2 ring-blue-500 bg-blue-50'
-                : 'bg-gray-50'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xl font-semibold text-gray-700">Basic</h3>
-              {(!subscription || subscription.tier === 'free') && (
-                <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />
-                  Current
-                </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Free Tier */}
+          <div className={`rounded-lg border p-6 ${!subscription ? 'border-primary' : 'border-gray-300'}`}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold">Free</h3>
+              {!subscription && (
+                <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">Current Plan</span>
               )}
             </div>
-            <p className="text-3xl font-bold mb-4">Free</p>
-            <ul className="list-disc pl-5 text-gray-700 mb-4">
-              <li>Access to GovSource&apos;s information</li>
+            <p className="text-gray-500 mt-2">Basic access to government data.</p>
+            <ul className="mt-4 space-y-2 text-sm">
+              <li className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                Track bills & laws
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                Follow politicians
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                Limited AI chat
+              </li>
             </ul>
           </div>
-          {/* Paid Tier Card */}
-          <div
-            className={`flex-1 flex flex-col border rounded-lg p-6 transition-all relative ${
-              subscription?.tier === 'paid'
-                ? 'ring-2 ring-purple-500 bg-purple-50'
-                : 'bg-purple-50'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xl font-semibold text-purple-700">Pro</h3>
-              {subscription?.tier === 'paid' && (
-                <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />
-                  Current
-                </span>
+          {/* Pro Tier */}
+          <div className={`rounded-lg border p-6 ${subscription ? 'border-primary' : 'border-gray-300'}`}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold">Pro</h3>
+              {subscription && (
+                <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">Current Plan</span>
               )}
             </div>
-            <p className="text-3xl font-bold mb-4">$4.99<span className="text-lg font-medium text-gray-500">/month</span></p>
-            <ul className="list-disc pl-5 text-purple-800 mb-4">
-              <li>Access to AI</li>
-              <li>No ads</li>
-              <li>Notifications (coming soon)</li>
-              <li>Digest (coming soon)</li>
+            <p className="text-gray-500 mt-2">Unlimited access and powerful AI tools.</p>
+            <ul className="mt-4 space-y-2 text-sm">
+              <li className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                All Free features
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                Unlimited AI chat
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                Personalized alerts
+              </li>
             </ul>
-            
-            {/* Action Button in Paid Plan Box */}
-            {subLoading ? (
-              <div className="text-sm text-purple-600">Loading...</div>
-            ) : (
-              <div className="mt-auto pt-4">
-                {/* Show Subscribe button if user is on free plan */}
-                {(!subscription || subscription.tier === 'free') && (
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!user) return;
-                      setCancelLoading(true);
-                      try {
-                        const res = await fetch('/api/create-checkout-session', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: user.id }),
-                        });
-                        const data = await res.json();
-                        if (data.url) {
-                          window.location.href = data.url;
-                        } else {
-                          alert('Failed to create checkout session.');
-                        }
-                      } catch (err) {
-                        alert('Failed to create checkout session.');
-                      } finally {
-                        setCancelLoading(false);
-                      }
-                    }}
-                    className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50"
-                    disabled={cancelLoading}
-                  >
-                    {cancelLoading ? 'Redirecting...' : 'Subscribe'}
-                  </button>
-                )}
-                {/* Show Cancel Subscription button if user is on paid plan */}
-                {subscription?.tier === 'paid' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCancelModal(true);
-                    }}
-                    className="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
-                    disabled={cancelLoading}
-                  >
-                    {cancelLoading ? 'Cancelling...' : 'Cancel Subscription'}
-                  </button>
-                )}
-              </div>
+            {!subscription && (
+              <Link
+                href="/onboarding?plan=pro"
+                className="mt-6 block text-center w-full bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
+              >
+                Upgrade to Pro
+              </Link>
             )}
           </div>
         </div>
 
-        {/* Current Period End and Cancel Notice */}
-        {subscription && (
-          <div className="mb-4 text-center">
-            {subscription.current_period_end && (
-              <p><strong>Current Period Ends:</strong> {new Date(subscription.current_period_end).toLocaleString()}</p>
-            )}
-            {subscription.cancel_at_period_end && (
-              <p className="text-yellow-600">Subscription will cancel at period end.</p>
+        {subLoading ? (
+          <div className="text-sm text-purple-600">Loading...</div>
+        ) : subscription ? (
+          <div className="mt-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="font-medium">
+                Your plan is <span className="lowercase">{subscription.plan_name}</span>.
+                {subscription.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
+              </p>
+              <button
+                className="mt-2 text-sm text-red-600 hover:underline"
+                onClick={() => setShowCancelModal(true)}
+              >
+                Cancel Subscription
+              </button>
+            </div>
+
+            {cancelError && <p className="text-red-500 text-sm mt-2">{cancelError}</p>}
+
+            {payments.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-semibold text-gray-800">Payment History</h3>
+                <ul className="mt-2 divide-y divide-gray-200">
+                  {payments.map(payment => (
+                    <li key={payment.id} className="py-3 flex justify-between items-center">
+                      <div>
+                        <p className="text-sm">
+                          {payment.created_at && `${new Date(payment.created_at).toLocaleDateString()} - `}${payment.amount / 100}
+                        </p>
+                        <p className="text-xs text-gray-500">{payment.status}</p>
+                      </div>
+                      {payment.receipt_url &&
+                        <a
+                          href={payment.receipt_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          View Receipt
+                        </a>
+                      }
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
+        ) : (
+          <p className="mt-6 text-gray-600">You are on the Free plan.</p>
         )}
-
-        {/* Cancel Modal */}
-        <ConfirmModal
-          open={showCancelModal}
-          loading={cancelLoading}
-          onCancel={() => setShowCancelModal(false)}
-          onConfirm={async () => {
-            setCancelLoading(true);
-            setCancelError(null);
-            try {
-              await handleCancelSubscription();
-              setShowCancelModal(false);
-              // Optionally, refetch subscription status here
-            } catch (err: any) {
-              setCancelError(err.message || 'Failed to cancel subscription');
-            } finally {
-              setCancelLoading(false);
-            }
-          }}
-        />
-        {cancelError && <div className="text-red-600 mt-2 text-center">{cancelError}</div>}
       </div>
 
       <UserPreferencesSection />

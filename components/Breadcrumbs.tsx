@@ -22,7 +22,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ steps, className = "" }) => {
             {idx > 0 && <li className="text-gray-500">/</li>}
             <li className={idx === steps.length - 1 ? "text-gray-700 truncate max-w-xs" : undefined}>
               {step.href && idx !== steps.length - 1 ? (
-                <Link href={step.href} className="text-blue-600 hover:underline">
+                <Link href={step.href} className="text-primary hover:underline">
                   {step.label}
                 </Link>
               ) : (

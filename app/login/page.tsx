@@ -75,7 +75,7 @@ function LoginPageInner() {
           )}
 
           {showConfirmNotice && (
-            <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+            <div className="bg-secondary border border-primary/20 text-secondary-foreground px-4 py-3 rounded mb-4">
               Check your email for a link to sign in. Click the link to continue back to GovSource.
             </div>
           )}
@@ -92,7 +92,7 @@ function LoginPageInner() {
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                    className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
                     placeholder="your@email.com"
                     required
                   />
@@ -102,7 +102,7 @@ function LoginPageInner() {
               <div>
                 <button
                   type="submit"
-                  className="flex w-full justify-center rounded-md border border-transparent bg-blue-700 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                  className="flex w-full justify-center rounded-md border border-transparent bg-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Sending link...' : 'Send link'}

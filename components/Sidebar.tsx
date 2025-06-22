@@ -146,7 +146,7 @@ export default function Sidebar() {
   }, [isMobileOpen]);
 
   const isActive = (path: string) => {
-    return pathname === path ? 'bg-gray-100 text-blue-700 font-medium' : '';
+    return pathname === path ? 'bg-gray-100 text-primary font-medium' : '';
   };
 
   // Fixed button to toggle sidebar on mobile
@@ -154,7 +154,7 @@ export default function Sidebar() {
     <button
       id="sidebar-toggle"
       onClick={() => setIsMobileOpen(!isMobileOpen)}
-      className="md:hidden fixed bottom-4 right-4 bg-blue-600 text-white rounded-full p-3 shadow-lg z-20"
+      className="md:hidden fixed bottom-4 right-4 bg-primary text-white rounded-full p-3 shadow-lg z-20"
       aria-label="Toggle sidebar"
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -318,7 +318,7 @@ export default function Sidebar() {
                       className="flex items-center px-3 py-2 text-sm hover:bg-gray-100 rounded-md"
                     >
                       {item.type === 'bill' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       ) : item.type === 'congressman' ? (
