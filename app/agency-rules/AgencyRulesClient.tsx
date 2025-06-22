@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface AgencyRulesClientProps {
   initialRules: AgencyDocument[];
@@ -32,8 +33,12 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   const [selectedAgencyId, setSelectedAgencyId] = useState(currentAgencyId);
   const [ruleType, setRuleType] = useState(currentRuleType);
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery);
-  const [startDate, setStartDate] = useState(currentStartDate);
-  const [endDate, setEndDate] = useState(currentEndDate);
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    currentStartDate ? new Date(currentStartDate) : undefined,
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    currentEndDate ? new Date(currentEndDate) : undefined,
+  );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
   const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
 
@@ -74,10 +79,10 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
         baseQuery = baseQuery.ilike("title", `%${searchQuery}%`);
       }
       if (startDate) {
-        baseQuery = baseQuery.gte("publication_date", startDate);
+        baseQuery = baseQuery.gte("publication_date", startDate.toISOString().split('T')[0]);
       }
       if (endDate) {
-        baseQuery = baseQuery.lte("publication_date", endDate);
+        baseQuery = baseQuery.lte("publication_date", endDate.toISOString().split('T')[0]);
       }
       // Always exclude Executive Orders
       baseQuery = baseQuery.neq("type", "Executive Order");
@@ -115,8 +120,8 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
       if (selectedAgencyId) params.set("agency_id", selectedAgencyId);
       if (ruleType) params.set("type", ruleType);
       if (searchQuery) params.set("search", searchQuery);
-      if (startDate) params.set("start_date", startDate);
-      if (endDate) params.set("end_date", endDate);
+      if (startDate) params.set("start_date", startDate.toISOString().split('T')[0]);
+      if (endDate) params.set("end_date", endDate.toISOString().split('T')[0]);
       if (sortOrder !== "desc") params.set("sort_order", sortOrder);
       const queryString = params.toString();
       const url = queryString ? `/agency-rules?${queryString}` : "/agency-rules";
@@ -137,11 +142,11 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(e.target.value);
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
   };
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(e.target.value);
+  const handleEndDateChange = (date: Date | undefined) => {
+    setEndDate(date);
   };
   const handleSortOrderChange = (value: string) => {
     setSortOrder(value as 'asc' | 'desc');
@@ -150,16 +155,16 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
     setSelectedAgencyId("");
     setRuleType("");
     setSearchQuery("");
-    setStartDate("");
-    setEndDate("");
+    setStartDate(undefined);
+    setEndDate(undefined);
     setSortOrder("desc");
   };
   // Individual clear handlers
   const clearAgencyFilter = () => setSelectedAgencyId("");
   const clearRuleTypeFilter = () => setRuleType("");
   const clearSearchQueryFilter = () => setSearchQuery("");
-  const clearStartDateFilter = () => setStartDate("");
-  const clearEndDateFilter = () => setEndDate("");
+  const clearStartDateFilter = () => setStartDate(undefined);
+  const clearEndDateFilter = () => setEndDate(undefined);
   const clearSortOrderFilter = () => setSortOrder("desc");
 
   return (
@@ -217,18 +222,14 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
               Publication Date Range
             </label>
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={handleStartDateChange}
+              <DatePicker
+                date={startDate}
+                setDate={handleStartDateChange}
                 placeholder="Start date"
               />
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={handleEndDateChange}
+              <DatePicker
+                date={endDate}
+                setDate={handleEndDateChange}
                 placeholder="End date"
               />
             </div>
@@ -284,7 +285,7 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
             )}
             {startDate && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                From: {new Date(startDate).toLocaleDateString()}
+                From: {startDate.toLocaleDateString()}
                 <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
                   <X className="h-3 w-3" />
                 </Button>
@@ -292,7 +293,7 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
             )}
             {endDate && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                To: {new Date(endDate).toLocaleDateString()}
+                To: {endDate.toLocaleDateString()}
                 <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
                   <X className="h-3 w-3" />
                 </Button>

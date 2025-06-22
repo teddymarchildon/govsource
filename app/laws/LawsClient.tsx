@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase/client';
 import LawCard from '@/components/LawCard';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface LawsClientProps {
   initialLaws: Law[];
@@ -29,8 +30,12 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   const [loading, setLoading] = useState(false);
   const [selectedPolicyArea, setSelectedPolicyArea] = useState<PolicyArea | ''>(currentPolicyArea as PolicyArea | '');
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery);
-  const [startDate, setStartDate] = useState(currentStartDate);
-  const [endDate, setEndDate] = useState(currentEndDate);
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    currentStartDate ? new Date(currentStartDate) : undefined,
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    currentEndDate ? new Date(currentEndDate) : undefined,
+  );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
   const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
 
@@ -70,11 +75,11 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
 
       // Apply date range filter if provided
       if (startDate) {
-        baseQuery = baseQuery.gte('law_enacted_date', startDate);
+        baseQuery = baseQuery.gte('law_enacted_date', startDate.toISOString().split('T')[0]);
       }
 
       if (endDate) {
-        baseQuery = baseQuery.lte('law_enacted_date', endDate);
+        baseQuery = baseQuery.lte('law_enacted_date', endDate.toISOString().split('T')[0]);
       }
 
       // Execute the query
@@ -117,8 +122,8 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
 
       if (selectedPolicyArea) params.set('policy_area', selectedPolicyArea);
       if (searchQuery) params.set('search', searchQuery);
-      if (startDate) params.set('start_date', startDate);
-      if (endDate) params.set('end_date', endDate);
+      if (startDate) params.set('start_date', startDate.toISOString().split('T')[0]);
+      if (endDate) params.set('end_date', endDate.toISOString().split('T')[0]);
       if (sortOrder !== 'desc') params.set('sort_order', sortOrder);
 
       const queryString = params.toString();
@@ -141,12 +146,12 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
     setSearchQuery(e.target.value);
   };
 
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(e.target.value);
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
   };
 
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(e.target.value);
+  const handleEndDateChange = (date: Date | undefined) => {
+    setEndDate(date);
   };
 
   const handleSortOrderChange = (value: string) => {
@@ -156,16 +161,16 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   const clearFilters = () => {
     setSelectedPolicyArea('');
     setSearchQuery('');
-    setStartDate('');
-    setEndDate('');
+    setStartDate(undefined);
+    setEndDate(undefined);
     setSortOrder('desc');
   };
 
   // Individual clear handlers
   const clearPolicyAreaFilter = () => setSelectedPolicyArea('');
   const clearSearchQueryFilter = () => setSearchQuery('');
-  const clearStartDateFilter = () => setStartDate('');
-  const clearEndDateFilter = () => setEndDate('');
+  const clearStartDateFilter = () => setStartDate(undefined);
+  const clearEndDateFilter = () => setEndDate(undefined);
   const clearSortOrderFilter = () => setSortOrder('desc');
 
   return (
@@ -209,18 +214,14 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
               Enacted Date Range
             </label>
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={handleStartDateChange}
+              <DatePicker
+                date={startDate}
+                setDate={handleStartDateChange}
                 placeholder="Start date"
               />
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={handleEndDateChange}
+              <DatePicker
+                date={endDate}
+                setDate={handleEndDateChange}
                 placeholder="End date"
               />
             </div>
@@ -269,7 +270,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
           )}
           {startDate && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              From: {new Date(startDate).toLocaleDateString()}
+              From: {startDate.toLocaleDateString()}
               <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
                 <X className="h-3 w-3" />
               </Button>
@@ -277,7 +278,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
           )}
           {endDate && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              To: {new Date(endDate).toLocaleDateString()}
+              To: {endDate.toLocaleDateString()}
               <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
                 <X className="h-3 w-3" />
               </Button>

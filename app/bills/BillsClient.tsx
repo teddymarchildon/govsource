@@ -8,16 +8,26 @@ import { Bill, PolicyArea } from "@/types/types";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface BillsClientProps {
   initialBills: Bill[];
   policyAreas: PolicyArea[];
 }
 
-export default function BillsClient({ initialBills, policyAreas }: BillsClientProps) {
+export default function BillsClient({
+  initialBills,
+  policyAreas,
+}: BillsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentPolicyArea = searchParams.get("policy_area") || "";
@@ -28,11 +38,19 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
 
   const [bills, setBills] = useState<Bill[]>(initialBills);
   const [loading, setLoading] = useState(false);
-  const [selectedPolicyArea, setSelectedPolicyArea] = useState<PolicyArea | "">(currentPolicyArea as PolicyArea | "");
+  const [selectedPolicyArea, setSelectedPolicyArea] = useState<
+    PolicyArea | ""
+  >(currentPolicyArea as PolicyArea | "");
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery);
-  const [startDate, setStartDate] = useState(currentStartDate);
-  const [endDate, setEndDate] = useState(currentEndDate);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(currentSortOrder === "asc" ? "asc" : "desc");
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    currentStartDate ? new Date(currentStartDate) : undefined,
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    currentEndDate ? new Date(currentEndDate) : undefined,
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
+    currentSortOrder === "asc" ? "asc" : "desc",
+  );
   const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
 
   const fetchBills = async (page: number) => {
@@ -64,11 +82,17 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
 
       // Apply date range filter if provided
       if (startDate) {
-        baseQuery = baseQuery.gte("introduced_date", startDate);
+        baseQuery = baseQuery.gte(
+          "introduced_date",
+          startDate.toISOString().split("T")[0],
+        );
       }
 
       if (endDate) {
-        baseQuery = baseQuery.lte("introduced_date", endDate);
+        baseQuery = baseQuery.lte(
+          "introduced_date",
+          endDate.toISOString().split("T")[0],
+        );
       }
 
       // Execute the query
@@ -76,10 +100,11 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
       if (error) throw error;
 
       // Transform the data to match our Bill interface
-      const fetchedBills = data?.map((bill: any) => ({
-        ...bill,
-        sponsor: bill.sponsor?.[0]?.congressman || null,
-      })) || [];
+      const fetchedBills =
+        data?.map((bill: any) => ({
+          ...bill,
+          sponsor: bill.sponsor?.[0]?.congressman || null,
+        })) || [];
 
       // Update bills state
       if (page === 1) {
@@ -99,10 +124,11 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
   };
 
   // Set up infinite scrolling
-  const { loading: loadingMore, sentinelRef, reset: resetScroll } = useInfiniteScroll(
-    fetchBills,
-    { enabled: initialLoadComplete }
-  );
+  const {
+    loading: loadingMore,
+    sentinelRef,
+    reset: resetScroll,
+  } = useInfiniteScroll(fetchBills, { enabled: initialLoadComplete });
 
   // Update URL and fetch data when filters change
   useEffect(() => {
@@ -111,8 +137,9 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
 
       if (selectedPolicyArea) params.set("policy_area", selectedPolicyArea);
       if (searchQuery) params.set("search", searchQuery);
-      if (startDate) params.set("start_date", startDate);
-      if (endDate) params.set("end_date", endDate);
+      if (startDate)
+        params.set("start_date", startDate.toISOString().split("T")[0]);
+      if (endDate) params.set("end_date", endDate.toISOString().split("T")[0]);
       if (sortOrder !== "desc") params.set("sort_order", sortOrder);
 
       const queryString = params.toString();
@@ -125,7 +152,15 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
       fetchBills(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPolicyArea, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, router]);
+  }, [
+    selectedPolicyArea,
+    searchQuery,
+    startDate,
+    endDate,
+    sortOrder,
+    initialLoadComplete,
+    router,
+  ]);
 
   const handlePolicyAreaChange = (value: string) => {
     setSelectedPolicyArea(value as PolicyArea | "");
@@ -135,12 +170,12 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
     setSearchQuery(e.target.value);
   };
 
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(e.target.value);
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
   };
 
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(e.target.value);
+  const handleEndDateChange = (date: Date | undefined) => {
+    setEndDate(date);
   };
 
   const handleSortOrderChange = (value: string) => {
@@ -150,43 +185,57 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
   const clearFilters = () => {
     setSelectedPolicyArea("");
     setSearchQuery("");
-    setStartDate("");
-    setEndDate("");
+    setStartDate(undefined);
+    setEndDate(undefined);
     setSortOrder("desc");
   };
 
   // Individual clear handlers
   const clearPolicyAreaFilter = () => setSelectedPolicyArea("");
   const clearSearchQueryFilter = () => setSearchQuery("");
-  const clearStartDateFilter = () => setStartDate("");
-  const clearEndDateFilter = () => setEndDate("");
+  const clearStartDateFilter = () => setStartDate(undefined);
+  const clearEndDateFilter = () => setEndDate(undefined);
   const clearSortOrderFilter = () => setSortOrder("desc");
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-2">Bills</h1>
-      <p className="text-gray-600 text-sm mb-6">Browse and explore congressional bills, their sponsors, and policy areas they address.</p>
+      <p className="text-gray-600 text-sm mb-6">
+        Browse and explore congressional bills, their sponsors, and policy areas
+        they address.
+      </p>
 
       <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
           <div>
-            <label htmlFor="policy-area" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="policy-area"
+              className="block text-sm font-medium mb-1"
+            >
               Policy Area
             </label>
-            <Select value={selectedPolicyArea} onValueChange={handlePolicyAreaChange}>
+            <Select
+              value={selectedPolicyArea}
+              onValueChange={handlePolicyAreaChange}
+            >
               <SelectTrigger id="policy-area">
                 <SelectValue placeholder="All Policy Areas" />
               </SelectTrigger>
               <SelectContent>
                 {policyAreas.map((area) => (
-                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                  <SelectItem key={area} value={area}>
+                    {area}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <label htmlFor="search-filter" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="search-filter"
+              className="block text-sm font-medium mb-1"
+            >
               Search Bills
             </label>
             <Input
@@ -203,25 +252,24 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
               Date Introduced Range
             </label>
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={handleStartDateChange}
+              <DatePicker
+                date={startDate}
+                setDate={handleStartDateChange}
                 placeholder="Start date"
               />
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={handleEndDateChange}
+              <DatePicker
+                date={endDate}
+                setDate={handleEndDateChange}
                 placeholder="End date"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="sort-order" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="sort-order"
+              className="block text-sm font-medium mb-1"
+            >
               Sort By
             </label>
             <Select value={sortOrder} onValueChange={handleSortOrderChange}>
@@ -237,56 +285,92 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
         </div>
 
         <div className="flex items-center justify-end">
-           <Button variant="outline" onClick={clearFilters} size="sm">
-              Clear All Filters
-            </Button>
+          <Button variant="outline" onClick={clearFilters} size="sm">
+            Clear All Filters
+          </Button>
         </div>
 
-        {(selectedPolicyArea || searchQuery || startDate || endDate || sortOrder !== "desc") && (
-        <div className="mt-4 flex items-center flex-wrap gap-2">
-          <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
-          {selectedPolicyArea && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              Policy: {selectedPolicyArea}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearPolicyAreaFilter} aria-label="Clear policy area filter">
-                <X className="h-3 w-3" />
-              </Button>
+        {(selectedPolicyArea ||
+          searchQuery ||
+          startDate ||
+          endDate ||
+          sortOrder !== "desc") && (
+          <div className="mt-4 flex items-center flex-wrap gap-2">
+            <span className="text-sm text-muted-foreground mr-2">
+              Active filters:
             </span>
-          )}
-          {searchQuery && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              Search: {searchQuery}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSearchQueryFilter} aria-label="Clear search filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-          {startDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              From: {new Date(startDate).toLocaleDateString()}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-          {endDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              To: {new Date(endDate).toLocaleDateString()}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-          {sortOrder !== "desc" && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              Sort: {sortOrder === "asc" ? "Oldest First" : "Newest First"}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSortOrderFilter} aria-label="Clear sort order filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-        </div>
-      )}
+            {selectedPolicyArea && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Policy: {selectedPolicyArea}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearPolicyAreaFilter}
+                  aria-label="Clear policy area filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {searchQuery && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Search: {searchQuery}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearSearchQueryFilter}
+                  aria-label="Clear search filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {startDate && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                From: {startDate.toLocaleDateString()}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearStartDateFilter}
+                  aria-label="Clear start date filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {endDate && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                To: {endDate.toLocaleDateString()}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearEndDateFilter}
+                  aria-label="Clear end date filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {sortOrder !== "desc" && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Sort: {sortOrder === "asc" ? "Oldest First" : "Newest First"}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearSortOrderFilter}
+                  aria-label="Clear sort order filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -313,7 +397,8 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
           ) : (
             <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
               <p className="text-yellow-700">
-                No bills found matching your filters. Try adjusting your search criteria.
+                No bills found matching your filters. Try adjusting your search
+                criteria.
               </p>
             </div>
           )}
