@@ -44,7 +44,7 @@ export default function CongressmenPage() {
         const params: any = { limit: 100, current: currentOnly };
         if (party) params.party = party;
         if (state) params.state = state;
-        if (chamber) params.chamber = chamber;
+        if (chamber) params.chamber = chamber.toLowerCase();
         if (searchTerm) params.search = searchTerm;
         
         const filteredData = await getCongressmen(params);

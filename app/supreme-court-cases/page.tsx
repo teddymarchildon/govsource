@@ -66,51 +66,41 @@ function SupremeCourtCasesContent() {
     }
 
     try {
-      // Calculate range for pagination
       const from = (page - 1) * 50;
       const to = from + 49;
 
-      let query = supabase
-        .from('cluster')
-        .select(`
-          *,
-          court (*),
-          opinions:court_opinion (
-            *,
-            author:judge (*)
-          )
-        `)
-        .eq('court.remote_id', 'scotus')
-        .order('date_filed', { ascending: sortOrder === 'asc' })
-        .range(from, to);
+      let query;
 
+      if (judgeId) {
+        query = supabase
+          .from('cluster')
+          .select(`
+            *,
+            court (*),
+            opinions:court_opinion!inner (
+              *,
+              author:judge!inner (*)
+            )
+          `)
+          .eq('opinions.author.id', judgeId);
+      } else {
+        query = supabase
+          .from('cluster')
+          .select(`
+            *,
+            court (*),
+            opinions:court_opinion (
+              *,
+              author:judge (*)
+            )
+          `);
+      }
+
+      query = query.eq('court.remote_id', 'scotus');
+      
       // Apply search filter if provided
       if (searchQuery) {
         query = query.or(`case_name.ilike.%${searchQuery}%,case_name_short.ilike.%${searchQuery}%`);
-      }
-
-      // Apply judge filter if selected
-      if (judgeId) {
-        // First get the case IDs associated with this judge
-        const { data: judgeCases, error: judgeError } = await supabase
-          .from('cluster')
-          .select('id')
-          .eq('opinions.author.id', judgeId);
-
-        if (judgeError) throw judgeError;
-
-        // If there are cases with this judge, filter the query
-        if (judgeCases && judgeCases.length > 0) {
-          const caseIds = judgeCases.map(item => item.id);
-          query = query.in('id', caseIds);
-        } else {
-          // If no cases are associated with this judge, return empty array
-          setLoading(false);
-          if (page === 1) {
-            setClusters([]);
-          }
-          return false;
-        }
       }
 
       // Apply date range filter if provided
@@ -123,7 +113,10 @@ function SupremeCourtCasesContent() {
       }
 
       // Execute the query
-      const { data, error } = await query;
+      const { data, error } = await query
+        .order('date_filed', { ascending: sortOrder === 'asc' })
+        .range(from, to);
+        
       if (error) throw error;
 
       // Update clusters state

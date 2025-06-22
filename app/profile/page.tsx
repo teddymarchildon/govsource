@@ -305,7 +305,7 @@ export default function ProfilePage() {
           <div className="mt-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="font-medium">
-                Your plan is <span className="lowercase">{subscription.tier === 'paid' ? 'Pro' : 'Free'}</span>.
+                Your plan is <span>{subscription.tier === 'paid' ? 'Pro' : 'Free'}</span>.
                 {subscription.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
               </p>
               <button
