@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://www.govsrc.com
+Host: https://govsrc.com
 
 # Sitemaps
-Sitemap: https://www.govsrc.com/sitemap.xml
+Sitemap: https://govsrc.com/sitemap.xml
