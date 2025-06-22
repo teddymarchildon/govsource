@@ -305,15 +305,17 @@ export default function ProfilePage() {
           <div className="mt-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="font-medium">
-                Your plan is <span>{subscription.tier === 'paid' ? 'Pro' : 'Free'}</span>.
+                You're on the <span>{subscription.tier === 'paid' ? 'pro' : 'free'} plan</span>.
                 {subscription.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
               </p>
-              <button
-                className="mt-2 text-sm text-red-600 hover:underline"
-                onClick={() => setShowCancelModal(true)}
-              >
-                Cancel Subscription
-              </button>
+              {subscription.tier === 'paid' && (
+                <button
+                  className="mt-2 text-sm text-red-600 hover:underline"
+                  onClick={() => setShowCancelModal(true)}
+                >
+                  Cancel Subscription
+                </button>
+              )}
             </div>
 
             {cancelError && <p className="text-red-500 text-sm mt-2">{cancelError}</p>}
