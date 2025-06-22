@@ -16,7 +16,7 @@ export default function LoadingIndicator({ size = 'medium' }: LoadingIndicatorPr
   return (
     <div className="flex justify-center items-center py-4">
       <div 
-        className={`${sizeClasses[size]} rounded-full border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent animate-spin`}
+        className={`${sizeClasses[size]} rounded-full border-t-primary border-r-transparent border-b-primary border-l-transparent animate-spin`}
       ></div>
     </div>
   );
