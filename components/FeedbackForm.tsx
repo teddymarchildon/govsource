@@ -64,7 +64,7 @@ export default function FeedbackForm() {
       {!isOpen && (
         <button
           onClick={toggleOpen}
-          className="bg-blue-600 text-white rounded-full px-4 py-2 shadow-lg hover:bg-blue-700 transition-colors"
+          className="bg-primary text-white rounded-full px-4 py-2 shadow-lg hover:bg-primary/90 transition-colors"
         >
           Have feedback?
         </button>
@@ -99,7 +99,7 @@ export default function FeedbackForm() {
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
               <button
                 type="submit"
-                className="mt-4 w-full bg-blue-700 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                className="mt-4 w-full bg-primary text-white py-2 rounded-md hover:bg-primary/90 disabled:bg-gray-400"
                 disabled={!user || isSubmitting}
               >
                 {isSubmitting ? 'Submitting...' : 'Submit'}

@@ -192,7 +192,7 @@ export default function AiChat({
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="px-4 py-3 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all text-sm font-medium"
+          className="px-4 py-3 rounded-lg bg-primary text-white flex items-center justify-center shadow-lg hover:bg-primary/90 transition-all text-sm font-medium"
           aria-label="AI Chat"
         >
           {buttonText}
@@ -203,7 +203,7 @@ export default function AiChat({
       {isOpen && (
         <div className="flex flex-col w-96 md:w-[550px] h-[600px] bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-slide-up">
           {/* Header */}
-          <div className="p-3 bg-blue-700 text-white flex justify-between items-center">
+          <div className="p-3 bg-primary text-white flex justify-between items-center">
             <h2 className="text-lg font-semibold">GovSource Assistant</h2>
             <div className="flex space-x-2">
               <button
@@ -218,15 +218,15 @@ export default function AiChat({
 
           {/* Info indicator if htmlFilePath is not defined */}
           {!htmlFilePath && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 text-xs border-b border-blue-100">
-              <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
+            <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
+              <svg className="h-4 w-4 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
               <span>The assistant cannot process a PDF. It will search the web to find additional information.</span>
             </div>
           )}
           {/* Info indicator if htmlFilePath is defined */}
           {htmlFilePath && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 text-xs border-b border-blue-100">
-            <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
+            <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
+            <svg className="h-4 w-4 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
             <span>The AI will objectively analyze the contents of this document. No other sources are considered.</span>
           </div>
         )}
@@ -260,7 +260,7 @@ export default function AiChat({
                     className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-1.5 ${
                       isLoading
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                     }`}
                   >
                     <IconComponent className="h-4 w-4" />
@@ -272,7 +272,7 @@ export default function AiChat({
               <div className="w-full text-center text-sm text-gray-500 py-2">
                 You must be a paid subscriber to use the AI Assistant. <br />
                 <button
-                  className="text-blue-700 font-medium underline disabled:opacity-50"
+                  className="text-primary font-medium underline disabled:opacity-50"
                   style={{ cursor: user ? 'pointer' : 'not-allowed' }}
                   disabled={subscribing || !user}
                   onClick={async () => {
@@ -315,7 +315,7 @@ export default function AiChat({
               </div>
             ) : !isPaidSubscriber ? (
               <div className="flex justify-center items-center h-full">
-                <div className="max-w-[85%] rounded-lg p-4 bg-blue-100 text-blue-900 text-center text-sm border border-blue-300">
+                <div className="max-w-[85%] rounded-lg p-4 bg-secondary text-secondary-foreground text-center text-sm border border-primary/20">
                   <p>You must be a paid subscriber to use the AI Assistant.</p>
                 </div>
               </div>
@@ -331,7 +331,7 @@ export default function AiChat({
                     <div
                       className={`max-w-[85%] rounded-lg p-2.5 ${
                         message.role === 'user'
-                          ? 'bg-blue-100 text-blue-900'
+                          ? 'bg-secondary text-secondary-foreground'
                           : 'bg-white text-gray-900 border border-gray-200'
                       }`}
                     >
@@ -347,9 +347,9 @@ export default function AiChat({
                   <div className="flex justify-start">
                     <div className="max-w-[85%] rounded-lg p-2.5 bg-white border border-gray-200">
                       <div className="flex space-x-1.5 items-center">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                       </div>
                     </div>
                   </div>
@@ -374,15 +374,15 @@ export default function AiChat({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={`Ask about ${documentTitle || 'this document'}...`}
-                className="flex-1 p-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 p-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={isLoading || (!user && !authLoading) || !isPaidSubscriber}
               />
               <button
                 type="submit"
                 className={`px-3 py-2 rounded-lg text-white text-sm ${
                   isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber
-                    ? 'bg-blue-300 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-primary/50 cursor-not-allowed'
+                    : 'bg-primary hover:bg-primary/90'
                 }`}
                 disabled={isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber}
               >
