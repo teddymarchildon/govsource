@@ -5,7 +5,7 @@ module.exports = {
   changefreq: 'weekly',
   trailingSlash: false,
   priority: 0.7,
-  exclude: [],
+  exclude: ['/onboarding'],
   robotsTxtOptions: {
     policies: [
       {
