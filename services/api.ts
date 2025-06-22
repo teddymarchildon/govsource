@@ -1375,16 +1375,11 @@ export const getUserSubscription = async (userId: string) => {
   return data && data.length > 0 ? data[0] : null;
 };
 
-export const getUserPayments = async (userId: string) => {
-  // TODO: Implement actual payment retrieval logic
-  return { data: [], error: null };
-};
-
 // Upsert a free subscription - creates if doesn't exist, does nothing if it exists
-export const upsertFreeSubscription = async (userId: string) => {
+export const upsertSubscription = async (userId: string) => {
     const { data, error } = await supabase
-      .from('subscriptions')
-      .upsert({ user_id: userId, status: 'free' }, { onConflict: 'user_id' });
+      .from('subscription')
+      .upsert({ user_id: userId, status: 'active'}, { onConflict: 'user_id' });
   
     if (error) throw error;
     return data;
