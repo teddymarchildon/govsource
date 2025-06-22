@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/utils/supabase/client";
 import BillCard from "@/components/BillCard";
-import CongressmanSearchSelect, { CongressmanSearchSelectRef } from "@/components/CongressmanSearchSelect";
-import { Bill, Congressman, PolicyArea } from "@/types/types";
+import { Bill, PolicyArea } from "@/types/types";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface BillsClientProps {
   initialBills: Bill[];
@@ -19,7 +22,6 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
   const searchParams = useSearchParams();
   const currentPolicyArea = searchParams.get("policy_area") || "";
   const currentSearchQuery = searchParams.get("search") || "";
-  const currentSponsorId = searchParams.get("sponsor_id");
   const currentStartDate = searchParams.get("start_date") || "";
   const currentEndDate = searchParams.get("end_date") || "";
   const currentSortOrder = searchParams.get("sort_order") || "desc";
@@ -28,36 +30,10 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
   const [loading, setLoading] = useState(false);
   const [selectedPolicyArea, setSelectedPolicyArea] = useState<PolicyArea | "">(currentPolicyArea as PolicyArea | "");
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery);
-  const [selectedSponsor, setSelectedSponsor] = useState<Congressman | null>(null);
   const [startDate, setStartDate] = useState(currentStartDate);
   const [endDate, setEndDate] = useState(currentEndDate);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(currentSortOrder === "asc" ? "asc" : "desc");
-  const congressmanSearchRef = useRef<CongressmanSearchSelectRef>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
-
-  // Fetch sponsor details if sponsor_id is in URL
-  useEffect(() => {
-    const fetchSponsor = async () => {
-      if (currentSponsorId && !selectedSponsor) {
-        try {
-          const { data, error } = await supabase
-            .from("congressman")
-            .select("*")
-            .eq("id", currentSponsorId)
-            .single();
-
-          if (error) throw error;
-          if (data) {
-            setSelectedSponsor(data);
-          }
-        } catch (error) {
-          console.error("Error fetching sponsor:", error);
-        }
-      }
-    };
-
-    fetchSponsor();
-  }, [currentSponsorId, selectedSponsor]);
 
   const fetchBills = async (page: number) => {
     if (page === 1) {
@@ -84,11 +60,6 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
       // Apply search filter if provided
       if (searchQuery) {
         baseQuery = baseQuery.ilike("title", `%${searchQuery}%`);
-      }
-
-      // Apply sponsor filter if we have a selected sponsor
-      if (selectedSponsor) {
-        baseQuery = baseQuery.eq("sponsor.congressman_id", selectedSponsor.id);
       }
 
       // Apply date range filter if provided
@@ -140,7 +111,6 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
 
       if (selectedPolicyArea) params.set("policy_area", selectedPolicyArea);
       if (searchQuery) params.set("search", searchQuery);
-      if (selectedSponsor) params.set("sponsor_id", selectedSponsor.id);
       if (startDate) params.set("start_date", startDate);
       if (endDate) params.set("end_date", endDate);
       if (sortOrder !== "desc") params.set("sort_order", sortOrder);
@@ -155,11 +125,10 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
       fetchBills(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPolicyArea, searchQuery, selectedSponsor, startDate, endDate, sortOrder, initialLoadComplete, router]);
+  }, [selectedPolicyArea, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, router]);
 
-  const handlePolicyAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value as PolicyArea | "";
-    setSelectedPolicyArea(value || "");
+  const handlePolicyAreaChange = (value: string) => {
+    setSelectedPolicyArea(value as PolicyArea | "");
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,37 +143,21 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
     setEndDate(e.target.value);
   };
 
-  const handleSortOrderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortOrder(e.target.value as "asc" | "desc");
-  };
-
-  const handleSponsorSelect = (congressman: Congressman | null) => {
-    setSelectedSponsor(congressman);
+  const handleSortOrderChange = (value: string) => {
+    setSortOrder(value as "asc" | "desc");
   };
 
   const clearFilters = () => {
     setSelectedPolicyArea("");
     setSearchQuery("");
-    setSelectedSponsor(null);
     setStartDate("");
     setEndDate("");
     setSortOrder("desc");
-
-    // Clear the congressman search component
-    if (congressmanSearchRef.current) {
-      congressmanSearchRef.current.clear();
-    }
   };
 
   // Individual clear handlers
   const clearPolicyAreaFilter = () => setSelectedPolicyArea("");
   const clearSearchQueryFilter = () => setSearchQuery("");
-  const clearSponsorFilter = () => {
-    setSelectedSponsor(null);
-    if (congressmanSearchRef.current) {
-      congressmanSearchRef.current.clear();
-    }
-  };
   const clearStartDateFilter = () => setStartDate("");
   const clearEndDateFilter = () => setEndDate("");
   const clearSortOrderFilter = () => setSortOrder("desc");
@@ -214,185 +167,127 @@ export default function BillsClient({ initialBills, policyAreas }: BillsClientPr
       <h1 className="text-3xl font-bold mb-2">Bills</h1>
       <p className="text-gray-600 text-sm mb-6">Browse and explore congressional bills, their sponsors, and policy areas they address.</p>
 
-      <div className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
           <div>
-            <label htmlFor="policy-area" className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Policy Area
+            <label htmlFor="policy-area" className="block text-sm font-medium mb-1">
+              Policy Area
             </label>
-            <select
-              id="policy-area"
-              value={selectedPolicyArea || ""}
-              onChange={handlePolicyAreaChange}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">All Policy Areas</option>
-              {policyAreas.map((area) => (
-                <option key={area} value={area}>
-                  {area}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedPolicyArea} onValueChange={handlePolicyAreaChange}>
+              <SelectTrigger id="policy-area">
+                <SelectValue placeholder="All Policy Areas" />
+              </SelectTrigger>
+              <SelectContent>
+                {policyAreas.map((area) => (
+                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
-            <label htmlFor="search-filter" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="search-filter" className="block text-sm font-medium mb-1">
               Search Bills
             </label>
-            <input
+            <Input
               id="search-filter"
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search by title..."
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Sponsor
-            </label>
-            <CongressmanSearchSelect
-              ref={congressmanSearchRef}
-              onSelect={handleSponsorSelect}
-              selectedId={selectedSponsor?.id?.toString()}
-              placeholder="Search for a congressman..."
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Date Introduced
+            <label className="block text-sm font-medium mb-1">
+              Date Introduced Range
             </label>
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex-1">
-                <input
-                  id="start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={handleStartDateChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Start date"
-                />
-              </div>
-              <div className="flex-1">
-                <input
-                  id="end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={handleEndDateChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="End date"
-                />
-              </div>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={handleStartDateChange}
+                placeholder="Start date"
+              />
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={handleEndDateChange}
+                placeholder="End date"
+              />
             </div>
           </div>
 
           <div>
-            <label htmlFor="sort-order" className="block text-sm font-medium text-gray-700 mb-2">
-              Sort by Introduced Date
+            <label htmlFor="sort-order" className="block text-sm font-medium mb-1">
+              Sort By
             </label>
-            <div className="flex">
-              <select
-                id="sort-order"
-                value={sortOrder}
-                onChange={handleSortOrderChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="desc">Newest First</option>
-                <option value="asc">Oldest First</option>
-              </select>
-            </div>
+            <Select value={sortOrder} onValueChange={handleSortOrderChange}>
+              <SelectTrigger id="sort-order">
+                <SelectValue placeholder="Sort by date..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Newest First</SelectItem>
+                <SelectItem value="asc">Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </div>
 
-      {(selectedPolicyArea || searchQuery || selectedSponsor || startDate || endDate || sortOrder !== "desc") && (
-        <div className="mb-4 flex items-center flex-wrap">
-          <div className="text-sm text-gray-600 mr-2">Active filters:</div>
+        <div className="flex items-center justify-end">
+           <Button variant="outline" onClick={clearFilters} size="sm">
+              Clear All Filters
+            </Button>
+        </div>
+
+        {(selectedPolicyArea || searchQuery || startDate || endDate || sortOrder !== "desc") && (
+        <div className="mt-4 flex items-center flex-wrap gap-2">
+          <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
           {selectedPolicyArea && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2 mb-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
               Policy: {selectedPolicyArea}
-              <button
-                onClick={clearPolicyAreaFilter}
-                className="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none"
-                aria-label="Clear policy area filter"
-              >
-                &times;
-              </button>
+              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearPolicyAreaFilter} aria-label="Clear policy area filter">
+                <X className="h-3 w-3" />
+              </Button>
             </span>
           )}
           {searchQuery && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2 mb-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
               Search: {searchQuery}
-              <button
-                onClick={clearSearchQueryFilter}
-                className="ml-2 text-green-500 hover:text-green-700 focus:outline-none"
-                aria-label="Clear search filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {selectedSponsor && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-2 mb-2">
-              Sponsor: {selectedSponsor.full_name}
-              <button
-                onClick={clearSponsorFilter}
-                className="ml-2 text-purple-500 hover:text-purple-700 focus:outline-none"
-                aria-label="Clear sponsor filter"
-              >
-                &times;
-              </button>
+              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSearchQueryFilter} aria-label="Clear search filter">
+                <X className="h-3 w-3" />
+              </Button>
             </span>
           )}
           {startDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mr-2 mb-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
               From: {new Date(startDate).toLocaleDateString()}
-              <button
-                onClick={clearStartDateFilter}
-                className="ml-2 text-amber-500 hover:text-amber-700 focus:outline-none"
-                aria-label="Clear start date filter"
-              >
-                &times;
-              </button>
+              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
+                <X className="h-3 w-3" />
+              </Button>
             </span>
           )}
           {endDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mr-2 mb-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
               To: {new Date(endDate).toLocaleDateString()}
-              <button
-                onClick={clearEndDateFilter}
-                className="ml-2 text-amber-500 hover:text-amber-700 focus:outline-none"
-                aria-label="Clear end date filter"
-              >
-                &times;
-              </button>
+              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
+                <X className="h-3 w-3" />
+              </Button>
             </span>
           )}
           {sortOrder !== "desc" && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-2 mb-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
               Sort: {sortOrder === "asc" ? "Oldest First" : "Newest First"}
-              <button
-                onClick={clearSortOrderFilter}
-                className="ml-2 text-indigo-500 hover:text-indigo-700 focus:outline-none"
-                aria-label="Clear sort order filter"
-              >
-                &times;
-              </button>
+              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSortOrderFilter} aria-label="Clear sort order filter">
+                <X className="h-3 w-3" />
+              </Button>
             </span>
           )}
-          <button
-            onClick={clearFilters}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Clear all
-          </button>
         </div>
       )}
+      </div>
 
       {loading ? (
         <div className="flex justify-center items-center h-64">

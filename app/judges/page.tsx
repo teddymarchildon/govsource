@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase/client';
 import JudgeCard from '@/components/JudgeCard';
 import { Judge } from '@/types/types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 function JudgesContent() {
   const router = useRouter();
@@ -75,49 +78,46 @@ function JudgesContent() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Supreme Court Judges</h1>
 
-      <div className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="search-filter" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-end md:space-x-4 gap-4 mb-4">
+          <div className="flex-1">
+            <label htmlFor="search" className="block text-sm font-medium mb-1">
               Search Judges
             </label>
-            <div className="flex">
-              <input
-                id="search-filter"
-                type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search by name..."
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+            <Input
+              id="search"
+              placeholder="Search by name..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="w-full"
+            />
+          </div>
+          <div className="ml-auto">
+            <Button variant="outline" onClick={clearFilters} size="sm">
+              Clear Filter
+            </Button>
           </div>
         </div>
+        {searchQuery && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
+            {searchQuery && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Search: {searchQuery}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearSearchQueryFilter}
+                  aria-label="Clear search filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
-
-      {searchQuery && (
-        <div className="mb-4 flex items-center">
-          <div className="text-sm text-gray-600 mr-2">Active filters:</div>
-          {searchQuery && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-2">
-              Search: {searchQuery}
-              <button
-                onClick={clearSearchQueryFilter}
-                className="ml-2 text-purple-500 hover:text-purple-700 focus:outline-none"
-                aria-label="Clear search filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          <button
-            onClick={clearFilters}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Clear all
-          </button>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
