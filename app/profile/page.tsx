@@ -261,15 +261,7 @@ export default function ProfilePage() {
             <ul className="mt-4 space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                Track bills & laws
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                Follow politicians
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                Limited AI chat
+                See GovSource information
               </li>
             </ul>
           </div>
@@ -313,7 +305,7 @@ export default function ProfilePage() {
           <div className="mt-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="font-medium">
-                Your plan is <span className="lowercase">{subscription.plan_name}</span>.
+                Your plan is <span className="lowercase">{subscription.tier === 'paid' ? 'Pro' : 'Free'}</span>.
                 {subscription.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
               </p>
               <button
