@@ -72,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('auth state change', event, session);
         if (session?.user) {
           const supaUser = session.user as SupabaseUser;
           setUser({
@@ -82,8 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           // Check onboarding status when auth state changes
           if (event === 'SIGNED_IN') {
-            await checkSubscriptionStatus(supaUser.id);
-          } else {
             await checkSubscriptionStatus(supaUser.id);
           }
         } else {
