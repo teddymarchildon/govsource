@@ -27,45 +27,37 @@ export default function CongressmenPage() {
   const chambers = ['House', 'Senate'];
 
   useEffect(() => {
-    const fetchCongressmen = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
       try {
-        const params: any = { limit: 100 };
-        if (party) {
-          params.party = party;
-        }
-        if (state) {
-          params.state = state;
-        }
-        if (chamber) {
-          params.chamber = chamber;
-        }
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
-        // Add current filter parameter
-        params.current = currentOnly;
-
-        const data = await getCongressmen(params);
-        setCongressmen(data);
-
-        // Extract unique states
-        const uniqueStates = data.reduce((acc: string[], congressman: Congressman) => {
+        // Fetch all congressmen initially to populate states dropdown
+        const allCongressmen = await getCongressmen({ limit: 1000, current: true });
+        const uniqueStates = allCongressmen.reduce((acc: string[], congressman: Congressman) => {
           if (congressman.state && !acc.includes(congressman.state)) {
             acc.push(congressman.state);
           }
           return acc;
         }, []);
         setStates(uniqueStates.sort());
+
+        // Then fetch the filtered list for display
+        const params: any = { limit: 100, current: currentOnly };
+        if (party) params.party = party;
+        if (state) params.state = state;
+        if (chamber) params.chamber = chamber;
+        if (searchTerm) params.search = searchTerm;
+        
+        const filteredData = await getCongressmen(params);
+        setCongressmen(filteredData);
       } catch (error) {
         console.error('Error fetching congressmen:', error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchCongressmen();
-  }, [party, state, chamber, searchTerm, currentOnly]); // Added currentOnly to dependency array
+    
+    fetchInitialData();
+  }, [party, state, chamber, searchTerm, currentOnly]);
 
   const clearFilters = () => {
     setParty('');
