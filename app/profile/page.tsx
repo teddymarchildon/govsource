@@ -6,7 +6,7 @@ import {
   getSavedBills, getSavedCongressmen, getSavedAgencies,
   getSavedJudges, getSavedClusters, getSavedAgencyDocuments,
   unsaveBill, unsaveCongressman, unsaveAgency,
-  unsaveJudge, unsaveCluster, unsaveAgencyDocument, cancelSubscription
+  unsaveJudge, unsaveCluster, unsaveAgencyDocument, createCheckoutSession
 } from '../../services/api';
 import BillCard from '../../components/BillCard';
 import CongressmanCard from '../../components/CongressmanCard';
@@ -70,6 +70,7 @@ export default function ProfilePage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -102,6 +103,22 @@ export default function ProfilePage() {
       fetchSavedItems();
     }
   }, [user, loading, isPaidSubscriber]);
+
+  const handleUpgrade = async () => {
+    if (!user) return;
+
+    setCheckoutLoading(true);
+    try {
+      const url = await createCheckoutSession(user.id, window.location.href);
+      if (url) {
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
 
   const handleDeleteSavedBill = async (savedBill: SavedBill) => {
     if (!user) return;
@@ -166,21 +183,6 @@ export default function ProfilePage() {
       setSavedAgencyDocuments(savedAgencyDocuments.filter(doc => doc.id !== savedDocument.id));
     } catch (error) {
       console.error('Error deleting saved agency document:', error);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!subscription) return;
-    setCancelLoading(true);
-    setCancelError(null);
-    try {
-      await cancelSubscription(subscription.stripe_subscription_id);
-      // Let the AuthContext handle the subscription state update
-    } catch (err: any) {
-      setCancelError(err.message || 'Failed to cancel subscription');
-    } finally {
-      setCancelLoading(false);
-      setShowCancelModal(false);
     }
   };
 
@@ -265,12 +267,13 @@ export default function ProfilePage() {
               </li>
             </ul>
             {!isPaidSubscriber && (
-              <Link
-                href="/onboarding?plan=pro"
-                className="mt-6 block text-center w-full bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
+              <Button
+                onClick={handleUpgrade}
+                disabled={checkoutLoading}
+                className="mt-6 w-full"
               >
-                Upgrade to Pro
-              </Link>
+                {checkoutLoading ? 'Processing...' : 'Upgrade to Pro'}
+              </Button>
             )}
           </div>
         </div>

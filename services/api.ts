@@ -1376,38 +1376,34 @@ export const getUserSubscription = async (userId: string) => {
 };
 
 export const getUserPayments = async (userId: string) => {
-  
-  const { data, error } = await supabase
-    .from('payment')
-    .select('*')
-    .eq('user_id', userId)
-    .order('paid_at', { ascending: false })
-    .limit(10);
-  if (error) throw error;
-  return data;
+  // TODO: Implement actual payment retrieval logic
+  return { data: [], error: null };
 };
 
 // Upsert a free subscription - creates if doesn't exist, does nothing if it exists
 export const upsertFreeSubscription = async (userId: string) => {
-  const res = await fetch('/api/upsert-subscription', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId }),
-  });
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error || 'Failed to upsert subscription');
-  }
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .upsert({ user_id: userId, status: 'free' }, { onConflict: 'user_id' });
+  
+    if (error) throw error;
+    return data;
 };
 
-// This is a stub. Actual cancellation should be handled securely on the backend.
-export const cancelSubscription = async (stripeSubscriptionId: string) => {
-  const res = await fetch('/api/cancel-subscription', {
+export const createCheckoutSession = async (userId: string, redirectUrl: string) => {
+  const response = await fetch('/api/create-checkout-session', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stripeSubscriptionId }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId, redirectUrl }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription');
-  return data;
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create checkout session');
+  }
+
+  const session = await response.json();
+  return session.url;
 };
