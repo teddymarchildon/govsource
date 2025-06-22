@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bill, Congressman } from '../types/types';
 import { supabase } from '../utils/supabase/client';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface BillCardProps {
   bill: Bill;
@@ -43,30 +51,31 @@ export default function BillCard({ bill }: BillCardProps) {
   }, [bill.id, bill.sponsor]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
-      <div className="p-3 md:p-4 h-full flex flex-col">
-        <div className="flex flex-wrap justify-between items-start mb-2 gap-2">
-          <span className="text-sm font-semibold text-gray-700">{billIdentifier}</span>
-
+    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+      <CardHeader>
+        <div className="flex justify-between items-start gap-2">
+          <CardTitle className="text-base">{billIdentifier}</CardTitle>
           {bill.policy_area && (
-            <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 truncate max-w-[150px]">
+            <Badge variant="secondary" className="truncate max-w-[150px] text-xs">
               {bill.policy_area}
-            </span>
+            </Badge>
           )}
         </div>
-
+      </CardHeader>
+      <CardContent className="flex-grow pb-4">
         <Link
           href={`/bills/${bill.id}`}
-          className="block mb-3 hover:text-blue-600 transition-colors"
+          className="block hover:text-blue-600 transition-colors"
         >
-          <h3 className="text-sm md:text-base font-medium text-gray-900 line-clamp-2">
+          <p className="text-sm font-medium text-gray-900 line-clamp-3">
             {bill.title}
-          </h3>
+          </p>
         </Link>
-
-        <div className="flex flex-col space-y-2 mt-auto">
+      </CardContent>
+      <CardFooter>
+        <div className="flex flex-col space-y-2 text-xs w-full">
           {sponsor && (
-            <div className="text-xs text-gray-700">
+            <div className="text-gray-700">
               <span className="font-medium">Sponsored by:</span>{' '}
               <Link
                 href={`/congressmen/${sponsor.id}`}
@@ -81,18 +90,18 @@ export default function BillCard({ bill }: BillCardProps) {
           )}
 
           {bill.introduced_date && (
-            <div className="text-xs text-gray-500">
+            <div className="text-gray-500">
               <span className="font-medium">Introduced:</span> {new Date(bill.introduced_date).toLocaleDateString()}
             </div>
           )}
 
           {bill.most_recent_action && bill.most_recent_action.date && (
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-gray-500">
               <span className="font-medium">Latest Action:</span> {new Date(bill.most_recent_action.date).toLocaleDateString()}
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }
