@@ -77,7 +77,7 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Details
+            Summary
           </button>
 
           <button
@@ -98,10 +98,12 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
         {activeTab === 'details' && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-6">
-              {rule.abstract && (
+              {rule.abstract ? (
                 <div className="prose max-w-none mb-6">
                   <div dangerouslySetInnerHTML={{ __html: rule.abstract }} />
                 </div>
+              ) : (
+                <div className="text-gray-500 italic">No summary available for this rule.</div>
               )}
             </div>
           </div>

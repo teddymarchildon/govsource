@@ -119,7 +119,7 @@ export default function BillOrLawDetail({
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Details
+            Summary
           </button>
           <button
             onClick={() => setActiveTab('text')}
@@ -173,7 +173,6 @@ export default function BillOrLawDetail({
         {activeTab === 'details' && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Summary</h3>
               {summary && summary.text ? (
                 <div className="prose max-w-none mb-6">
                   <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
