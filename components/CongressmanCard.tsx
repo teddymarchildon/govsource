@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { Congressman } from '../types/types';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Phone, Globe } from 'lucide-react';
 
 interface CongressmanCardProps {
   congressman: Congressman;
@@ -7,16 +10,14 @@ interface CongressmanCardProps {
 
 export default function CongressmanCard({ congressman }: CongressmanCardProps) {
   // Helper function to get party tag class
-  const getPartyTagClass = (party: string) => {
+  const getPartyBadgeClass = (party: string) => {
     switch (party.toLowerCase()) {
       case 'democrat':
-        return 'bill-tag-party-democrat';
+        return 'bg-secondary text-secondary-foreground border-transparent hover:bg-secondary/80';
       case 'republican':
-        return 'bill-tag-party-republican';
-      case 'independent':
-        return 'bill-tag-party-independent';
+        return 'bg-red-100 text-red-800 border-transparent hover:bg-red-200';
       default:
-        return 'bill-tag bg-gray-100 text-gray-800';
+        return 'bg-gray-200 text-gray-800 border-transparent hover:bg-gray-300';
     }
   };
 
@@ -37,39 +38,38 @@ export default function CongressmanCard({ congressman }: CongressmanCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
-      <Link href={`/congressmen/${congressman.id}`} className="block p-5">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-medium text-gray-900">
-            {congressman.full_name}
-          </h3>
+    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="p-4 pb-2">
+        <div className="flex justify-between items-start gap-2">
+          <CardTitle className="text-lg">
+            <Link href={`/congressmen/${congressman.id}`} className="hover:text-blue-600 transition-colors">
+              {congressman.full_name}
+            </Link>
+          </CardTitle>
 
-          <span className={`${getPartyTagClass(congressman.party)}`}>
+          <Badge className={getPartyBadgeClass(congressman.party)}>
             {congressman.party}
-          </span>
+          </Badge>
         </div>
-
+      </CardHeader>
+      <CardContent className="p-4 pt-2 flex-grow flex flex-col">
         {congressman.chamber && (
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-gray-600 mb-4">
             {getChamberInfo()}
           </p>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 mt-auto">
           {congressman.phone && (
             <div className="flex items-center text-sm text-gray-600">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
+              <Phone className="h-4 w-4 mr-2 text-gray-400" />
               {congressman.phone}
             </div>
           )}
 
           {congressman.website && (
             <div className="flex items-center text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-              </svg>
+              <Globe className="h-4 w-4 mr-2 text-gray-400" />
               <a
                 href={congressman.website}
                 target="_blank"
@@ -82,7 +82,7 @@ export default function CongressmanCard({ congressman }: CongressmanCardProps) {
             </div>
           )}
         </div>
-      </Link>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -52,7 +52,7 @@ export default function BillCard({ bill }: BillCardProps) {
 
   return (
     <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
-      <CardHeader>
+      <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-base">{billIdentifier}</CardTitle>
           {bill.policy_area && (
@@ -62,7 +62,7 @@ export default function BillCard({ bill }: BillCardProps) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="flex-grow pb-4">
+      <CardContent className="flex-grow px-4 pb-2">
         <Link
           href={`/bills/${bill.id}`}
           className="block hover:text-blue-600 transition-colors"
@@ -72,7 +72,7 @@ export default function BillCard({ bill }: BillCardProps) {
           </p>
         </Link>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="p-4 pt-2">
         <div className="flex flex-col space-y-2 text-xs w-full">
           {sponsor && (
             <div className="text-gray-700">
