@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 export default function AgenciesPage() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -56,7 +57,7 @@ export default function AgenciesPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <LoadingIndicator size="large" />
       </div>
     );
   }
