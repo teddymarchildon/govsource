@@ -6,8 +6,6 @@ import Sidebar from '../components/Sidebar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { OnboardingProvider } from '@/contexts/OnboardingContext';
-import OnboardingRedirect from '@/components/OnboardingRedirect';
 import FeedbackForm from '@/components/FeedbackForm';
 
 const inter = Inter({
@@ -48,18 +46,14 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable}`}>
       <body className={`${inter.className} font-sans`}>
         <AuthProvider>
-          <OnboardingProvider>
             <div className="min-h-screen bg-gray-50">
               <Header />
               <Sidebar />
               <main className="md:ml-64 pt-16 md:pt-16 p-4 md:p-6">
-                <OnboardingRedirect>
-                  {children}
-                </OnboardingRedirect>
+                {children}
               </main>
             </div>
             <FeedbackForm />
-          </OnboardingProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

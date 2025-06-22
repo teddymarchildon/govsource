@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, Suspense, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import OnboardingContainer from '../../components/onboarding/OnboardingContainer';
 import { upsertFreeSubscription } from '../../services/api';
+import { OnboardingProvider } from '@/contexts/OnboardingContext';
 
 function OnboardingContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const hasAttemptedSubscriptionCreation = useRef(false);
 
   // Upsert free subscription for users when they land on onboarding
@@ -61,7 +61,9 @@ export default function OnboardingPage() {
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       </div>
     }>
-      <OnboardingContent />
+      <OnboardingProvider>
+        <OnboardingContent />
+      </OnboardingProvider>
     </Suspense>
   );
 }

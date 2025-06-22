@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
-import { useOnboarding } from '@/contexts/OnboardingContext';
+import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 
 function LoginPageInner() {
   const [email, setEmail] = useState('');
@@ -119,7 +119,9 @@ function LoginPageInner() {
 export default function LoginPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <LoginPageInner />
+      <OnboardingProvider>
+        <LoginPageInner />
+      </OnboardingProvider>
     </Suspense>
   );
 }

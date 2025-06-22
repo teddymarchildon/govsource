@@ -4,11 +4,20 @@ import { useOnboarding } from '../../contexts/OnboardingContext';
 import StateSelection from './StateSelection';
 import PolicyAreaSelection from './PolicyAreaSelection';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function OnboardingContainer() {
-  const { currentStep, totalSteps, isLoading, skipOnboarding } = useOnboarding();
+  const { currentStep, totalSteps, isLoading, skipOnboarding, userPreferences } = useOnboarding();
+  const router = useRouter();
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading && userPreferences.onboarding_completed) {
+      router.push('/');
+    }
+  }, [isLoading, userPreferences.onboarding_completed, router]);
+
+  if (isLoading || (userPreferences && userPreferences.onboarding_completed)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner />
