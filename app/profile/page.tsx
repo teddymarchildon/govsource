@@ -6,8 +6,7 @@ import {
   getSavedBills, getSavedCongressmen, getSavedAgencies,
   getSavedJudges, getSavedClusters, getSavedAgencyDocuments,
   unsaveBill, unsaveCongressman, unsaveAgency,
-  unsaveJudge, unsaveCluster, unsaveAgencyDocument,
-  getUserSubscription, getUserPayments, cancelSubscription
+  unsaveJudge, unsaveCluster, unsaveAgencyDocument, cancelSubscription
 } from '../../services/api';
 import BillCard from '../../components/BillCard';
 import CongressmanCard from '../../components/CongressmanCard';
@@ -18,7 +17,6 @@ import AgencyRuleCard from '../../components/AgencyRuleCard';
 import {
   SavedBill, SavedCongressman, SavedAgency,
   SavedJudge, SavedCluster, SavedAgencyDocument,
-  Subscription, Payment
 } from '../../types/types';
 import Link from 'next/link';
 import UserPreferencesSection from '../../components/UserPreferencesSection';
@@ -61,7 +59,7 @@ function ConfirmModal({ open, onConfirm, onCancel, loading }: {
 }
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isPaidSubscriber, subscription } = useAuth();
   const [savedBills, setSavedBills] = useState<SavedBill[]>([]);
   const [savedCongressmen, setSavedCongressmen] = useState<SavedCongressman[]>([]);
   const [savedAgencies, setSavedAgencies] = useState<SavedAgency[]>([]);
@@ -69,9 +67,6 @@ export default function ProfilePage() {
   const [savedClusters, setSavedClusters] = useState<SavedCluster[]>([]);
   const [savedAgencyDocuments, setSavedAgencyDocuments] = useState<SavedAgencyDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [subLoading, setSubLoading] = useState(true);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -103,32 +98,10 @@ export default function ProfilePage() {
       setIsLoading(false);
     };
 
-    const fetchSubscription = async () => {
-      if (user) {
-        setSubLoading(true);
-        try {
-          const sub = await getUserSubscription(user.id);
-          setSubscription(sub || null);
-          if (sub) {
-            const pays = await getUserPayments(user.id);
-            setPayments(pays || []);
-          } else {
-            setPayments([]);
-          }
-        } catch (err) {
-          setSubscription(null);
-          setPayments([]);
-        } finally {
-          setSubLoading(false);
-        }
-      }
-    };
-
     if (!loading) {
       fetchSavedItems();
-      if (user) fetchSubscription();
     }
-  }, [user, loading]);
+  }, [user, loading, isPaidSubscriber]);
 
   const handleDeleteSavedBill = async (savedBill: SavedBill) => {
     if (!user) return;
@@ -202,11 +175,12 @@ export default function ProfilePage() {
     setCancelError(null);
     try {
       await cancelSubscription(subscription.stripe_subscription_id);
-      // Optionally, refetch subscription status here
+      // Let the AuthContext handle the subscription state update
     } catch (err: any) {
       setCancelError(err.message || 'Failed to cancel subscription');
     } finally {
       setCancelLoading(false);
+      setShowCancelModal(false);
     }
   };
 
@@ -251,11 +225,11 @@ export default function ProfilePage() {
 
         {/* Modern Card Style for Tiers */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Free Tier */}
-          <div className={`rounded-lg border p-6 ${!subscription ? 'border-primary' : 'border-gray-300'}`}>
+          {/* Basic Tier */}
+          <div className={`rounded-lg border p-6 ${!isPaidSubscriber ? 'border-primary' : 'border-gray-300'}`}>
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold">Free</h3>
-              {!subscription && (
+              <h3 className="text-lg font-bold">Basic</h3>
+              {!isPaidSubscriber && (
                 <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">Current Plan</span>
               )}
             </div>
@@ -268,10 +242,10 @@ export default function ProfilePage() {
             </ul>
           </div>
           {/* Pro Tier */}
-          <div className={`rounded-lg border p-6 ${subscription ? 'border-primary' : 'border-gray-300'}`}>
+          <div className={`rounded-lg border p-6 ${isPaidSubscriber ? 'border-primary' : 'border-gray-300'}`}>
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-bold">Pro</h3>
-              {subscription && (
+              {isPaidSubscriber && (
                 <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">Current Plan</span>
               )}
             </div>
@@ -279,7 +253,7 @@ export default function ProfilePage() {
             <ul className="mt-4 space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                All Free features
+                All Basic features
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
@@ -290,7 +264,7 @@ export default function ProfilePage() {
                 Personalized alerts
               </li>
             </ul>
-            {!subscription && (
+            {!isPaidSubscriber && (
               <Link
                 href="/onboarding?plan=pro"
                 className="mt-6 block text-center w-full bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
@@ -301,16 +275,16 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {subLoading ? (
+        {loading ? (
           <div className="text-sm text-purple-600">Loading...</div>
-        ) : subscription ? (
+        ) : isPaidSubscriber ? (
           <div className="mt-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="font-medium">
-                You&apos;re on the <span>{subscription.tier === 'paid' ? 'pro' : 'free'} plan</span>.
-                {subscription.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
+                You&apos;re on the <span>Pro plan</span>.
+                {subscription?.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
               </p>
-              {subscription.tier === 'paid' && (
+              {isPaidSubscriber && (
                 <button
                   className="mt-2 text-sm text-red-600 hover:underline"
                   onClick={() => setShowCancelModal(true)}
@@ -321,37 +295,9 @@ export default function ProfilePage() {
             </div>
 
             {cancelError && <p className="text-red-500 text-sm mt-2">{cancelError}</p>}
-
-            {payments.length > 0 && (
-              <div className="mt-6">
-                <h3 className="font-semibold text-gray-800">Payment History</h3>
-                <ul className="mt-2 divide-y divide-gray-200">
-                  {payments.map(payment => (
-                    <li key={payment.id} className="py-3 flex justify-between items-center">
-                      <div>
-                        <p className="text-sm">
-                          {payment.created_at && `${new Date(payment.created_at).toLocaleDateString()} - `}${payment.amount / 100}
-                        </p>
-                        <p className="text-xs text-gray-500">{payment.status}</p>
-                      </div>
-                      {payment.receipt_url &&
-                        <a
-                          href={payment.receipt_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline"
-                        >
-                          View Receipt
-                        </a>
-                      }
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
         ) : (
-          <p className="mt-6 text-gray-600">You are on the Free plan.</p>
+          <p className="mt-6 text-gray-600">You are on the Basic plan.</p>
         )}
       </div>
 
