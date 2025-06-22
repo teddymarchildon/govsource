@@ -26,39 +26,6 @@ import { Button } from '../../components/ui/button';
 import { BookmarkMinus } from 'lucide-react';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
-function ConfirmModal({ open, onConfirm, onCancel, loading }: {
-  open: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-  loading?: boolean;
-}) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-        <h2 className="text-lg font-bold mb-4">Cancel Subscription</h2>
-        <p className="mb-6">Are you sure you want to cancel your subscription? You will retain access until the end of your billing period.</p>
-        <div className="flex justify-end gap-2">
-          <button
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            No, keep it
-          </button>
-          <button
-            className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-            onClick={onConfirm}
-            disabled={loading}
-          >
-            {loading ? "Cancelling..." : "Yes, cancel"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function ProfilePage() {
   const { user, loading, isPaidSubscriber, subscription } = useAuth();
   const [savedBills, setSavedBills] = useState<SavedBill[]>([]);
@@ -68,8 +35,6 @@ export default function ProfilePage() {
   const [savedClusters, setSavedClusters] = useState<SavedCluster[]>([]);
   const [savedAgencyDocuments, setSavedAgencyDocuments] = useState<SavedAgencyDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [cancelError, setCancelError] = useState<string | null>(null);
-  const [showCancelModal, setShowCancelModal] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const pathname = usePathname();
 
@@ -290,16 +255,16 @@ export default function ProfilePage() {
                 {subscription?.current_period_end && `It will renew on ${new Date(subscription.current_period_end).toLocaleDateString()}.`}
               </p>
               {isPaidSubscriber && (
-                <button
-                  className="mt-2 text-sm text-red-600 hover:underline"
-                  onClick={() => setShowCancelModal(true)}
+                <a
+                  href={`https://billing.stripe.com/p/login/7sY4gzcew0Exef437l2ZO00?prefilled_email=${user.email}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 text-sm text-blue-600 hover:underline"
                 >
-                  Cancel Subscription
-                </button>
+                  Manage subscription
+                </a>
               )}
             </div>
-
-            {cancelError && <p className="text-red-500 text-sm mt-2">{cancelError}</p>}
           </div>
         ) : (
           <p className="mt-6 text-gray-600">You are on the Basic plan.</p>
