@@ -2,6 +2,13 @@
 
 import Link from 'next/link';
 import { AgencyDocument, Agency } from '../types/types';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface ExecutiveOrderCardProps {
   order: AgencyDocument & {
@@ -12,26 +19,28 @@ interface ExecutiveOrderCardProps {
 
 export default function ExecutiveOrderCard({ order }: ExecutiveOrderCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
-      <div className="p-4 h-full flex flex-col">
-        <div className="flex justify-between items-start mb-2">
-          <span className="text-sm font-semibold text-gray-700">
-            {order.remote_document_number}
-          </span>
-        </div>
+    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="p-4 pb-2">
+        <CardTitle className="text-base font-semibold text-gray-700">
+          {order.remote_document_number}
+        </CardTitle>
+      </CardHeader>
 
+      <CardContent className="flex-grow px-4 pb-2">
         <Link
           href={`/executive-orders/${order.id}`}
-          className="block mb-3 hover:text-blue-600 transition-colors"
+          className="block hover:text-blue-600 transition-colors"
         >
-          <h3 className="text-base font-medium text-gray-900 line-clamp-2">
+          <p className="text-sm font-medium text-gray-900 line-clamp-3">
             {order.title}
-          </h3>
+          </p>
         </Link>
+      </CardContent>
 
-        <div className="flex flex-col space-y-2 mt-auto">
+      <CardFooter className="p-4 pt-2">
+        <div className="flex flex-col space-y-2 text-xs w-full mt-auto">
           {order.agency && (
-            <div className="text-xs text-gray-700">
+            <div className="text-gray-700">
               <span className="font-medium">Agency:</span>{' '}
               <Link
                 href={`/agencies/${order.agency.id}`}
@@ -43,19 +52,19 @@ export default function ExecutiveOrderCard({ order }: ExecutiveOrderCardProps) {
           )}
 
           {order.president && (
-            <div className="text-xs text-gray-700">
+            <div className="text-gray-700">
               <span className="font-medium">President:</span>{' '}
               <span>{order.president}</span>
             </div>
           )}
 
           {order.signing_date && (
-            <div className="text-xs text-gray-500">
+            <div className="text-gray-500">
               <span className="font-medium">Signed:</span> {new Date(order.signing_date).toLocaleDateString()}
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }
