@@ -56,8 +56,8 @@ export default function StateSelection() {
             disabled={isSaving}
             className={`p-3 rounded-lg border transition-colors text-left ${
               selectedStates.includes(state.code)
-                ? 'bg-blue-100 border-blue-500 text-blue-800'
-                : 'bg-white border-gray-300 hover:bg-gray-50'
+                ? 'bg-secondary border-primary text-primary'
+                : 'bg-white border-border hover:bg-gray-50'
             } ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             <div className="text-sm font-medium">{state.code}</div>
@@ -70,7 +70,7 @@ export default function StateSelection() {
         <button
           onClick={handleContinue}
           disabled={isSaving}
-          className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
           Continue
         </button>

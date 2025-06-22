@@ -31,9 +31,15 @@ export default function PolicyAreaSelection() {
   };
 
   const handleComplete = async () => {
-    // We don't need to save preferences again since they're already saved
-    // Just mark onboarding as completed
-    await completeOnboarding();
+    setIsSaving(true);
+    try {
+      await savePreferences();
+      await completeOnboarding();
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -52,8 +58,8 @@ export default function PolicyAreaSelection() {
             disabled={isSaving}
             className={`p-3 rounded-lg border transition-colors text-left ${
               selectedAreas.includes(area)
-                ? 'bg-blue-100 border-blue-500 text-blue-800'
-                : 'bg-white border-gray-300 hover:bg-gray-50'
+                ? 'bg-secondary border-primary text-primary'
+                : 'bg-white border-border hover:bg-gray-50'
             } ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {area}
@@ -71,10 +77,10 @@ export default function PolicyAreaSelection() {
         </button>
         <button
           onClick={handleComplete}
-          className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
+          className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           disabled={isSaving}
         >
-          Complete
+          {isSaving ? 'Saving...' : 'Complete'}
         </button>
       </div>
       <div className="text-center mt-4">
