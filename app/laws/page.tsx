@@ -1,7 +1,7 @@
 'use server'
 
 import { Suspense } from 'react';
-import { supabaseServer as supabase } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { Law } from '@/types/types';
 import { POLICY_AREAS } from '@/constants/policyAreas';
 import type { PolicyArea } from '@/types/types';
@@ -9,6 +9,7 @@ import LawsClient from './LawsClient';
 
 // Server Component
 async function fetchInitialLaws() {
+  const supabase = await createClient()
   try {
     const { data, error } = await supabase
       .from('bill')
