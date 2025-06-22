@@ -95,7 +95,7 @@ export default function SupremeCourtCaseDetailPage() {
           <p className="text-red-700">
             {error || 'Case not found'}
           </p>
-          <Link href="/supreme-court-cases" className="text-blue-600 hover:underline mt-2 inline-block">
+          <Link href="/supreme-court-cases" className="text-primary hover:underline mt-2 inline-block">
             Back to cases
           </Link>
         </div>
@@ -151,7 +151,7 @@ export default function SupremeCourtCaseDetailPage() {
                           onClick={() => setActiveTab(idx)}
                           className={`py-3 px-1 inline-flex items-center border-b-2 transition-colors duration-200 ${
                             activeTab === idx
-                              ? 'border-blue-700 text-blue-700 font-medium'
+                              ? 'border-primary text-primary font-medium'
                               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                           }`}
                         >

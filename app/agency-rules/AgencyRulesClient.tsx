@@ -7,6 +7,10 @@ import { Agency, AgencyDocument } from "@/types/types";
 import { supabase } from "@/utils/supabase/client";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface AgencyRulesClientProps {
   initialRules: AgencyDocument[];
@@ -124,11 +128,11 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgencyId, ruleType, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, router]);
 
-  const handleAgencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedAgencyId(e.target.value);
+  const handleAgencyChange = (value: string) => {
+    setSelectedAgencyId(value);
   };
-  const handleRuleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setRuleType(e.target.value);
+  const handleRuleTypeChange = (value: string) => {
+    setRuleType(value);
   };
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -139,8 +143,8 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(e.target.value);
   };
-  const handleSortOrderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortOrder(e.target.value as 'asc' | 'desc');
+  const handleSortOrderChange = (value: string) => {
+    setSortOrder(value as 'asc' | 'desc');
   };
   const clearFilters = () => {
     setSelectedAgencyId("");
@@ -162,184 +166,149 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-2">Agency Rules</h1>
       <p className="text-gray-600 text-sm mb-6">Review federal agency rules and regulations that implement and enforce laws passed by Congress.</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div>
-          <label htmlFor="agency-filter" className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Agency
-          </label>
-          <select
-            id="agency-filter"
-            value={selectedAgencyId}
-            onChange={handleAgencyChange}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          >
-            <option value="">All Agencies</option>
-            {agencies.map((agency) => (
-              <option key={agency.id} value={agency.id}>
-                {agency.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="rule-type-filter" className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Rule Type
-          </label>
-          <select
-            id="rule-type-filter"
-            value={ruleType}
-            onChange={handleRuleTypeChange}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          >
-            <option value="">All Rule Types</option>
-            <option value="Presidential Document">Presidential Document</option>
-            <option value="Proposed Rule">Proposed Rule</option>
-            <option value="Rule">Rule</option>
-            <option value="Notice">Notice</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="search-filter" className="block text-sm font-medium text-gray-700 mb-2">
-            Search Rules
-          </label>
-          <input
-            id="search-filter"
-            type="text"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            placeholder="Search by title..."
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Date Signed
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex-1">
-              <input
+      
+      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
+          <div>
+            <label htmlFor="agency-filter" className="block text-sm font-medium mb-1">
+              Agency
+            </label>
+            <Select value={selectedAgencyId} onValueChange={handleAgencyChange}>
+              <SelectTrigger id="agency-filter">
+                <SelectValue placeholder="All Agencies" />
+              </SelectTrigger>
+              <SelectContent>
+                {agencies.map((agency) => (
+                  <SelectItem key={agency.id} value={agency.id.toString()}>{agency.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label htmlFor="rule-type-filter" className="block text-sm font-medium mb-1">
+              Rule Type
+            </label>
+            <Select value={ruleType} onValueChange={handleRuleTypeChange}>
+              <SelectTrigger id="rule-type-filter">
+                <SelectValue placeholder="All Rule Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Presidential Document">Presidential Document</SelectItem>
+                <SelectItem value="Proposed Rule">Proposed Rule</SelectItem>
+                <SelectItem value="Rule">Rule</SelectItem>
+                <SelectItem value="Notice">Notice</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label htmlFor="search-filter" className="block text-sm font-medium mb-1">
+              Search Rules
+            </label>
+            <Input
+              id="search-filter"
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search by title..."
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              Publication Date Range
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
                 id="start-date"
                 type="date"
                 value={startDate}
                 onChange={handleStartDateChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 placeholder="Start date"
               />
-            </div>
-            <div className="flex-1">
-              <input
+              <Input
                 id="end-date"
                 type="date"
                 value={endDate}
                 onChange={handleEndDateChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 placeholder="End date"
               />
             </div>
           </div>
-        </div>
-        <div>
-          <label htmlFor="sort-order" className="block text-sm font-medium text-gray-700 mb-2">
-            Sort by Publication Date
-          </label>
-          <div className="flex">
-            <select
-              id="sort-order"
-              value={sortOrder}
-              onChange={handleSortOrderChange}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="desc">Newest First</option>
-              <option value="asc">Oldest First</option>
-            </select>
+          <div>
+            <label htmlFor="sort-order" className="block text-sm font-medium mb-1">
+              Sort By
+            </label>
+            <Select value={sortOrder} onValueChange={handleSortOrderChange}>
+              <SelectTrigger id="sort-order">
+                <SelectValue placeholder="Sort by date..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Newest First</SelectItem>
+                <SelectItem value="asc">Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </div>
-      {(selectedAgencyId || ruleType || searchQuery || startDate || endDate || sortOrder !== "desc") && (
-        <div className="mb-4 flex items-center flex-wrap">
-          <div className="text-sm text-gray-600 mr-2">Active filters:</div>
-          {selectedAgencyId && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2 mb-2">
-              Agency: {agencies.find(a => a.id === selectedAgencyId)?.name || 'Selected'}
-              <button
-                onClick={clearAgencyFilter}
-                className="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none"
-                aria-label="Clear agency filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {ruleType && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2 mb-2">
-              Type: {ruleType}
-              <button
-                onClick={clearRuleTypeFilter}
-                className="ml-2 text-green-500 hover:text-green-700 focus:outline-none"
-                aria-label="Clear rule type filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {searchQuery && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-2 mb-2">
-              Search: {searchQuery}
-              <button
-                onClick={clearSearchQueryFilter}
-                className="ml-2 text-purple-500 hover:text-purple-700 focus:outline-none"
-                aria-label="Clear search filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {startDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mr-2 mb-2">
-              From: {new Date(startDate).toLocaleDateString()}
-              <button
-                onClick={clearStartDateFilter}
-                className="ml-2 text-amber-500 hover:text-amber-700 focus:outline-none"
-                aria-label="Clear start date filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {endDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mr-2 mb-2">
-              To: {new Date(endDate).toLocaleDateString()}
-              <button
-                onClick={clearEndDateFilter}
-                className="ml-2 text-amber-500 hover:text-amber-700 focus:outline-none"
-                aria-label="Clear end date filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {sortOrder !== "desc" && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-2 mb-2">
-              Sort: {sortOrder === "asc" ? "Oldest First" : "Newest First"}
-              <button
-                onClick={clearSortOrderFilter}
-                className="ml-2 text-indigo-500 hover:text-indigo-700 focus:outline-none"
-                aria-label="Clear sort order filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          <button
-            onClick={clearFilters}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Clear all
-          </button>
+
+        <div className="flex items-center justify-end">
+           <Button variant="outline" onClick={clearFilters} size="sm">
+              Clear All Filters
+            </Button>
         </div>
-      )}
+
+        {(selectedAgencyId || ruleType || searchQuery || startDate || endDate || sortOrder !== "desc") && (
+          <div className="mt-4 flex items-center flex-wrap gap-2">
+            <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
+            {selectedAgencyId && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Agency: {agencies.find(a => a.id.toString() === selectedAgencyId)?.name || 'Selected'}
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearAgencyFilter} aria-label="Clear agency filter">
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {ruleType && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Type: {ruleType}
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearRuleTypeFilter} aria-label="Clear rule type filter">
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {searchQuery && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Search: {searchQuery}
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSearchQueryFilter} aria-label="Clear search filter">
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {startDate && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                From: {new Date(startDate).toLocaleDateString()}
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {endDate && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                To: {new Date(endDate).toLocaleDateString()}
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {sortOrder !== "desc" && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Sort: {sortOrder === "asc" ? "Oldest First" : "Newest First"}
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSortOrderFilter} aria-label="Clear sort order filter">
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-xl">Loading...</div>

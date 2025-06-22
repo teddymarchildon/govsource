@@ -279,6 +279,7 @@ export interface Subscription {
   created_at?: string;
   updated_at?: string;
   tier: 'free' | 'paid';
+  plan_name?: string;
 }
 
 export interface Payment {
@@ -291,4 +292,5 @@ export interface Payment {
   status: string;
   paid_at?: string;
   created_at?: string;
+  receipt_url?: string;
 }

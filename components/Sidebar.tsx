@@ -5,6 +5,18 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSavedBills, getSavedCongressmen, getSavedAgencies, getSavedJudges, getSavedClusters, getSavedAgencyDocuments } from '../services/api';
+import {
+  Home,
+  Gavel,
+  FileText,
+  ClipboardList,
+  PenSquare,
+  Scale,
+  Users,
+  Building,
+  Briefcase,
+  Menu,
+} from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -146,7 +158,7 @@ export default function Sidebar() {
   }, [isMobileOpen]);
 
   const isActive = (path: string) => {
-    return pathname === path ? 'bg-gray-100 text-blue-700 font-medium' : '';
+    return pathname === path ? 'bg-gray-100 text-primary font-medium' : '';
   };
 
   // Fixed button to toggle sidebar on mobile
@@ -154,12 +166,10 @@ export default function Sidebar() {
     <button
       id="sidebar-toggle"
       onClick={() => setIsMobileOpen(!isMobileOpen)}
-      className="md:hidden fixed bottom-4 right-4 bg-blue-600 text-white rounded-full p-3 shadow-lg z-20"
+      className="md:hidden fixed bottom-4 right-4 bg-primary text-white rounded-full p-3 shadow-lg z-20"
       aria-label="Toggle sidebar"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
+      <Menu className="h-6 w-6" />
     </button>
   );
 
@@ -180,9 +190,7 @@ export default function Sidebar() {
                   href="/"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7m-7-7v14" />
-                  </svg>
+                  <Home className="h-5 w-5 mr-2" />
                   Home
                 </Link>
               </li>
@@ -197,9 +205,7 @@ export default function Sidebar() {
                   href="/laws"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/laws')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
+                  <Gavel className="h-5 w-5 mr-2" />
                   Laws
                 </Link>
               </li>
@@ -208,9 +214,7 @@ export default function Sidebar() {
                   href="/bills"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/bills')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <FileText className="h-5 w-5 mr-2" />
                   Proposed Bills
                 </Link>
               </li>
@@ -219,9 +223,7 @@ export default function Sidebar() {
                   href="/agency-rules"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/agency-rules')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
+                  <ClipboardList className="h-5 w-5 mr-2" />
                   Agency Rules
                 </Link>
               </li>
@@ -230,9 +232,7 @@ export default function Sidebar() {
                   href="/executive-orders"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/executive-orders')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <PenSquare className="h-5 w-5 mr-2" />
                   Executive Orders
                 </Link>
               </li>
@@ -241,9 +241,7 @@ export default function Sidebar() {
                   href="/supreme-court-cases"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/supreme-court-cases')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
+                  <Scale className="h-5 w-5 mr-2" />
                   Supreme Court Cases
                 </Link>
               </li>
@@ -258,9 +256,7 @@ export default function Sidebar() {
                   href="/congressmen"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/congressmen')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  <Users className="h-5 w-5 mr-2" />
                   Congress Members
                 </Link>
               </li>
@@ -269,9 +265,7 @@ export default function Sidebar() {
                   href="/agencies"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/agencies')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
+                  <Building className="h-5 w-5 mr-2" />
                   Federal Agencies
                 </Link>
               </li>
@@ -280,9 +274,7 @@ export default function Sidebar() {
                   href="/judges"
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/judges')}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
+                  <Briefcase className="h-5 w-5 mr-2" />
                   Supreme Court Judges
                 </Link>
               </li>
@@ -318,30 +310,18 @@ export default function Sidebar() {
                       className="flex items-center px-3 py-2 text-sm hover:bg-gray-100 rounded-md"
                     >
                       {item.type === 'bill' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <FileText className="h-4 w-4 mr-2 text-primary" />
                       ) : item.type === 'congressman' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
+                        <Users className="h-4 w-4 mr-2 text-red-500" />
                       ) : item.type === 'agency' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
+                        <Building className="h-4 w-4 mr-2 text-green-500" />
                       ) : item.type === 'judge' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
+                        <Briefcase className="h-4 w-4 mr-2 text-purple-500" />
                       ) : item.type === 'cluster' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      )}
+                        <Scale className="h-4 w-4 mr-2 text-yellow-500" />
+                      ) : item.type === 'agencyDocument' ? (
+                        <ClipboardList className="h-4 w-4 mr-2 text-orange-500" />
+                      ) : null}
                       <span className="truncate">{item.title}</span>
                     </Link>
                   </li>

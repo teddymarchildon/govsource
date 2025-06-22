@@ -115,7 +115,7 @@ export default function BillOrLawDetail({
             onClick={() => setActiveTab('details')}
             className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
               activeTab === 'details'
-                ? 'border-blue-700 text-blue-700'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
@@ -125,7 +125,7 @@ export default function BillOrLawDetail({
             onClick={() => setActiveTab('text')}
             className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
               activeTab === 'text'
-                ? 'border-blue-700 text-blue-700'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
@@ -135,14 +135,14 @@ export default function BillOrLawDetail({
             onClick={() => setActiveTab('sponsors')}
             className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
               activeTab === 'sponsors'
-                ? 'border-blue-700 text-blue-700'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             Sponsors
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
               activeTab === 'sponsors'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-secondary text-secondary-foreground'
                 : 'bg-gray-100 text-gray-900'
             }`}>
               {(sponsors?.length || 0) + (cosponsors?.length || 0)}
@@ -152,14 +152,14 @@ export default function BillOrLawDetail({
             onClick={() => setActiveTab('actions')}
             className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
               activeTab === 'actions'
-                ? 'border-blue-700 text-blue-700'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             Actions
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
               activeTab === 'actions'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-secondary text-secondary-foreground'
                 : 'bg-gray-100 text-gray-900'
             }`}>
               {actions?.length || 0}
@@ -182,7 +182,7 @@ export default function BillOrLawDetail({
                   {needsTruncation && (
                     <button
                       onClick={() => setShowFullSummary(!showFullSummary)}
-                      className="text-blue-500 hover:text-blue-700 text-sm font-medium mt-2"
+                      className="text-primary hover:underline text-sm font-medium mt-2"
                     >
                       {showFullSummary ? 'See less' : 'See more'}
                     </button>
@@ -256,8 +256,8 @@ export default function BillOrLawDetail({
                     <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
                       <div className="flex items-start">
                         <div className="flex-shrink-0">
-                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-blue-600 text-sm font-medium">
+                          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                            <span className="text-secondary-foreground text-sm font-medium">
                               {formatDate(action.date)?.split(' ')[0]}
                             </span>
                           </div>

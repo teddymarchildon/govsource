@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { getCongressmen } from '../../services/api';
 import CongressmanCard from '../../components/CongressmanCard';
 import { Congressman } from '../../types/types';
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 export default function CongressmenPage() {
   const [congressmen, setCongressmen] = useState<Congressman[]>([]);
@@ -22,45 +27,37 @@ export default function CongressmenPage() {
   const chambers = ['House', 'Senate'];
 
   useEffect(() => {
-    const fetchCongressmen = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
       try {
-        const params: any = { limit: 100 };
-        if (party) {
-          params.party = party;
-        }
-        if (state) {
-          params.state = state;
-        }
-        if (chamber) {
-          params.chamber = chamber;
-        }
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
-        // Add current filter parameter
-        params.current = currentOnly;
-
-        const data = await getCongressmen(params);
-        setCongressmen(data);
-
-        // Extract unique states
-        const uniqueStates = data.reduce((acc: string[], congressman: Congressman) => {
+        // Fetch all congressmen initially to populate states dropdown
+        const allCongressmen = await getCongressmen({ limit: 1000, current: true });
+        const uniqueStates = allCongressmen.reduce((acc: string[], congressman: Congressman) => {
           if (congressman.state && !acc.includes(congressman.state)) {
             acc.push(congressman.state);
           }
           return acc;
         }, []);
         setStates(uniqueStates.sort());
+
+        // Then fetch the filtered list for display
+        const params: any = { limit: 100, current: currentOnly };
+        if (party) params.party = party;
+        if (state) params.state = state;
+        if (chamber) params.chamber = chamber;
+        if (searchTerm) params.search = searchTerm;
+        
+        const filteredData = await getCongressmen(params);
+        setCongressmen(filteredData);
       } catch (error) {
         console.error('Error fetching congressmen:', error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchCongressmen();
-  }, [party, state, chamber, searchTerm, currentOnly]); // Added currentOnly to dependency array
+    
+    fetchInitialData();
+  }, [party, state, chamber, searchTerm, currentOnly]);
 
   const clearFilters = () => {
     setParty('');
@@ -80,153 +77,140 @@ export default function CongressmenPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Members of Congress</h1>
 
-      <div className="mb-8">
-        <div className="mb-4">
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-            Search Congressmembers
-          </label>
-          <input
-            type="text"
-            id="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Type to search by name..."
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label htmlFor="party-filter" className="block text-sm font-medium text-gray-700 mb-2">
+      {/* Redesigned Search & Filters */}
+      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-end md:space-x-4 gap-4 mb-4">
+          <div className="flex-1">
+            <label htmlFor="search" className="block text-sm font-medium mb-1">
+              Search Congressmembers
+            </label>
+            <Input
+              id="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Type to search by name..."
+              className="w-full"
+            />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="party-filter" className="block text-sm font-medium mb-1">
               Party
             </label>
-            <select
-              id="party-filter"
-              value={party}
-              onChange={(e) => setParty(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">All Parties</option>
-              {parties.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+            <Select value={party} onValueChange={setParty}>
+              <SelectTrigger id="party-filter" className="w-full">
+                <SelectValue placeholder="All Parties" />
+              </SelectTrigger>
+              <SelectContent>
+                {parties.map((p) => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
-          <div>
-            <label htmlFor="state-filter" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="flex-1">
+            <label htmlFor="state-filter" className="block text-sm font-medium mb-1">
               State
             </label>
-            <select
-              id="state-filter"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">All States</option>
-              {states.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            <Select value={state} onValueChange={setState}>
+              <SelectTrigger id="state-filter" className="w-full">
+                <SelectValue placeholder="All States" />
+              </SelectTrigger>
+              <SelectContent>
+                {states.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
-          <div>
-            <label htmlFor="chamber-filter" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="flex-1">
+            <label htmlFor="chamber-filter" className="block text-sm font-medium mb-1">
               Chamber
             </label>
-            <select
-              id="chamber-filter"
-              value={chamber}
-              onChange={(e) => setChamber(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">All Chambers</option>
-              {chambers.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <Select value={chamber} onValueChange={setChamber}>
+              <SelectTrigger id="chamber-filter" className="w-full">
+                <SelectValue placeholder="All Chambers" />
+              </SelectTrigger>
+              <SelectContent>
+                {chambers.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-
-        <div className="mt-4 flex items-center">
-          <input
-            type="checkbox"
-            id="currentOnly"
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            checked={currentOnly}
-            onChange={(e) => setCurrentOnly(e.target.checked)}
-          />
-          <label htmlFor="currentOnly" className="ml-2 block text-sm text-gray-900">
+        <div className="flex items-center gap-4 mt-2">
+          <Checkbox id="currentOnly" checked={currentOnly} onCheckedChange={(checked) => setCurrentOnly(!!checked)} />
+          <label htmlFor="currentOnly" className="text-sm select-none">
             Show current members only
           </label>
+          <div className="ml-auto">
+            <Button variant="outline" onClick={clearFilters} size="sm">
+              Clear All Filters
+            </Button>
+          </div>
         </div>
+        {(party || state || chamber || !currentOnly) && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
+            {party && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Party: {party}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearPartyFilter}
+                  aria-label="Clear party filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {state && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                State: {state}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearStateFilter}
+                  aria-label="Clear state filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {chamber && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                Chamber: {chamber}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearChamberFilter}
+                  aria-label="Clear chamber filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+            {!currentOnly && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                Former Members
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-1 h-4 w-4 p-0"
+                  onClick={clearCurrentOnlyFilter}
+                  aria-label="Clear current only filter"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
-
-      {(party || state || chamber || !currentOnly) && (
-        <div className="mb-4 flex items-center">
-          <div className="text-sm text-gray-600 mr-2">Active filters:</div>
-          {party && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-              Party: {party}
-              <button
-                onClick={clearPartyFilter}
-                className="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none"
-                aria-label="Clear party filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {state && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
-              State: {state}
-              <button
-                onClick={clearStateFilter}
-                className="ml-2 text-green-500 hover:text-green-700 focus:outline-none"
-                aria-label="Clear state filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {chamber && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-2">
-              Chamber: {chamber}
-              <button
-                onClick={clearChamberFilter}
-                className="ml-2 text-purple-500 hover:text-purple-700 focus:outline-none"
-                aria-label="Clear chamber filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          {!currentOnly && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mr-2">
-              Including former members
-              <button
-                onClick={clearCurrentOnlyFilter}
-                className="ml-2 text-yellow-500 hover:text-yellow-700 focus:outline-none"
-                aria-label="Clear current only filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-          <button
-            onClick={clearFilters}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Clear all
-          </button>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex justify-center items-center h-64">

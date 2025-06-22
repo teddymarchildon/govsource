@@ -211,7 +211,7 @@ function HomeContent() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Legislative updates in your policy areas</h2>
-            <Link href="/bills" className="text-sm text-blue-600 hover:underline">
+            <Link href="/bills" className="text-sm text-primary hover:underline">
               View all legislation
             </Link>
           </div>
@@ -245,7 +245,7 @@ function HomeContent() {
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
                     <p className="text-gray-700">No recent legislation found in your policy areas.</p>
-                    <Link href="/bills" className="text-blue-600 hover:underline mt-2 inline-block">
+                    <Link href="/bills" className="text-primary hover:underline mt-2 inline-block">
                       Browse all bills
                     </Link>
                   </div>
@@ -255,7 +255,7 @@ function HomeContent() {
           ) : (
             <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
               <p className="text-gray-700">You haven&apos;t selected any policy areas yet.</p>
-              <Link href="/profile" className="text-blue-600 hover:underline mt-2 inline-block">
+              <Link href="/profile" className="text-primary hover:underline mt-2 inline-block">
                 Update preferences
               </Link>
             </div>
@@ -273,7 +273,7 @@ function HomeContent() {
                 onClick={() => setActiveTab('bills')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'bills'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -283,7 +283,7 @@ function HomeContent() {
                 onClick={() => setActiveTab('congressmen')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'congressmen'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -293,7 +293,7 @@ function HomeContent() {
                 onClick={() => setActiveTab('judges')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'judges'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -303,7 +303,7 @@ function HomeContent() {
                 onClick={() => setActiveTab('agencies')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'agencies'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -325,7 +325,7 @@ function HomeContent() {
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
                     <p className="text-gray-700">You haven&apos;t saved any bills yet.</p>
-                    <Link href="/bills" className="text-blue-600 hover:underline mt-2 inline-block">
+                    <Link href="/bills" className="text-primary hover:underline mt-2 inline-block">
                       Browse bills
                     </Link>
                   </div>
@@ -343,7 +343,7 @@ function HomeContent() {
                           <div className="p-4 h-full flex flex-col">
                             <Link
                               href={`/congressmen/${saved.congressman.id}`}
-                              className="block mb-2 hover:text-blue-600 transition-colors"
+                              className="block mb-2 hover:text-primary transition-colors"
                             >
                               <h3 className="text-lg font-medium text-gray-900">
                                 {saved.congressman.full_name}
@@ -364,7 +364,7 @@ function HomeContent() {
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
                     <p className="text-gray-700">You haven&apos;t saved any congressmen yet.</p>
-                    <Link href="/congressmen" className="text-blue-600 hover:underline mt-2 inline-block">
+                    <Link href="/congressmen" className="text-primary hover:underline mt-2 inline-block">
                       Browse congressmen
                     </Link>
                   </div>
@@ -382,7 +382,7 @@ function HomeContent() {
                           <div className="p-4 h-full flex flex-col">
                             <Link
                               href={`/judges/${saved.judge.id}`}
-                              className="block mb-2 hover:text-blue-600 transition-colors"
+                              className="block mb-2 hover:text-primary transition-colors"
                             >
                               <h3 className="text-lg font-medium text-gray-900">
                                 {saved.judge.full_name}
@@ -396,7 +396,7 @@ function HomeContent() {
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
                     <p className="text-gray-700">You haven&apos;t saved any judges yet.</p>
-                    <Link href="/judges" className="text-blue-600 hover:underline mt-2 inline-block">
+                    <Link href="/judges" className="text-primary hover:underline mt-2 inline-block">
                       Browse judges
                     </Link>
                   </div>
@@ -414,7 +414,7 @@ function HomeContent() {
                           <div className="p-4 h-full flex flex-col">
                             <Link
                               href={`/agencies/${saved.agency.id}`}
-                              className="block mb-2 hover:text-blue-600 transition-colors"
+                              className="block mb-2 hover:text-primary transition-colors"
                             >
                               <h3 className="text-lg font-medium text-gray-900">
                                 {saved.agency.name}
@@ -433,7 +433,7 @@ function HomeContent() {
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
                     <p className="text-gray-700">You haven&apos;t saved any agencies yet.</p>
-                    <Link href="/agencies" className="text-blue-600 hover:underline mt-2 inline-block">
+                    <Link href="/agencies" className="text-primary hover:underline mt-2 inline-block">
                       Browse agencies
                     </Link>
                   </div>
@@ -447,7 +447,7 @@ function HomeContent() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Recent Executive Orders</h2>
-            <Link href="/executive-orders" className="text-sm text-blue-600 hover:underline">
+            <Link href="/executive-orders" className="text-sm text-primary hover:underline">
               View executive orders
             </Link>
           </div>
@@ -460,7 +460,7 @@ function HomeContent() {
                     <div>
                       <Link
                         href={`/executive-orders/${order.id}`}
-                        className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                        className="text-lg font-medium text-gray-900 hover:text-primary transition-colors"
                       >
                         {order.title}
                       </Link>
@@ -496,7 +496,7 @@ function HomeContent() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-700 to-indigo-700 rounded-lg shadow-md p-6 mb-8 text-white">
+      <div className="bg-primary rounded-lg shadow-md p-6 mb-8 text-white">
         <h1 className="text-2xl font-bold mb-2">Welcome to GovSource!</h1>
         <p className="mb-4">Use AI to discover, track, and understand US federal legislation, court cases, and more.</p>
       </div>
@@ -510,7 +510,7 @@ function HomeContent() {
           <li>Get personalized legislative updates (coming soon)</li>
         </ul>
         <div className="flex space-x-3">
-          <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="inline-block px-4 py-2 bg-gray-100 text-blue-700 rounded-md font-medium hover:bg-gray-200 transition-colors">Sign In</Link>
+          <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="inline-block px-4 py-2 bg-gray-100 text-primary rounded-md font-medium hover:bg-gray-200 transition-colors">Sign In</Link>
         </div>
       </div>
 
@@ -518,7 +518,7 @@ function HomeContent() {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Recent Executive Orders</h2>
-          <Link href="/executive-orders" className="text-sm text-blue-600 hover:underline">
+          <Link href="/executive-orders" className="text-sm text-primary hover:underline">
             View all
           </Link>
         </div>
@@ -530,7 +530,7 @@ function HomeContent() {
                   <div>
                     <Link
                       href={`/executive-orders/${order.id}`}
-                      className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                      className="text-lg font-medium text-gray-900 hover:text-primary transition-colors"
                     >
                       {order.title}
                     </Link>
@@ -563,7 +563,7 @@ function HomeContent() {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Recent Legislation</h2>
-          <Link href="/bills" className="text-sm text-blue-600 hover:underline">
+          <Link href="/bills" className="text-sm text-primary hover:underline">
             View all
           </Link>
         </div>

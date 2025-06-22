@@ -52,7 +52,7 @@ export default function AgencyDetailPage() {
     return (
       <div className="flex justify-center items-center min-h-screen -mt-16">
         <div className="text-center">
-          <svg className="animate-spin h-12 w-12 mx-auto text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin h-12 w-12 mx-auto text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
@@ -111,7 +111,7 @@ export default function AgencyDetailPage() {
               {agency.parent && (
                 <p className="mt-2 text-gray-600">
                   <span className="font-medium">Part of:</span>{' '}
-                  <Link href={`/agencies/${agency.parent.id}`} className="text-blue-600 hover:underline">
+                  <Link href={`/agencies/${agency.parent.id}`} className="text-primary hover:underline">
                     {agency.parent.name}
                   </Link>
                 </p>
@@ -141,12 +141,12 @@ export default function AgencyDetailPage() {
               onClick={() => setActiveTab('subagencies')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'subagencies'
-                  ? 'border-blue-700 text-blue-700'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               Sub-Agencies
-              <span className={`ml-2 py-0.5 px-2 text-xs rounded-full bg-gray-100${activeTab === 'subagencies' ? ' text-blue-700' : ''}`}>
+              <span className={`ml-2 py-0.5 px-2 text-xs rounded-full ${activeTab === 'subagencies' ? 'bg-secondary text-secondary-foreground' : 'bg-gray-100'}`}>
                 {childAgencies.length}
               </span>
             </button>
@@ -154,12 +154,12 @@ export default function AgencyDetailPage() {
               onClick={() => setActiveTab('rules')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'rules'
-                  ? 'border-blue-700 text-blue-700'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               Rules
-              <span className={`ml-2 py-0.5 px-2 text-xs rounded-full bg-gray-100${activeTab === 'rules' ? ' text-blue-700' : ''}`}>
+              <span className={`ml-2 py-0.5 px-2 text-xs rounded-full ${activeTab === 'rules' ? 'bg-secondary text-secondary-foreground' : 'bg-gray-100'}`}>
                 {agencyRulesCount}
               </span>
             </button>

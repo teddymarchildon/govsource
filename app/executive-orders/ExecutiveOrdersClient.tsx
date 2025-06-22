@@ -7,6 +7,10 @@ import ExecutiveOrderCard from '@/components/ExecutiveOrderCard';
 import { AgencyDocument } from '@/types/types';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 interface ExecutiveOrdersClientProps {
   initialOrders: AgencyDocument[];
@@ -144,8 +148,8 @@ export default function ExecutiveOrdersClient({
     setSearchQuery(e.target.value);
   };
 
-  const handlePresidentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedPresident(e.target.value);
+  const handlePresidentChange = (value: string) => {
+    setSelectedPresident(value);
   };
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,8 +160,8 @@ export default function ExecutiveOrdersClient({
     setEndDate(e.target.value);
   };
 
-  const handleSortOrderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortOrder(e.target.value as 'asc' | 'desc');
+  const handleSortOrderChange = (value: string) => {
+    setSortOrder(value as 'asc' | 'desc');
   };
 
   const clearFilters = () => {
@@ -179,155 +183,124 @@ export default function ExecutiveOrdersClient({
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Executive Orders</h1>
 
-      <div className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
+      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
           <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="search" className="block text-sm font-medium mb-1">
               Search
             </label>
-            <input
-              type="text"
+            <Input
               id="search"
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search by title or document number"
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="president" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="president" className="block text-sm font-medium mb-1">
               President
             </label>
-            <select
-              id="president"
-              value={selectedPresident}
-              onChange={handlePresidentChange}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">All Presidents</option>
-              {presidents.map(president => (
-                <option key={president} value={president}>
-                  {president}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedPresident} onValueChange={handlePresidentChange}>
+              <SelectTrigger id="president">
+                <SelectValue placeholder="All Presidents" />
+              </SelectTrigger>
+              <SelectContent>
+                {presidents.map(president => (
+                  <SelectItem key={president} value={president}>
+                    {president}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
-            <label htmlFor="date-range" className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium mb-1">
               Date Range
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <input
-                  type="date"
-                  id="start-date"
-                  value={startDate}
-                  onChange={handleStartDateChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Start date"
-                />
-              </div>
-              <div>
-                <input
-                  type="date"
-                  id="end-date"
-                  value={endDate}
-                  onChange={handleEndDateChange}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="End date"
-                />
-              </div>
+              <Input
+                type="date"
+                id="start-date"
+                value={startDate}
+                onChange={handleStartDateChange}
+                placeholder="Start date"
+              />
+              <Input
+                type="date"
+                id="end-date"
+                value={endDate}
+                onChange={handleEndDateChange}
+                placeholder="End date"
+              />
             </div>
           </div>
 
           <div>
-            <label htmlFor="sort-order" className="block text-sm font-medium text-gray-700 mb-2">
-              Sort by Signing Date
+            <label htmlFor="sort-order" className="block text-sm font-medium mb-1">
+              Sort By
             </label>
-            <div className="flex">
-              <select
-                id="sort-order"
-                value={sortOrder}
-                onChange={handleSortOrderChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="desc">Newest First</option>
-                <option value="asc">Oldest First</option>
-              </select>
-            </div>
+            <Select value={sortOrder} onValueChange={handleSortOrderChange}>
+              <SelectTrigger id="sort-order">
+                <SelectValue placeholder="Sort by date..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Newest First</SelectItem>
+                <SelectItem value="asc">Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
+        <div className="flex items-center justify-end">
+           <Button variant="outline" onClick={clearFilters} size="sm">
+              Clear All Filters
+            </Button>
+        </div>
+
         {(searchQuery || startDate || endDate || sortOrder !== 'desc' || selectedPresident) && (
-          <div className="mb-4 flex items-center flex-wrap">
-            <div className="text-sm text-gray-600 mr-2">Active filters:</div>
+          <div className="mt-4 flex items-center flex-wrap gap-2">
+            <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
             {searchQuery && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-2 mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                 Search: {searchQuery}
-                <button
-                  onClick={clearSearchQueryFilter}
-                  className="ml-2 text-purple-500 hover:text-purple-700 focus:outline-none"
-                  aria-label="Clear search filter"
-                >
-                  &times;
-                </button>
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSearchQueryFilter} aria-label="Clear search filter">
+                  <X className="h-3 w-3" />
+                </Button>
               </span>
             )}
             {selectedPresident && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2 mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                 President: {selectedPresident}
-                <button
-                  onClick={clearPresidentFilter}
-                  className="ml-2 text-green-500 hover:text-green-700 focus:outline-none"
-                  aria-label="Clear president filter"
-                >
-                  &times;
-                </button>
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearPresidentFilter} aria-label="Clear president filter">
+                  <X className="h-3 w-3" />
+                </Button>
               </span>
             )}
             {startDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mr-2 mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                 From: {new Date(startDate).toLocaleDateString()}
-                <button
-                  onClick={clearStartDateFilter}
-                  className="ml-2 text-amber-500 hover:text-amber-700 focus:outline-none"
-                  aria-label="Clear start date filter"
-                >
-                  &times;
-                </button>
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
+                  <X className="h-3 w-3" />
+                </Button>
               </span>
             )}
             {endDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mr-2 mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                 To: {new Date(endDate).toLocaleDateString()}
-                <button
-                  onClick={clearEndDateFilter}
-                  className="ml-2 text-amber-500 hover:text-amber-700 focus:outline-none"
-                  aria-label="Clear end date filter"
-                >
-                  &times;
-                </button>
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
+                  <X className="h-3 w-3" />
+                </Button>
               </span>
             )}
             {sortOrder !== 'desc' && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-2 mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                 Sort: {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
-                <button
-                  onClick={clearSortOrderFilter}
-                  className="ml-2 text-indigo-500 hover:text-indigo-700 focus:outline-none"
-                  aria-label="Clear sort order filter"
-                >
-                  &times;
-                </button>
+                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSortOrderFilter} aria-label="Clear sort order filter">
+                  <X className="h-3 w-3" />
+                </Button>
               </span>
             )}
-            <button
-              onClick={clearFilters}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              Clear all
-            </button>
           </div>
         )}
       </div>

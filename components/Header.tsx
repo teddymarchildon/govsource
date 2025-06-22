@@ -91,7 +91,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold text-blue-700">
+            <Link href="/" className="text-xl font-bold text-primary">
               GovSource
             </Link>
           </div>
@@ -126,7 +126,7 @@ export default function Header() {
               <input
                 type="text"
                 placeholder="Search the government..."
-                className="w-64 bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-64 bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 aria-label="Search"
@@ -181,7 +181,7 @@ export default function Header() {
                   aria-expanded={dropdownOpen}
                   aria-haspopup="true"
                 >
-                  <div className="h-8 w-8 rounded-full bg-blue-700 text-white flex items-center justify-center text-sm font-medium cursor-pointer">
+                  <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium cursor-pointer">
                     {user.email?.substring(0, 2).toUpperCase() || 'ME'}
                   </div>
                 </button>
@@ -220,7 +220,7 @@ export default function Header() {
             <input
               type="text"
               placeholder="Search the government..."
-              className="w-full bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               value={searchQuery}
               onChange={handleSearchChange}
               aria-label="Search"
@@ -276,7 +276,7 @@ export default function Header() {
           {!loading && user && (
             <div className="flex flex-col space-y-3">
               <div className="flex items-center space-x-3 py-2">
-                <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">
+                <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
                   {user.email?.substring(0, 2).toUpperCase() || 'ME'}
                 </div>
                 <span className="text-sm font-medium text-gray-900 truncate">{user.email}</span>
