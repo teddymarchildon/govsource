@@ -273,9 +273,9 @@ export default function AiChat({
         )}
 
           {/* Preset buttons (moved to top, with extra spacing) */}
-          <div className="p-2 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-2 justify-center mt-3">
-            {isPaidSubscriber ? (
-              PRESETS.map((preset) => {
+          {user && (
+            <div className="p-2 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-2 justify-center mt-3">
+              {PRESETS.map((preset) => {
                 let IconComponent = null;
                 switch (preset.type) {
                   case 'summarize':
@@ -293,25 +293,44 @@ export default function AiChat({
                   default:
                     IconComponent = FileText;
                 }
+                const isLocked = !isPaidSubscriber;
                 return (
                   <Button
                     key={preset.label}
-                    onClick={() => handlePresetClick(preset)}
-                    disabled={isLoading}
+                    onClick={() => !isLocked && handlePresetClick(preset)}
+                    disabled={isLoading || isLocked}
                     variant="outline"
-                    className="px-3 py-1.5 text-xs rounded-full flex items-center gap-1.5"
+                    className={`px-3 py-1.5 text-xs rounded-full flex items-center gap-1.5 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={isLocked ? 'Subscribe to unlock this feature' : undefined}
                   >
                     <IconComponent className="h-4 w-4" />
                     {preset.label}
                   </Button>
                 );
-              })
-            ) : (
-              <div className="w-full text-center text-sm text-gray-500 py-2">
-                You must be a paid subscriber to use the AI Assistant. <br />
+              })}
+            </div>
+          )}
+
+          {/* Messages */}
+          {(!user && !authLoading) ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="max-w-[85%] rounded-lg p-4 bg-gray-100 text-primary text-center text-sm border border-primary/20">
+                <p className="mb-3">You must sign in to use the AI Assistant.</p>
+                <a
+                  href="/login"
+                  className="inline-block px-4 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary/90 transition"
+                >
+                  Sign in
+                </a>
+              </div>
+            </div>
+          ) : !isPaidSubscriber ? (
+            <div className="flex justify-center items-center flex-1">
+              <div className="max-w-[85%] rounded-lg p-4 bg-secondary text-secondary-foreground text-center text-sm border border-primary/20">
+                <p className="mb-3">You must be a paid subscriber to use the AI Assistant.</p>
                 <Button
-                  className="text-primary font-medium underline disabled:opacity-50"
-                  style={{ cursor: user ? 'pointer' : 'not-allowed' }}
+                  className="w-full"
+                  variant="default"
                   disabled={subscribing || !user}
                   onClick={async () => {
                     if (!user) return;
@@ -339,68 +358,51 @@ export default function AiChat({
                   {subscribing ? 'Redirecting...' : 'Subscribe to unlock AI features.'}
                 </Button>
               </div>
-            )}
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
-            {/* If not logged in and not loading, show login message */}
-            {!user && !authLoading ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="max-w-[85%] rounded-lg p-4 bg-yellow-100 text-yellow-900 text-center text-sm border border-yellow-300">
-                  <p>You must sign in to use the AI Assistant.</p>
-                </div>
-              </div>
-            ) : !isPaidSubscriber ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="max-w-[85%] rounded-lg p-4 bg-secondary text-secondary-foreground text-center text-sm border border-primary/20">
-                  <p>You must be a paid subscriber to use the AI Assistant.</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((message, index) => (
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+              {/* Chat messages for paid subscribers */}
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
                   <div
-                    key={index}
-                    className={`flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
+                    className={`max-w-[85%] rounded-lg p-2.5 ${
+                      message.role === 'user'
+                        ? 'bg-secondary text-secondary-foreground'
+                        : 'bg-white text-gray-900 border border-gray-200'
                     }`}
                   >
-                    <div
-                      className={`max-w-[85%] rounded-lg p-2.5 ${
-                        message.role === 'user'
-                          ? 'bg-secondary text-secondary-foreground'
-                          : 'bg-white text-gray-900 border border-gray-200'
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap text-sm markdown-content prose">
-                        <ReactMarkdown>
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
+                    <div className="whitespace-pre-wrap text-sm markdown-content prose">
+                      <ReactMarkdown>
+                        {message.content}
+                      </ReactMarkdown>
                     </div>
                   </div>
-                ))}
-                {isLoading && !isStreaming && (
-                  <div className="flex justify-start">
-                    <div className="max-w-[85%] rounded-lg p-2.5 bg-white border border-gray-200">
-                      <div className="flex items-center justify-center">
-                        <Loader className="h-5 w-5 text-primary animate-spin" />
-                      </div>
+                </div>
+              ))}
+              {isLoading && !isStreaming && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-lg p-2.5 bg-white border border-gray-200">
+                    <div className="flex items-center justify-center">
+                      <Loader className="h-5 w-5 text-primary animate-spin" />
                     </div>
                   </div>
-                )}
-                {error && (
-                  <div className="flex justify-center">
-                    <div className="max-w-[85%] rounded-lg p-2.5 bg-red-100 text-red-800 text-sm">
-                      <p>{error}</p>
-                    </div>
+                </div>
+              )}
+              {error && (
+                <div className="flex justify-center">
+                  <div className="max-w-[85%] rounded-lg p-2.5 bg-red-100 text-red-800 text-sm">
+                    <p>{error}</p>
                   </div>
-                )}
-                <div ref={messagesEndRef} />
-              </>
-            )}
-          </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
 
           {/* Input form */}
           <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-gray-200">
