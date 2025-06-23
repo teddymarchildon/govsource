@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { XMarkIcon, DocumentTextIcon, SparklesIcon, ClockIcon, ScaleIcon } from '@heroicons/react/24/outline';
+import { X, FileText, Sparkles, Clock, Scale, Loader } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -190,13 +192,13 @@ export default function AiChat({
     <div className="fixed bottom-6 right-6 z-50">
       {/* Chat bubble button */}
       {!isOpen && (
-        <button
+        <Button
           onClick={() => setIsOpen(true)}
           className="px-4 py-3 rounded-lg bg-primary text-white flex items-center justify-center shadow-lg hover:bg-primary/90 transition-all text-sm font-medium"
           aria-label="AI Chat"
         >
           {buttonText}
-        </button>
+        </Button>
       )}
 
       {/* Chat window */}
@@ -206,13 +208,15 @@ export default function AiChat({
           <div className="p-3 bg-primary text-white flex justify-between items-center">
             <h2 className="text-lg font-semibold">GovSource Assistant</h2>
             <div className="flex space-x-2">
-              <button
+              <Button
                 onClick={() => setIsOpen(false)}
                 className="text-white hover:text-white/80"
                 aria-label="Close chat"
+                variant="ghost"
+                size="icon"
               >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
+                <X className="h-5 w-5" />
+              </Button>
             </div>
           </div>
 
@@ -238,40 +242,37 @@ export default function AiChat({
                 let IconComponent = null;
                 switch (preset.type) {
                   case 'summarize':
-                    IconComponent = DocumentTextIcon;
+                    IconComponent = FileText;
                     break;
                   case 'keyPoints':
-                    IconComponent = SparklesIcon;
+                    IconComponent = Sparkles;
                     break;
                   case 'historicalContext':
-                    IconComponent = ClockIcon;
+                    IconComponent = Clock;
                     break;
                   case 'prosAndCons':
-                    IconComponent = ScaleIcon;
+                    IconComponent = Scale;
                     break;
                   default:
-                    IconComponent = DocumentTextIcon;
+                    IconComponent = FileText;
                 }
                 return (
-                  <button
+                  <Button
                     key={preset.label}
                     onClick={() => handlePresetClick(preset)}
                     disabled={isLoading}
-                    className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-1.5 ${
-                      isLoading
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                    }`}
+                    variant="outline"
+                    className="px-3 py-1.5 text-xs rounded-full flex items-center gap-1.5"
                   >
                     <IconComponent className="h-4 w-4" />
                     {preset.label}
-                  </button>
+                  </Button>
                 );
               })
             ) : (
               <div className="w-full text-center text-sm text-gray-500 py-2">
                 You must be a paid subscriber to use the AI Assistant. <br />
-                <button
+                <Button
                   className="text-primary font-medium underline disabled:opacity-50"
                   style={{ cursor: user ? 'pointer' : 'not-allowed' }}
                   disabled={subscribing || !user}
@@ -299,7 +300,7 @@ export default function AiChat({
                   }}
                 >
                   {subscribing ? 'Redirecting...' : 'Subscribe to unlock AI features.'}
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -346,10 +347,8 @@ export default function AiChat({
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="max-w-[85%] rounded-lg p-2.5 bg-white border border-gray-200">
-                      <div className="flex space-x-1.5 items-center">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                      <div className="flex items-center justify-center">
+                        <Loader className="h-5 w-5 text-primary animate-spin" />
                       </div>
                     </div>
                   </div>
@@ -369,25 +368,20 @@ export default function AiChat({
           {/* Input form */}
           <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-gray-200">
             <div className="flex space-x-2">
-              <input
+              <Input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={`Ask about ${documentTitle || 'this document'}...`}
-                className="flex-1 p-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={isLoading || (!user && !authLoading) || !isPaidSubscriber}
               />
-              <button
+              <Button
                 type="submit"
-                className={`px-3 py-2 rounded-lg text-white text-sm ${
-                  isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber
-                    ? 'bg-primary/50 cursor-not-allowed'
-                    : 'bg-primary hover:bg-primary/90'
-                }`}
+                className="px-3 py-2 rounded-lg text-white text-sm"
                 disabled={isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber}
               >
                 Send
-              </button>
+              </Button>
             </div>
           </form>
         </div>
