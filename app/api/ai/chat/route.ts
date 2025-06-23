@@ -78,17 +78,35 @@ export async function POST(request: Request) {
       // Prepare messages for OpenAI API with document content
       const apiMessages = [systemMessage, ...messages];
 
-      // Call OpenAI API with document content
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: apiMessages,
-        temperature: 0.7,
-        max_tokens: 1000,
+      // --- Streaming OpenAI response ---
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            const completion = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: apiMessages,
+              temperature: 0.7,
+              max_tokens: 1000,
+              stream: true,
+            });
+            for await (const chunk of completion) {
+              const token = chunk.choices?.[0]?.delta?.content || '';
+              if (token) {
+                controller.enqueue(new TextEncoder().encode(token));
+              }
+            }
+            controller.close();
+          } catch (err) {
+            controller.error(err);
+          }
+        },
       });
-
-      // Extract the response
-      const responseMessage = completion.choices[0].message.content;
-      return NextResponse.json({ message: responseMessage });
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        },
+      });
     } else {
       // If no content is available, use web search tool
       systemMessage.content += `\n\nNo document content is available. Please use web search to find relevant information about this document.`;

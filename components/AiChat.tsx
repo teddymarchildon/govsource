@@ -84,6 +84,7 @@ export default function AiChat({
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +104,7 @@ export default function AiChat({
   // Function to handle sending a message to the AI API
   const sendMessageToApi = async (messagesToSend: Message[], presetType: PresetType = 'default') => {
     setIsLoading(true);
+    setIsStreaming(false);
     setError(null);
 
     try {
@@ -130,8 +132,43 @@ export default function AiChat({
         throw new Error(`Error: ${response.status}`);
       }
 
-      const data = await response.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+      // Check if the response is a stream (text/plain) or JSON (web search fallback)
+      const contentType = response.headers.get('Content-Type') || '';
+      if (contentType.includes('application/json')) {
+        // Web search fallback (non-streaming)
+        const data = await response.json();
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+      } else {
+        // Streaming response
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
+        let assistantMessage = '';
+        setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+        let done = false;
+        let firstChunk = true;
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          if (value) {
+            if (firstChunk) {
+              setIsStreaming(true);
+              firstChunk = false;
+            }
+            const chunk = new TextDecoder().decode(value);
+            assistantMessage += chunk;
+            setMessages(prev => {
+              // Update the last assistant message in the array
+              const updated = [...prev];
+              // Only update if the last message is assistant
+              if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+                updated[updated.length - 1] = { role: 'assistant', content: assistantMessage };
+              }
+              return updated;
+            });
+          }
+        }
+        setIsStreaming(false);
+      }
     } catch (err) {
       console.error('Error calling AI API:', err);
       setError('Failed to get a response. Please try again.');
@@ -344,7 +381,7 @@ export default function AiChat({
                     </div>
                   </div>
                 ))}
-                {isLoading && (
+                {isLoading && !isStreaming && (
                   <div className="flex justify-start">
                     <div className="max-w-[85%] rounded-lg p-2.5 bg-white border border-gray-200">
                       <div className="flex items-center justify-center">
