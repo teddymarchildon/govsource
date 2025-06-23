@@ -457,3 +457,62 @@
   },
   "previous_attributes": null
 }
+
+## customer.updated
+
+{
+  "id": "evt_1Rbu7uFHp5a6uQih3yxAUnYw",
+  "object": "event",
+  "api_version": "2025-05-28.basil",
+  "created": 1750384339,
+  "data": {
+    "object": {
+      "id": "cus_SWy3sIVVDOYA6N",
+      "object": "customer",
+      "address": {
+        "city": null,
+        "country": "US",
+        "line1": null,
+        "line2": null,
+        "postal_code": "10011",
+        "state": null
+      },
+      "balance": 0,
+      "created": 1750384339,
+      "currency": "usd",
+      "default_source": null,
+      "delinquent": false,
+      "description": null,
+      "discount": null,
+      "email": "leah.delaney.stewart@gmail.com",
+      "invoice_prefix": "NGCUJA3V",
+      "invoice_settings": {
+        "custom_fields": null,
+        "default_payment_method": null,
+        "footer": null,
+        "rendering_options": null
+      },
+      "livemode": true,
+      "metadata": {},
+      "name": "Leah Stewart",
+      "next_invoice_sequence": 2,
+      "phone": null,
+      "preferred_locales": [
+        "en-US"
+      ],
+      "shipping": null,
+      "tax_exempt": "none",
+      "test_clock": null
+    },
+    "previous_attributes": {
+      "currency": null
+    }
+  },
+  "livemode": true,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": "d7398ab1-eec7-4d3a-8d86-b15be666de67"
+  },
+  "type": "customer.updated"
+}

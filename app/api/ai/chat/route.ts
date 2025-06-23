@@ -13,7 +13,7 @@ const PRESET_PROMPTS: Record<PresetType, string> = {
   prosAndCons: 'You are an AI assistant helping a user understand information about US Federal Government documents, legislation, and executive actions. Analyze the potential benefits and drawbacks of this document. Present a balanced view of arguments for and against its provisions, considering different stakeholder perspectives. Be objective and factual about the contents of the document.'
 };
 
-export const maxDuration = 20;
+export const maxDuration = 60;
 
 // Initialize OpenAI client
 const openai = new OpenAI({
