@@ -419,25 +419,6 @@ A table for tracking Stripe subscriptions for each user.
 
 **Relationships:**
 - References `auth.users.id` via `user_id`
-- Referenced by `payment.subscription_id`
-
-### Payment
-A table for tracking individual Stripe payments/invoices.
-
-**Columns:**
-- `id` uuid (PK, default: gen_random_uuid())
-- `user_id` uuid (FK, references auth.users.id, nullable)
-- `subscription_id` uuid (FK, references subscription.id, nullable)
-- `stripe_invoice_id` varchar (required)
-- `amount` integer (required)
-- `currency` varchar (required)
-- `status` varchar (required)
-- `paid_at` timestamptz (nullable)
-- `created_at` timestamptz (default: now(), nullable)
-
-**Relationships:**
-- References `auth.users.id` via `user_id`
-- References `subscription.id` via `subscription_id`
 
 ### User Feedback
 A table for storing user feedback.
