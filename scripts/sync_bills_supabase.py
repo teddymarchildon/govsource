@@ -777,7 +777,7 @@ def sync_bills_to_supabase(
                         if text_data.get("pdf_url"):
                             pdf_path = f"{bill_identifier}/{date_str}/bill.pdf"
                             pdf_storage_url = download_and_upload_document(
-                                supabase, text_data.get("pdf_url"), "bill-pdfs", pdf_path
+                                supabase, str(text_data.get("pdf_url") or ""), "bill-pdfs", pdf_path
                             )
                         else:
                             pdf_path = None
@@ -785,7 +785,7 @@ def sync_bills_to_supabase(
                         if text_data.get("formatted_text_url"):
                             html_path = f"{bill_identifier}/{date_str}/bill.html"
                             html_storage_url = download_and_upload_document(
-                                supabase, text_data.get("formatted_text_url"), "bill-htmls", html_path
+                                supabase, str(text_data.get("formatted_text_url") or ""), "bill-htmls", html_path
                             )
                         else:
                             html_path = None
@@ -793,7 +793,7 @@ def sync_bills_to_supabase(
                         if text_data.get("xml_url"):
                             xml_path = f"{bill_identifier}/{date_str}/bill.xml"
                             xml_storage_url = download_and_upload_document(
-                                supabase, text_data.get("xml_url"), "bill-xmls", xml_path
+                                supabase, str(text_data.get("xml_url") or ""), "bill-xmls", xml_path
                             )
                         else:
                             xml_path = None
@@ -831,13 +831,9 @@ def sync_bills_to_supabase(
                     congress, parsed_bill["type"], parsed_bill["number"]
                 )
 
-                # Get existing actions for this bill to avoid duplicates
-                existing_actions = supabase.table("bill_action").select("date, text").eq("bill_id", bill_db_id).execute()
-                existing_action_keys = set()
-                if existing_actions.data:
-                    existing_action_keys = {f"{item['date']}_{item['text']}" for item in existing_actions.data if item.get("date") and item.get("text")}
-
-                logger.info(f"Found {len(existing_action_keys)} existing actions for bill: {bill_db_id}")
+                # Delete all existing actions for this bill before inserting new ones
+                logger.info(f"Deleting all existing actions for bill_id {bill_db_id}")
+                supabase.table("bill_action").delete().eq("bill_id", bill_db_id).execute()
 
                 for action_data in bill_actions:
                     # Skip if date or text is None
@@ -846,26 +842,12 @@ def sync_bills_to_supabase(
                             f"Skipping action with missing date or text for bill: {bill_db_id}"
                         )
                         continue
-
-                    # Create a unique key for this action
-                    action_key = f"{action_data['date']}_{action_data['text']}"
-
-                    # Skip if we already have this action
-                    if action_key in existing_action_keys:
-                        logger.info(
-                            f"Skipping existing action for date {action_data.get('date')} for bill: {bill_db_id}"
-                        )
-                        continue
-
-                    # Create action record
                     bill_action_data = {
                         "bill_id": bill_db_id,
                         "date": action_data.get("date"),
                         "text": action_data.get("text"),
                         "type": action_data.get("type"),
                     }
-
-                    # Insert action
                     supabase.table("bill_action").insert(bill_action_data).execute()
                     logger.info(
                         f"Added action for date {action_data.get('date')} for bill: {bill_db_id}"
@@ -933,6 +915,8 @@ def main():
 
     # Initialize Supabase client
     try:
+        assert SUPABASE_URL is not None
+        assert SUPABASE_KEY is not None
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception as e:
         logger.error(f"Failed to initialize Supabase client: {e}")
