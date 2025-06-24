@@ -7,7 +7,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
   const buf = Buffer.from(await req.arrayBuffer());
   const sig = req.headers.get('stripe-signature') as string;
