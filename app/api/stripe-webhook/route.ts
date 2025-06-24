@@ -28,9 +28,11 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as any;
         const userId = session.client_reference_id;
         const stripeCustomerId = session.customer;
+        console.log('userId', userId);
+        console.log('stripeCustomerId', stripeCustomerId);
         if (userId && stripeCustomerId) {
-          // Update the existing subscription row
-          await supabase
+          // Try to update
+          const { data, error, count } = await supabase
             .from('subscription')
             .update({
               stripe_customer_id: stripeCustomerId,
@@ -38,7 +40,20 @@ export async function POST(req: NextRequest) {
               status: 'active',
               tier: 'paid',
             })
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .select('*')
+            .single();
+
+          if (error) {
+            console.error('Supabase update error:', error);
+          } else if (count === 0) {
+            console.warn(`No subscription row found for user_id: ${userId}`);
+            // Optionally, insert a new row here if that's expected
+          } else {
+            console.log(`Updated subscription for user_id: ${userId}`);
+          }
+        } else {
+          console.warn('Missing userId or stripeCustomerId in session:', { userId, stripeCustomerId });
         }
         break;
       }
