@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         console.log('stripeCustomerId', stripeCustomerId);
         if (userId && stripeCustomerId) {
           // Try to update
-          const { data, error, count } = await supabase
+          const { data, error } = await supabase
             .from('subscription')
             .update({
               stripe_customer_id: stripeCustomerId,
@@ -41,12 +41,11 @@ export async function POST(req: NextRequest) {
               tier: 'paid',
             })
             .eq('user_id', userId)
-            .select('*')
-            .single();
+            .select('*');
 
           if (error) {
             console.error('Supabase update error:', error);
-          } else if (count === 0) {
+          } else if (!data || data.length === 0) {
             console.warn(`No subscription row found for user_id: ${userId}`);
             // Optionally, insert a new row here if that's expected
           } else {
