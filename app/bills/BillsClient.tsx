@@ -67,6 +67,7 @@ export default function BillsClient({
       let baseQuery = supabase
         .from("bill")
         .select(`*, sponsor:sponsored_bills(congressman:congressman(*))`)
+        .eq('law_enacted_date', null)
         .order("introduced_date", { ascending: sortOrder === "asc" })
         .range(from, to);
 

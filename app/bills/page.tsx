@@ -10,8 +10,8 @@ import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 // Server Component
 async function fetchInitialBills() {
+  const supabase = await createClient()
   try {
-    const supabase = await createClient()
     const { data, error } = await supabase
       .from('bill')
       .select(`
@@ -20,6 +20,7 @@ async function fetchInitialBills() {
           congressman:congressman(*)
         )
       `)
+      .eq('law_enacted_date', null)
       .order('introduced_date', { ascending: false })
       .range(0, 49);
 
