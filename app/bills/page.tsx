@@ -20,7 +20,7 @@ async function fetchInitialBills() {
           congressman:congressman(*)
         )
       `)
-      .eq('law_enacted_date', null)
+      .is('law_enacted_date', null)
       .order('introduced_date', { ascending: false })
       .range(0, 49);
 
