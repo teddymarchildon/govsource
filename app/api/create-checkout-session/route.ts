@@ -12,7 +12,16 @@ export async function POST(req: NextRequest) {
       line_items: [{ price: 'price_1RXqViFHp5a6uQihQFgBJKBH', quantity: 1 }],
       success_url: redirectUrl || 'https://govsrc.com/profile',
       cancel_url: redirectUrl || 'https://govsrc.com/profile',
-      client_reference_id: userId, // user's UUID
+      client_reference_id: userId,
+      subscription_data: {
+        trial_period_days: 7,
+        trial_settings: {
+          end_behavior: {
+            missing_payment_method: 'cancel',
+          },
+        },
+      },
+      payment_method_collection: 'if_required',
     });
 
     return NextResponse.json({ url: session.url });
