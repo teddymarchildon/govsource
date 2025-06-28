@@ -226,7 +226,7 @@ export default function AiChat({
 
   // Panel layout (always open, not floating)
   return (
-    <div className="w-full h-full flex flex-col bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden" style={{ maxHeight: 'calc(100vh - 250px)' }}>
+    <div className="w-full h-full flex flex-col bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="p-2 bg-primary text-white flex justify-between items-center rounded-t-xl">
         <h2 className="text-base font-semibold">GovSource Assistant</h2>

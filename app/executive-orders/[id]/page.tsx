@@ -138,7 +138,7 @@ export default function ExecutiveOrderDetailPage() {
       </div>
 
       {/* Main Content: Two-column responsive layout */}
-      <div className="flex flex-col md:flex-row gap-8 min-h-[400px] md:h-[calc(100vh-60px)] md:min-h-0">
+      <div className="flex flex-col md:flex-row gap-8 min-h-[400px] md:h-[calc(100vh-300px)] md:min-h-0">
         {/* Left: Executive Order Details */}
         <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 overflow-y-auto">
           {/* Tab Navigation (always visible) */}
@@ -179,7 +179,7 @@ export default function ExecutiveOrderDetailPage() {
         </div>
 
         {/* Right: AI Chat Panel */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3">
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12">
           <AuthProvider>
             <AiChat
               documentType="executiveOrder"
