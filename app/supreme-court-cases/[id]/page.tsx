@@ -105,112 +105,122 @@ export default function SupremeCourtCaseDetailPage() {
   }
 
   return (
-    <>
-      <div className="container mx-auto px-4 py-8">
-        <Breadcrumbs
-          steps={[
-            { label: 'Home', href: '/' },
-            { label: 'Supreme Court Cases', href: '/supreme-court-cases' },
-            { label: cluster.case_name }
-          ]}
-        />
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">{cluster.case_name}</h1>
-                {cluster.case_name_short && cluster.case_name_short !== cluster.case_name && (
-                  <p className="text-lg text-gray-600">{cluster.case_name_short}</p>
-                )}
-              </div>
-              <div className="flex items-center space-x-3 mt-2 md:mt-0">
-                <SaveButton itemId={cluster.id} itemType="cluster" />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h2 className="text-lg font-semibold mb-3">Case Information</h2>
-                <p className="text-gray-700">
-                  <span className="font-medium">Date Filed:</span> {cluster.date_filed || 'Not available'}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {cluster.opinions?.length || 0} opinion{(cluster.opinions?.length || 0) !== 1 ? 's' : ''} in this case
-                </p>
-              </div>
-            </div>
+    <div className="container mx-auto px-4 py-8 relative min-h-screen">
+      {/* Breadcrumb and Top Section (Full Width) */}
+      <Breadcrumbs
+        steps={[
+          { label: 'Home', href: '/' },
+          { label: 'Supreme Court Cases', href: '/supreme-court-cases' },
+          { label: cluster.case_name }
+        ]}
+      />
 
-            <div className="border-t border-gray-200 pt-6 mt-6">
-              <h2 className="text-xl font-semibold mb-4">Opinions</h2>
-              {sortedOpinions.length > 0 ? (
-                <>
-                  {/* Tabs Navigation */}
-                  <div className="border-b border-gray-200 mb-6">
-                    <nav className="flex space-x-8" aria-label="Tabs">
-                      {sortedOpinions.map((opinion, idx) => (
-                        <button
-                          key={opinion.id}
-                          onClick={() => setActiveTab(idx)}
-                          className={`py-3 px-1 inline-flex items-center border-b-2 transition-colors duration-200 ${
-                            activeTab === idx
-                              ? 'border-primary text-primary font-medium'
-                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                          }`}
-                        >
+      {/* Header Information */}
+      <div className="mb-8">
+        <div className="mb-2 flex justify-between items-center">
+          <span className="text-gray-600">Supreme Court Case</span>
+          <SaveButton itemId={cluster.id} itemType="cluster" />
+        </div>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">{cluster.case_name}</h1>
+        {cluster.case_name_short && cluster.case_name_short !== cluster.case_name && (
+          <h2 className="text-lg md:text-xl mb-4 text-gray-600">{cluster.case_name_short}</h2>
+        )}
+        
+        <div className="mb-6">
+          <div className="text-sm mb-1">
+            <span className="font-medium">Date Filed:</span> {cluster.date_filed || 'Not available'}
+          </div>
+          <div className="text-sm">
+            <span className="font-medium">Opinions:</span> {cluster.opinions?.length || 0} opinion{(cluster.opinions?.length || 0) !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content: Two-column responsive layout */}
+      <div className="flex flex-col md:flex-row gap-8 min-h-[400px] md:h-[calc(100vh-60px)] md:min-h-0">
+        {/* Left: Supreme Court Case Details */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 overflow-y-auto">
+          {/* Tab Navigation (always visible) */}
+          {sortedOpinions.length > 0 && (
+            <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
+              <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
+                {sortedOpinions.map((opinion, idx) => (
+                  <button
+                    key={opinion.id}
+                    onClick={() => setActiveTab(idx)}
+                    className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 transition-colors duration-200 ${
+                      activeTab === idx
+                        ? 'border-primary text-primary font-medium'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {opinion.type ? opinion.type.charAt(0).toUpperCase() + opinion.type.slice(1) : 'Opinion'}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          )}
+
+          {/* Tab Content (scrollable) */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {sortedOpinions.length > 0 ? (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-6">
+                  {(() => {
+                    const opinion = sortedOpinions[activeTab];
+                    return (
+                      <div>
+                        <h2 className="text-xl font-semibold mb-4">
                           {opinion.type ? opinion.type.charAt(0).toUpperCase() + opinion.type.slice(1) : 'Opinion'}
-                        </button>
-                      ))}
-                    </nav>
-                  </div>
-                  {/* Tab Content */}
-                  <div className="space-y-4">
-                    {(() => {
-                      const opinion = sortedOpinions[activeTab];
-                      return (
-                        <div>
+                        </h2>
+                        <div className="mb-4">
                           <div className="mb-2">
                             <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
                             {opinion.joined_by && opinion.joined_by.length > 0 && (
-                              <span className="ml-2 text-gray-600 text-sm">(Joined by: {/* TODO: joined by names if available */} {opinion.joined_by.length} others)</span>
+                              <span className="ml-2 text-gray-600 text-sm">(Joined by: {opinion.joined_by.length} others)</span>
                             )}
                           </div>
-                          <div className="mb-2 text-sm text-gray-500">
+                          <div className="text-sm text-gray-500">
                             {opinion.date && (
                               <span>Date: {new Date(opinion.date).toLocaleDateString()}</span>
                             )}
                           </div>
-                          {opinion.pdf_file_path ? (
-                            <div className="h-[600px]">
-                              <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center h-32 text-gray-500 bg-gray-50 rounded-lg">
-                              No PDF available for this opinion.
-                            </div>
-                          )}
                         </div>
-                      );
-                    })()}
-                  </div>
-                </>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                  <p className="text-yellow-700">
-                    No opinions available for this case.
-                  </p>
+                        {opinion.pdf_file_path ? (
+                          <div className="h-[400px] md:h-[600px]">
+                            <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-32 text-gray-500 bg-gray-50 rounded-lg">
+                            No PDF available for this opinion.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                <p className="text-yellow-700">
+                  No opinions available for this case.
+                </p>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Right: AI Chat Panel */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3">
+          <AuthProvider>
+            <AiChat
+              documentType="opinion"
+              documentId={String(cluster.id)}
+              documentTitle={cluster.case_name}
+            />
+          </AuthProvider>
+        </div>
       </div>
-      {/* Floating AI Chat Button */}
-      <AuthProvider>
-      <AiChat
-        documentType="opinion"
-        documentId={String(cluster.id)}
-        documentTitle={cluster.case_name}
-      />
-      </AuthProvider>
-    </>
+    </div>
   );
 }

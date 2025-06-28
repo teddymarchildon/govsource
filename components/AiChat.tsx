@@ -80,7 +80,6 @@ export default function AiChat({
   documentTitle,
   htmlFilePath
 }: AiChatProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -225,206 +224,187 @@ export default function AiChat({
       buttonText = 'Learn about this document';
   }
 
+  // Panel layout (always open, not floating)
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {/* Chat bubble button */}
-      {!isOpen && (
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="px-4 py-3 rounded-lg bg-primary text-white flex items-center justify-center shadow-lg hover:bg-primary/90 transition-all text-sm font-medium"
-          aria-label="AI Chat"
-        >
-          {buttonText}
-        </Button>
-      )}
+    <div className="w-full h-full flex flex-col bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden" style={{ maxHeight: 'calc(100vh - 250px)' }}>
+      {/* Header */}
+      <div className="p-2 bg-primary text-white flex justify-between items-center rounded-t-xl">
+        <h2 className="text-base font-semibold">GovSource Assistant</h2>
+      </div>
 
-      {/* Chat window */}
-      {isOpen && (
-        <div className="flex flex-col w-96 md:w-[550px] h-[600px] bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-slide-up">
-          {/* Header */}
-          <div className="p-3 bg-primary text-white flex justify-between items-center">
-            <h2 className="text-lg font-semibold">GovSource Assistant</h2>
-            <div className="flex space-x-2">
-              <Button
-                onClick={() => setIsOpen(false)}
-                className="text-white hover:text-white/80"
-                aria-label="Close chat"
-                variant="ghost"
-                size="icon"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Info indicator if htmlFilePath is not defined */}
-          {!htmlFilePath && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
-              <svg className="h-4 w-4 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
-              <span>The assistant cannot process a PDF. It will search the web to find additional information.</span>
-            </div>
-          )}
-          {/* Info indicator if htmlFilePath is defined */}
-          {htmlFilePath && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
-            <svg className="h-4 w-4 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
-            <span>The AI will objectively analyze the contents of this document. No other sources are considered.</span>
-          </div>
-        )}
-
-          {/* Preset buttons (moved to top, with extra spacing) */}
-          {user && (
-            <div className="p-2 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-2 justify-center mt-3">
-              {PRESETS.map((preset) => {
-                let IconComponent = null;
-                switch (preset.type) {
-                  case 'summarize':
-                    IconComponent = FileText;
-                    break;
-                  case 'keyPoints':
-                    IconComponent = Sparkles;
-                    break;
-                  case 'historicalContext':
-                    IconComponent = Clock;
-                    break;
-                  case 'prosAndCons':
-                    IconComponent = Scale;
-                    break;
-                  default:
-                    IconComponent = FileText;
-                }
-                const isLocked = !isPaidSubscriber;
-                return (
-                  <Button
-                    key={preset.label}
-                    onClick={() => !isLocked && handlePresetClick(preset)}
-                    disabled={isLoading || isLocked}
-                    variant="outline"
-                    className={`px-3 py-1.5 text-xs rounded-full flex items-center gap-1.5 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title={isLocked ? 'Subscribe to unlock this feature' : undefined}
-                  >
-                    <IconComponent className="h-4 w-4" />
-                    {preset.label}
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Messages */}
-          {(!user && !authLoading) ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="max-w-[85%] rounded-lg p-4 bg-gray-100 text-primary text-center text-sm border border-primary/20">
-                <p className="mb-3">You must sign in to use the AI Assistant.</p>
-                <a
-                  href="/login"
-                  className="inline-block px-4 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary/90 transition"
-                >
-                  Sign in
-                </a>
-              </div>
-            </div>
-          ) : !isPaidSubscriber ? (
-            <div className="flex justify-center items-center flex-1">
-              <div className="max-w-[85%] rounded-lg p-4 bg-secondary text-secondary-foreground text-center text-sm border border-primary/20">
-                <p className="mb-3">You must be a paid subscriber to use the AI Assistant.</p>
-                <Button
-                  className="w-full"
-                  variant="default"
-                  disabled={subscribing || !user}
-                  onClick={async () => {
-                    if (!user) return;
-                    setSubscribing(true);
-                    try {
-                      const redirectUrl = window.location.href;
-                      const res = await fetch('/api/create-checkout-session', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: user.id, redirectUrl }),
-                      });
-                      const data = await res.json();
-                      if (data.url) {
-                        window.location.href = data.url;
-                      } else {
-                        alert('Failed to create checkout session.');
-                      }
-                    } catch (err) {
-                      alert('Failed to create checkout session.');
-                    } finally {
-                      setSubscribing(false);
-                    }
-                  }}
-                >
-                  {subscribing ? 'Redirecting...' : 'Subscribe to unlock AI features.'}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
-              {/* Chat messages for paid subscribers */}
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-lg p-2.5 ${
-                      message.role === 'user'
-                        ? 'bg-secondary text-secondary-foreground'
-                        : 'bg-white text-gray-900 border border-gray-200'
-                    }`}
-                  >
-                    <div className="whitespace-pre-wrap text-sm markdown-content prose">
-                      <ReactMarkdown>
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {isLoading && !isStreaming && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-lg p-2.5 bg-white border border-gray-200">
-                    <div className="flex items-center justify-center">
-                      <Loader className="h-5 w-5 text-primary animate-spin" />
-                    </div>
-                  </div>
-                </div>
-              )}
-              {error && (
-                <div className="flex justify-center">
-                  <div className="max-w-[85%] rounded-lg p-2.5 bg-red-100 text-red-800 text-sm">
-                    <p>{error}</p>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-
-          {/* Input form */}
-          <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-gray-200">
-            <div className="flex space-x-2">
-              <Input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={`Ask about ${documentTitle || 'this document'}...`}
-                disabled={isLoading || (!user && !authLoading) || !isPaidSubscriber}
-              />
-              <Button
-                type="submit"
-                className="px-3 py-2 rounded-lg text-white text-sm"
-                disabled={isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber}
-              >
-                Send
-              </Button>
-            </div>
-          </form>
+      {/* Info indicator if htmlFilePath is not defined */}
+      {!htmlFilePath && (
+        <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
+          <svg className="h-3 w-3 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
+          <span className="text-xs">The assistant cannot process this document. It will search the web to find additional information.</span>
         </div>
       )}
+      {/* Info indicator if htmlFilePath is defined */}
+      {htmlFilePath && (
+        <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
+          <svg className="h-3 w-3 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
+          <span className="text-xs">The assistant will objectively analyze the text and information here. No other sources are considered.</span>
+        </div>
+      )}
+
+      {/* Preset buttons (top, with extra spacing) - always visible, disabled if not paid subscriber */}
+      <div className="p-2 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-1.5 justify-center">
+        {PRESETS.map((preset) => {
+          let IconComponent = null;
+          switch (preset.type) {
+            case 'summarize':
+              IconComponent = FileText;
+              break;
+            case 'keyPoints':
+              IconComponent = Sparkles;
+              break;
+            case 'historicalContext':
+              IconComponent = Clock;
+              break;
+            case 'prosAndCons':
+              IconComponent = Scale;
+              break;
+            default:
+              IconComponent = FileText;
+          }
+          const isLocked = !isPaidSubscriber;
+          return (
+            <Button
+              key={preset.label}
+              onClick={() => !isLocked && handlePresetClick(preset)}
+              disabled={isLoading || isLocked}
+              variant="outline"
+              className={`px-2 py-1 text-xs flex items-center gap-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              style={{ borderRadius: '0.5rem' }}
+              title={isLocked ? 'Subscribe to unlock this feature' : undefined}
+            >
+              <IconComponent className="h-3.5 w-3.5" />
+              {preset.label}
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* Messages (scrollable area) */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 bg-gray-50">
+        {(!user && !authLoading) ? (
+          <div className="p-4">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-2">Sign in to use the AI Assistant</p>
+              <a
+                href="/login"
+                className="inline-block px-3 py-1.5 bg-primary text-white font-medium hover:bg-primary/90 transition text-sm"
+                style={{ borderRadius: '0.375rem' }}
+              >
+                Sign in
+              </a>
+            </div>
+          </div>
+        ) : !isPaidSubscriber ? (
+          <div className="p-4">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-2">Subscribe to use the AI Assistant</p>
+              <Button
+                className="text-sm"
+                style={{ borderRadius: '0.5rem' }}
+                variant="default"
+                disabled={subscribing || !user}
+                onClick={async () => {
+                  if (!user) return;
+                  setSubscribing(true);
+                  try {
+                    const redirectUrl = window.location.href;
+                    const res = await fetch('/api/create-checkout-session', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: user.id, redirectUrl }),
+                    });
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    } else {
+                      alert('Failed to create checkout session.');
+                    }
+                  } catch (err) {
+                    alert('Failed to create checkout session.');
+                  } finally {
+                    setSubscribing(false);
+                  }
+                }}
+              >
+                {subscribing ? 'Redirecting...' : 'Subscribe'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Chat messages for paid subscribers */}
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-lg p-2 ${
+                    message.role === 'user'
+                      ? 'bg-secondary text-secondary-foreground'
+                      : 'bg-white text-gray-900 border border-gray-200'
+                  }`}
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  <div className="whitespace-pre-wrap text-sm markdown-content prose">
+                    <ReactMarkdown>
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {isLoading && !isStreaming && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-lg p-2 bg-white border border-gray-200" style={{ borderRadius: '0.5rem' }}>
+                  <div className="flex items-center justify-center">
+                    <Loader className="h-4 w-4 text-primary animate-spin" />
+                  </div>
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="flex justify-center">
+                <div className="max-w-[85%] rounded-lg p-2 bg-red-100 text-red-800 text-sm" style={{ borderRadius: '0.5rem' }}>
+                  <p>{error}</p>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Input form (always visible at bottom) */}
+      <form onSubmit={handleSubmit} className="p-2 bg-white border-t border-gray-200">
+        <div className="flex space-x-2">
+          <Input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={`Ask about ${documentTitle || 'this document'}...`}
+            disabled={isLoading || (!user && !authLoading) || !isPaidSubscriber}
+            style={{ borderRadius: '0.5rem' }}
+            className="h-9"
+          />
+          <Button
+            type="submit"
+            className="px-3 py-1.5 text-white text-sm h-9"
+            style={{ borderRadius: '0.5rem' }}
+            disabled={isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber}
+          >
+            Send
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

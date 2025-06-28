@@ -96,93 +96,100 @@ export default function ExecutiveOrderDetailPage() {
   }
 
   return (
-    <>
-      <div className="container mx-auto px-4 py-8">
-        <nav className="mb-6 text-sm">
-          <Breadcrumbs
-            steps={[
-              { label: 'Home', href: '/' },
-              { label: 'Executive Orders', href: '/executive-orders' },
-              { label: order.title }
-            ]}
-          />
-        </nav>
+    <div className="container mx-auto px-4 py-8 relative min-h-screen">
+      {/* Breadcrumb and Top Section (Full Width) */}
+      <Breadcrumbs
+        steps={[
+          { label: 'Home', href: '/' },
+          { label: 'Executive Orders', href: '/executive-orders' },
+          { label: order.title }
+        ]}
+      />
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-          <div className="p-6">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">{order.title}</h1>
-                <div className="text-sm text-gray-600 mb-2">
-                  Document Number: {order.remote_document_number}
-                </div>
-                {order.president && (
-                  <div className="text-sm text-gray-600 mb-2">
-                    President: {order.president}
-                  </div>
-                )}
-                {order.signing_date && (
-                  <div className="text-sm text-gray-600 mb-2">
-                    Signed: {new Date(order.signing_date).toLocaleDateString()}
-                  </div>
-                )}
-                <div className="text-sm text-gray-600 mb-2">
-                  Published: {new Date(order.publication_date).toLocaleDateString()}
-                </div>
-                {order.agency && (
-                  <div className="text-sm text-gray-600">
-                    Agency: {order.agency.name}
-                  </div>
-                )}
-              </div>
-              <SaveButton itemId={order.id} itemType="agencyDocument" />
+      {/* Header Information */}
+      <div className="mb-8">
+        <div className="mb-2 flex justify-between items-center">
+          <span className="text-gray-600">Executive Order</span>
+          <SaveButton itemId={order.id} itemType="agencyDocument" />
+        </div>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">{order.title}</h1>
+        <h2 className="text-lg md:text-xl mb-4">Document Number: {order.remote_document_number}</h2>
+        
+        <div className="mb-6">
+          {order.president && (
+            <div className="text-sm mb-1">
+              <span className="font-medium">President:</span> {order.president}
             </div>
+          )}
+          {order.signing_date && (
+            <div className="text-sm mb-1">
+              <span className="font-medium">Signed:</span> {new Date(order.signing_date).toLocaleDateString()}
+            </div>
+          )}
+          <div className="text-sm mb-1">
+            <span className="font-medium">Published:</span> {new Date(order.publication_date).toLocaleDateString()}
+          </div>
+          {order.agency && (
+            <div className="text-sm">
+              <span className="font-medium">Agency:</span> {order.agency.name}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content: Two-column responsive layout */}
+      <div className="flex flex-col md:flex-row gap-8 min-h-[400px] md:h-[calc(100vh-60px)] md:min-h-0">
+        {/* Left: Executive Order Details */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 overflow-y-auto">
+          {/* Tab Navigation (always visible) */}
+          <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
+            <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('text')}
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                  activeTab === 'text'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Text
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content (scrollable) */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {activeTab === 'text' && (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-6">
+                  <h2 className="text-xl font-semibold mb-4">Executive Order Text</h2>
+                  <div className="h-[400px] md:h-[600px]">
+                    {order.pdf_file_path ? (
+                      <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        No PDF available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="flex space-x-8" aria-label="Tabs">
-          <button
-              onClick={() => setActiveTab('text')}
-              className={`py-4 px-1 inline-flex items-center border-b-2 ${
-                activeTab === 'text'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Text
-            </button>
-          </nav>
+        {/* Right: AI Chat Panel */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3">
+          <AuthProvider>
+            <AiChat
+              documentType="executiveOrder"
+              documentId={order.id}
+              documentTitle={order.title}
+              htmlFilePath={order.html_file_path}
+            />
+          </AuthProvider>
         </div>
-
-        {/* Tab Content */}
-
-          {activeTab === 'text' && (
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-6">
-                <div className="h-[600px]">
-                  {order.pdf_file_path ? (
-                    <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                      No PDF available
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
       </div>
-      {/* Floating AI Chat Button */}
-      <AuthProvider>
-        <AiChat
-          documentType="executiveOrder"
-          documentId={order.id}
-          documentTitle={order.title}
-          htmlFilePath={order.html_file_path}
-        />
-      </AuthProvider>
-    </>
+    </div>
   );
 }

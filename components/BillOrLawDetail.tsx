@@ -86,8 +86,8 @@ export default function BillOrLawDetail({
   const needsTruncation = summary?.text && summary.text.length > 1000;
 
   return (
-    <div className="container mx-auto px-4 py-8 relative">
-      {/* Breadcrumb */}
+    <div className="container mx-auto px-4 py-8 relative min-h-screen">
+      {/* Breadcrumb and Top Section (Full Width) */}
       <Breadcrumbs
         steps={[
           { label: 'Home', href: '/' },
@@ -114,241 +114,249 @@ export default function BillOrLawDetail({
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-        <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
-          <button
-            onClick={() => setActiveTab('details')}
-            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
-              activeTab === 'details'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Summary
-          </button>
-          <button
-            onClick={() => setActiveTab('text')}
-            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
-              activeTab === 'text'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Text
-          </button>
-          <button
-            onClick={() => setActiveTab('sponsors')}
-            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
-              activeTab === 'sponsors'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Sponsors
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              activeTab === 'sponsors'
-                ? 'bg-secondary text-secondary-foreground'
-                : 'bg-gray-100 text-gray-900'
-            }`}>
-              {(sponsors?.length || 0) + (cosponsors?.length || 0)}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('actions')}
-            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
-              activeTab === 'actions'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Actions
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              activeTab === 'actions'
-                ? 'bg-secondary text-secondary-foreground'
-                : 'bg-gray-100 text-gray-900'
-            }`}>
-              {actions?.length || 0}
-            </span>
-          </button>
-        </nav>
-      </div>
+      {/* Main Content: Two-column responsive layout */}
+      <div className="flex flex-col md:flex-row gap-8 min-h-[400px] md:h-[calc(100vh-60px)] md:min-h-0">
+        {/* Left: Bill/Law Details (Tabs, etc.) */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 overflow-y-auto">
+          {/* Tab Navigation (always visible) */}
+          <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
+            <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('details')}
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                  activeTab === 'details'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Summary
+              </button>
+              <button
+                onClick={() => setActiveTab('text')}
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                  activeTab === 'text'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Text
+              </button>
+              <button
+                onClick={() => setActiveTab('sponsors')}
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                  activeTab === 'sponsors'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Sponsors
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  activeTab === 'sponsors'
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'bg-gray-100 text-gray-900'
+                }`}>
+                  {(sponsors?.length || 0) + (cosponsors?.length || 0)}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('actions')}
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                  activeTab === 'actions'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Actions
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  activeTab === 'actions'
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'bg-gray-100 text-gray-900'
+                }`}>
+                  {actions?.length || 0}
+                </span>
+              </button>
+            </nav>
+          </div>
 
-      {/* Tab Content */}
-      <div className="mb-8">
-        {activeTab === 'details' && (
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="p-6">
-              {summary && summary.text ? (
-                <div className="prose max-w-none mb-6">
-                  <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
-                    {getSummaryText()}
-                  </div>
-                  {needsTruncation && (
-                    <button
-                      onClick={() => setShowFullSummary(!showFullSummary)}
-                      className="text-primary hover:underline text-sm font-medium mt-2"
-                    >
-                      {showFullSummary ? 'See less' : 'See more'}
-                    </button>
+          {/* Tab Content (scrollable) */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {activeTab === 'details' && (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-6">
+                  {summary && summary.text ? (
+                    <div className="prose max-w-none mb-6">
+                      <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
+                        {getSummaryText()}
+                      </div>
+                      {needsTruncation && (
+                        <button
+                          onClick={() => setShowFullSummary(!showFullSummary)}
+                          className="text-primary hover:underline text-sm font-medium mt-2"
+                        >
+                          {showFullSummary ? 'See less' : 'See more'}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 italic">No summary available for this bill.</div>
                   )}
                 </div>
-              ) : (
-                <div className="text-gray-500 italic">No summary available for this bill.</div>
-              )}
-            </div>
-          </div>
-        )}
-        {activeTab === 'sponsors' && (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Sponsors ({sponsors?.length || 0})</h2>
-              {sponsors && sponsors.length > 0 ? (
-                <div className="bg-white rounded-lg shadow p-4 max-h-[600px] overflow-y-auto">
-                  {sponsors.map((sponsor) => (
-                    <div key={sponsor.id} className="mb-4 last:mb-0">
-                      <Link
-                        href={`/congressmen/${sponsor.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {sponsor.full_name}
-                      </Link>
-                      <div className="text-sm text-gray-600">
-                        {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>No sponsors found</p>
-              )}
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Cosponsors ({cosponsors?.length || 0})</h2>
-              {cosponsors && cosponsors.length > 0 ? (
-                <div className="bg-white rounded-lg shadow p-4 max-h-[600px] overflow-y-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {cosponsors.map((cosponsor) => (
-                      <div key={cosponsor.id} className="mb-2">
-                        <Link
-                          href={`/congressmen/${cosponsor.id}`}
-                          className="font-medium hover:underline text-sm"
-                        >
-                          {cosponsor.full_name}
-                        </Link>
-                        <div className="text-xs text-gray-600">
-                          {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p>No cosponsors found</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'actions' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 md:p-6">
-              <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</h2>
-              {actions && actions.length > 0 ? (
-                <div className="space-y-4">
-                  {actions.map((action) => (
-                    <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-                      <div className="flex items-start">
-                        <div className="flex-shrink-0">
-                          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                            <span className="text-secondary-foreground text-sm font-medium">
-                              {formatDate(action.date)?.split(' ')[0]}
-                            </span>
+              </div>
+            )}
+            {activeTab === 'sponsors' && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Sponsors ({sponsors?.length || 0})</h2>
+                  {sponsors && sponsors.length > 0 ? (
+                    <div className="bg-white rounded-lg shadow p-4 max-h-[600px] overflow-y-auto">
+                      {sponsors.map((sponsor) => (
+                        <div key={sponsor.id} className="mb-4 last:mb-0">
+                          <Link
+                            href={`/congressmen/${sponsor.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {sponsor.full_name}
+                          </Link>
+                          <div className="text-sm text-gray-600">
+                            {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
                           </div>
                         </div>
-                        <div className="ml-4">
-                          <p className="text-sm text-gray-900">{action.text}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatDate(action.date)} • {action.type}
-                          </p>
-                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No sponsors found</p>
+                  )}
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Cosponsors ({cosponsors?.length || 0})</h2>
+                  {cosponsors && cosponsors.length > 0 ? (
+                    <div className="bg-white rounded-lg shadow p-4 max-h-[600px] overflow-y-auto">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {cosponsors.map((cosponsor) => (
+                          <div key={cosponsor.id} className="mb-2">
+                            <Link
+                              href={`/congressmen/${cosponsor.id}`}
+                              className="font-medium hover:underline text-sm"
+                            >
+                              {cosponsor.full_name}
+                            </Link>
+                            <div className="text-xs text-gray-600">
+                              {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <p>No cosponsors found</p>
+                  )}
                 </div>
-              ) : (
-                <p>No actions found</p>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
 
-        {activeTab === 'text' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 md:p-6">
-              <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Texts</h2>
-              {texts && texts.length > 0 ? (
-                <div>
-                  {/** Sort texts by date descending (most recent first) */}
-                  {(() => {
-                    const sortedTexts = [...texts].sort((a, b) => {
-                      const dateA = a.date ? new Date(a.date).getTime() : 0;
-                      const dateB = b.date ? new Date(b.date).getTime() : 0;
-                      // Place entries with missing/invalid dates at the end
-                      if (!a.date) return 1;
-                      if (!b.date) return -1;
-                      return dateB - dateA;
-                    });
-                    return (
-                      <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
-                        {sortedTexts.map((text) => (
-                          <AccordionItem key={text.id} value={text.id.toString()}>
-                            <AccordionTrigger>
-                              <div className="flex flex-col items-start">
-                                <span className="font-medium">
-                                  {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : 'Version'}
+            {activeTab === 'actions' && (
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-4 md:p-6">
+                  <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</h2>
+                  {actions && actions.length > 0 ? (
+                    <div className="space-y-4">
+                      {actions.map((action) => (
+                        <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                              <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                                <span className="text-secondary-foreground text-sm font-medium">
+                                  {formatDate(action.date)?.split(' ')[0]}
                                 </span>
-                                {text.date && (
-                                  <span className="text-xs text-gray-500">
-                                    {formatDate(text.date)}
-                                  </span>
-                                )}
                               </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="h-[400px] md:h-[600px] border rounded">
-                                {text.pdf_file_path ? (
-                                  <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
-                                ) : (
-                                  <div className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
-                                    No PDF available for this version.
-                                  </div>
-                                )}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                    );
-                  })()}
+                            </div>
+                            <div className="ml-4">
+                              <p className="text-sm text-gray-900">{action.text}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatDate(action.date)} • {action.type}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No actions found</p>
+                  )}
                 </div>
-              ) : (
-                <p>No {itemType} texts available</p>
-              )}
-            </div>
+              </div>
+            )}
+
+            {activeTab === 'text' && (
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-4 md:p-6">
+                  <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Texts</h2>
+                  {texts && texts.length > 0 ? (
+                    <div>
+                      {/** Sort texts by date descending (most recent first) */}
+                      {(() => {
+                        const sortedTexts = [...texts].sort((a, b) => {
+                          const dateA = a.date ? new Date(a.date).getTime() : 0;
+                          const dateB = b.date ? new Date(b.date).getTime() : 0;
+                          // Place entries with missing/invalid dates at the end
+                          if (!a.date) return 1;
+                          if (!b.date) return -1;
+                          return dateB - dateA;
+                        });
+                        return (
+                          <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
+                            {sortedTexts.map((text) => (
+                              <AccordionItem key={text.id} value={text.id.toString()}>
+                                <AccordionTrigger>
+                                  <div className="flex flex-col items-start">
+                                    <span className="font-medium">
+                                      {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
+                                    </span>
+                                    {text.date && (
+                                      <span className="text-xs text-gray-500">
+                                        {formatDate(text.date)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="h-[400px] md:h-[600px] border rounded">
+                                    {text.pdf_file_path ? (
+                                      <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
+                                    ) : (
+                                      <div className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                        No PDF available for this version.
+                                      </div>
+                                    )}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <p>No {itemType} texts available</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+        {/* Right: AI Chat Panel */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3">
+          <AuthProvider>
+            <AiChat
+              documentType={itemType}
+              documentId={item.id}
+              documentTitle={title}
+              htmlFilePath={latestText?.html_file_path}
+            />
+          </AuthProvider>
+        </div>
       </div>
-      {/* AI Chat (fixed position) */}
-      <AuthProvider>
-        <AiChat
-          documentType={itemType}
-          documentId={item.id}
-          documentTitle={title}
-          htmlFilePath={latestText?.html_file_path}
-        />
-      </AuthProvider>
     </div>
   );
 }
