@@ -28,7 +28,7 @@ export const getBills = async (params: any = {}) => {
       text,
       type
     )
-  `);
+  `).order("introduced_date", { ascending: false });
 
   if (params.limit) {
     query = query.limit(params.limit);
