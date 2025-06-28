@@ -353,6 +353,20 @@ export default function BillOrLawDetail({
               documentId={item.id}
               documentTitle={title}
               htmlFilePath={latestText?.html_file_path}
+              diffHtmlFilePaths={
+                texts.length > 1
+                  ? [...texts]
+                      .sort((a, b) => {
+                        const dateA = a.date ? new Date(a.date).getTime() : 0;
+                        const dateB = b.date ? new Date(b.date).getTime() : 0;
+                        if (!a.date) return 1;
+                        if (!b.date) return -1;
+                        return dateB - dateA;
+                      })
+                      .slice(0, 2)
+                      .map((t) => t.html_file_path)
+                  : undefined
+              }
             />
           </AuthProvider>
         </div>

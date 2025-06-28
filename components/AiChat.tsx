@@ -15,7 +15,7 @@ interface Message {
 }
 
 // Define preset types that match the backend types
-type PresetType = 'default' | 'summarize' | 'keyPoints' | 'historicalContext' | 'prosAndCons';
+type PresetType = 'default' | 'summarize' | 'keyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
 
 interface Preset {
   type: PresetType;
@@ -42,9 +42,9 @@ function getDocumentNoun(documentType: AiChatProps['documentType']) {
 }
 
 // Function to generate tailored presets based on documentType
-function getPresets(documentType: AiChatProps['documentType']): Preset[] {
+function getPresets(documentType: AiChatProps['documentType'], diffHtmlFilePaths?: (string | undefined)[]): Preset[] {
   const noun = getDocumentNoun(documentType);
-  return [
+  const presets: Preset[] = [
     {
       type: 'summarize',
       label: 'Summarize',
@@ -66,6 +66,15 @@ function getPresets(documentType: AiChatProps['documentType']): Preset[] {
       userMessage: `What are the pros and cons of this ${noun}?`
     }
   ];
+  // Add diff preset if bill/law and two valid htmls
+  if ((documentType === 'bill' || documentType === 'law') && Array.isArray(diffHtmlFilePaths) && diffHtmlFilePaths.length === 2 && diffHtmlFilePaths[0] && diffHtmlFilePaths[1]) {
+    presets.unshift({
+      type: 'diff',
+      label: 'Difference between versions',
+      userMessage: `What are the differences between the two most recent versions of this ${noun}?`
+    });
+  }
+  return presets;
 }
 
 interface AiChatProps {
@@ -74,13 +83,15 @@ interface AiChatProps {
   documentTitle: string;
   htmlFilePath?: string;
   pdfFilePath?: string;
+  diffHtmlFilePaths?: (string | undefined)[];
 }
 
 export default function AiChat({
   documentType,
   documentId,
   documentTitle,
-  htmlFilePath
+  htmlFilePath,
+  diffHtmlFilePaths
 }: AiChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('');
@@ -93,7 +104,7 @@ export default function AiChat({
   const { user, loading: authLoading, isPaidSubscriber } = useAuth();
 
   // Get tailored presets for the current documentType
-  const PRESETS = getPresets(documentType);
+  const PRESETS = getPresets(documentType, diffHtmlFilePaths);
 
   // Scroll to bottom of messages when new messages are added
   useEffect(() => {
@@ -114,21 +125,27 @@ export default function AiChat({
       // We'll let the API handle content fetching
       const documentContent = null;
 
+      // For diff preset, send the two html file paths
+      const body: any = {
+        messages: messagesToSend,
+        documentContent,
+        documentType,
+        documentId,
+        documentTitle,
+        htmlFilePath,
+        presetType,
+      };
+      if (presetType === 'diff' && diffHtmlFilePaths && diffHtmlFilePaths.length === 2 && diffHtmlFilePaths[0] && diffHtmlFilePaths[1]) {
+        body.diffHtmlFilePaths = diffHtmlFilePaths;
+      }
+
       // Call the API endpoint with the messages and document content
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messages: messagesToSend,
-          documentContent,
-          documentType,
-          documentId,
-          documentTitle,
-          htmlFilePath,
-          presetType, // Send the preset type to the backend
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -267,6 +284,9 @@ export default function AiChat({
               break;
             case 'prosAndCons':
               IconComponent = Scale;
+              break;
+            case 'diff':
+              IconComponent = FileText;
               break;
             default:
               IconComponent = FileText;
