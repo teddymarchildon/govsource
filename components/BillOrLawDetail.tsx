@@ -9,6 +9,7 @@ import Breadcrumbs from './Breadcrumbs';
 import AiChat from './AiChat';
 import { BillText, Congressman, BillSummary } from '@/types/types';
 import { AuthProvider } from '../contexts/AuthContext';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 
 interface BillAction {
   id: string;
@@ -33,9 +34,14 @@ interface DetailItem {
   law_title?: string;
 }
 
+// Patch BillText type to include 'type' for UI use
+export interface BillTextWithType extends BillText {
+  type?: string;
+}
+
 interface BillOrLawDetailProps {
   item: DetailItem;
-  texts: BillText[];
+  texts: BillTextWithType[];
   sponsors: Congressman[];
   cosponsors: Congressman[];
   actions: BillAction[];
@@ -281,16 +287,51 @@ export default function BillOrLawDetail({
         {activeTab === 'text' && (
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 md:p-6">
-              <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Text</h2>
-              {latestText ? (
-                <div className="h-[400px] md:h-[600px] border rounded">
-                  {latestText.pdf_file_path ? (
-                    <PdfViewer storagePath={latestText.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
-                  ) : (
-                    <div className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
-                      {item.introduced_date ? new Date(item.introduced_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}
-                    </div>
-                  )}
+              <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Texts</h2>
+              {texts && texts.length > 0 ? (
+                <div>
+                  {/** Sort texts by date descending (most recent first) */}
+                  {(() => {
+                    const sortedTexts = [...texts].sort((a, b) => {
+                      const dateA = a.date ? new Date(a.date).getTime() : 0;
+                      const dateB = b.date ? new Date(b.date).getTime() : 0;
+                      // Place entries with missing/invalid dates at the end
+                      if (!a.date) return 1;
+                      if (!b.date) return -1;
+                      return dateB - dateA;
+                    });
+                    return (
+                      <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
+                        {sortedTexts.map((text) => (
+                          <AccordionItem key={text.id} value={text.id.toString()}>
+                            <AccordionTrigger>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">
+                                  {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : 'Version'}
+                                </span>
+                                {text.date && (
+                                  <span className="text-xs text-gray-500">
+                                    {formatDate(text.date)}
+                                  </span>
+                                )}
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="h-[400px] md:h-[600px] border rounded">
+                                {text.pdf_file_path ? (
+                                  <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
+                                ) : (
+                                  <div className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                    No PDF available for this version.
+                                  </div>
+                                )}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    );
+                  })()}
                 </div>
               ) : (
                 <p>No {itemType} texts available</p>
