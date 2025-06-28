@@ -6,6 +6,8 @@ import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { usePathname } from 'next/navigation';
+import { getLoginUrl } from '@/utils/utils';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -99,6 +101,8 @@ export default function AiChat({
   }, [messages]);
 
   const [subscribing, setSubscribing] = useState(false);
+
+  const pathname = usePathname();
 
   // Function to handle sending a message to the AI API
   const sendMessageToApi = async (messagesToSend: Message[], presetType: PresetType = 'default') => {
@@ -292,7 +296,7 @@ export default function AiChat({
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-2">Sign in to use the AI Assistant</p>
               <a
-                href="/login"
+                href={getLoginUrl(pathname)}
                 className="inline-block px-3 py-1.5 bg-primary text-white font-medium hover:bg-primary/90 transition text-sm"
                 style={{ borderRadius: '0.375rem' }}
               >

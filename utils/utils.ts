@@ -18,3 +18,15 @@ export function formatDate(dateString: string): string {
     return dateString;
   }
 }
+
+/**
+ * Returns the login URL with a redirect param if appropriate.
+ * @param path The current path
+ * @returns The login URL
+ */
+export function getLoginUrl(path: string): string {
+  if (!path || path === '/login' || path.startsWith('/onboarding')) {
+    return '/login';
+  }
+  return `/login?redirect=${encodeURIComponent(path)}`;
+}

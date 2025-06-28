@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, Suspense, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import OnboardingContainer from '../../components/onboarding/OnboardingContainer';
 import { upsertSubscription } from '../../services/api';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
+import { getLoginUrl } from '@/utils/utils';
 
 function OnboardingContent() {
   const { user, loading, isPaidSubscriber } = useAuth();
   const router = useRouter();
   const hasAttemptedSubscriptionCreation = useRef(false);
+  const pathname = usePathname();
 
   // Upsert free subscription for users when they land on onboarding
   useEffect(() => {
@@ -34,9 +36,9 @@ function OnboardingContent() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login');
+      router.push(getLoginUrl(pathname));
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   if (loading) {
     return (

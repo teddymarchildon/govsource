@@ -25,6 +25,7 @@ import { CheckCircleIcon } from '@heroicons/react/24/solid';
 import { Button } from '../../components/ui/button';
 import { BookmarkMinus } from 'lucide-react';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { getLoginUrl } from '@/utils/utils';
 
 export default function ProfilePage() {
   const { user, loading, isPaidSubscriber, subscription } = useAuth();
@@ -165,7 +166,7 @@ export default function ProfilePage() {
         <div className="bg-white rounded-lg shadow-md p-6 text-center">
           <h1 className="text-2xl font-bold mb-4">Sign in to view your profile</h1>
           <Link
-            href={`/login?redirect=${encodeURIComponent(pathname)}`}
+            href={getLoginUrl(pathname)}
             className="inline-block bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
           >
             Sign In

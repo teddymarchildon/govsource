@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import SearchResults from './SearchResults';
 import useSearch from '../hooks/useSearch';
 import { usePathname } from 'next/navigation';
+import { getLoginUrl } from '@/utils/utils';
 
 export default function Header() {
   const { user, signOut, loading } = useAuth();
@@ -165,7 +166,7 @@ export default function Header() {
             {!loading && !user && (
               <div className="flex items-center space-x-4">
                 <Link
-                  href={`/login?redirect=${encodeURIComponent(pathname)}`}
+                  href={getLoginUrl(pathname)}
                   className="text-sm font-medium text-gray-700 hover:text-gray-900"
                 >
                   Sign In
@@ -264,7 +265,7 @@ export default function Header() {
           {!loading && !user && (
             <div className="flex flex-col space-y-3">
               <Link
-                href={`/login?redirect=${encodeURIComponent(pathname)}`}
+                href={getLoginUrl(pathname)}
                 className="text-sm font-medium text-gray-700 hover:text-gray-900 py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >

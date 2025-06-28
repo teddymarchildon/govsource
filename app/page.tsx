@@ -18,6 +18,7 @@ import {
   getAgencyRules
 } from '../services/api';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { getLoginUrl } from '@/utils/utils';
 
 function HomeContent() {
   const router = useRouter();
@@ -511,7 +512,7 @@ function HomeContent() {
           <li>Get personalized legislative updates (coming soon)</li>
         </ul>
         <div className="flex space-x-3">
-          <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="inline-block px-4 py-2 bg-gray-100 text-primary rounded-md font-medium hover:bg-gray-200 transition-colors">Sign In</Link>
+          <Link href={getLoginUrl(pathname)} className="inline-block px-4 py-2 bg-gray-100 text-primary rounded-md font-medium hover:bg-gray-200 transition-colors">Sign In</Link>
         </div>
       </div>
 

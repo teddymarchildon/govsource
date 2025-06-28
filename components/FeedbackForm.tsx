@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/utils/supabase/client';
+import { usePathname } from 'next/navigation';
+import { getLoginUrl } from '@/utils/utils';
 
 export default function FeedbackForm() {
   const { user } = useAuth();
@@ -11,6 +13,7 @@ export default function FeedbackForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const pathname = usePathname();
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
@@ -93,7 +96,7 @@ export default function FeedbackForm() {
               />
               {!user && (
                 <p className="text-sm text-red-500 mt-2">
-                  Please <a href="/login" className="underline">log in</a> to submit feedback.
+                  Please <a href={getLoginUrl(pathname)} className="underline">log in</a> to submit feedback.
                 </p>
               )}
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}

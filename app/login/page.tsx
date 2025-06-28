@@ -38,7 +38,11 @@ function LoginPageInner() {
     setIsLoading(true);
 
     try {
-      await signInWithMagicLink(email);
+      // Construct the absolute redirect URL
+      const redirectUrl = typeof window !== 'undefined'
+        ? window.location.origin + (redirectPath || '/')
+        : undefined;
+      await signInWithMagicLink(email, redirectUrl);
       setShowConfirmNotice(true);
     } catch (err: any) {
       setError(err.message || 'Failed to send link');

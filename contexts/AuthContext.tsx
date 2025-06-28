@@ -8,7 +8,7 @@ import type { User as AppUser } from '../types/types';
 type AuthContextType = {
   user: AppUser | null;
   loading: boolean;
-  signInWithMagicLink: (email: string) => Promise<void>;
+  signInWithMagicLink: (email: string, redirectUrl?: string) => Promise<void>;
   signOut: () => Promise<void>;
   isPaidSubscriber: boolean;
   subscription: any | null;
@@ -75,11 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signInWithMagicLink = async (email: string) => {
+  const signInWithMagicLink = async (email: string, redirectUrl?: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding'
+        emailRedirectTo: redirectUrl || (process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding')
       }
     });
     if (error) throw error;
