@@ -35,8 +35,8 @@ export async function POST(request: Request) {
     }
 
     // Get the appropriate system prompt based on the preset type
-    let presetPrompt = PRESET_PROMPTS[presetType as PresetType] || PRESET_PROMPTS.default;
-    let systemMessage = {
+    const presetPrompt = PRESET_PROMPTS[presetType as PresetType] || PRESET_PROMPTS.default;
+    const systemMessage = {
       role: 'system',
       content: `You are an AI assistant helping with information about this US federal government document: "${documentTitle}". ${presetPrompt}`
     };
