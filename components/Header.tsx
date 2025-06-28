@@ -7,6 +7,8 @@ import SearchResults from './SearchResults';
 import useSearch from '../hooks/useSearch';
 import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 export default function Header() {
   const { user, signOut, loading } = useAuth();
@@ -99,8 +101,10 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
-            <button
+            <Button
               id="mobile-menu-button"
+              variant="ghost"
+              size="icon"
               onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
               className="p-2 mr-2 text-gray-500 hover:text-gray-700 focus:outline-none"
               aria-label="Toggle search"
@@ -108,9 +112,11 @@ export default function Header() {
               <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            </button>
-            <button
+            </Button>
+            <Button
               id="mobile-menu-button"
+              variant="ghost"
+              size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
               aria-label="Toggle menu"
@@ -118,16 +124,16 @@ export default function Header() {
               <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-            </button>
+            </Button>
           </div>
 
           {/* Desktop search and user menu */}
           <div className="hidden md:flex items-center ml-auto">
             <div className="relative mr-4" ref={searchContainerRef}>
-              <input
+              <Input
                 type="text"
                 placeholder="Search the government..."
-                className="w-64 bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                className="w-64 bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 aria-label="Search"
@@ -141,7 +147,9 @@ export default function Header() {
 
               {/* Clear search button */}
               {searchQuery && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={clearSearch}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   aria-label="Clear search"
@@ -149,7 +157,7 @@ export default function Header() {
                   <svg className="h-4 w-4 text-gray-400 hover:text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
-                </button>
+                </Button>
               )}
 
               {/* Search Results Dropdown */}
@@ -176,7 +184,9 @@ export default function Header() {
 
             {!loading && user && (
               <div className="relative" ref={dropdownRef}>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center focus:outline-none"
                   aria-expanded={dropdownOpen}
@@ -185,7 +195,7 @@ export default function Header() {
                   <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium cursor-pointer">
                     {user.email?.substring(0, 2).toUpperCase() || 'ME'}
                   </div>
-                </button>
+                </Button>
 
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 ring-1 ring-black ring-opacity-5">
@@ -200,12 +210,13 @@ export default function Header() {
                     >
                       Your Profile
                     </Link>
-                    <button
-                      onClick={handleSignOut}
+                    <Button
+                      variant="ghost"
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={handleSignOut}
                     >
                       Sign Out
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -218,10 +229,10 @@ export default function Header() {
       {mobileSearchOpen && (
         <div className="md:hidden px-4 py-3 border-t border-gray-200" ref={searchContainerRef}>
           <div className="relative">
-            <input
+            <Input
               type="text"
               placeholder="Search the government..."
-              className="w-full bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              className="w-full bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm"
               value={searchQuery}
               onChange={handleSearchChange}
               aria-label="Search"
@@ -235,7 +246,9 @@ export default function Header() {
 
             {/* Clear search button */}
             {searchQuery && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={clearSearch}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 aria-label="Clear search"
@@ -243,7 +256,7 @@ export default function Header() {
                 <svg className="h-4 w-4 text-gray-400 hover:text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-              </button>
+              </Button>
             )}
 
             {/* Search Results Dropdown */}
@@ -289,12 +302,13 @@ export default function Header() {
               >
                 Your Profile
               </Link>
-              <button
-                onClick={handleSignOut}
+              <Button
+                variant="ghost"
                 className="text-sm font-medium text-gray-700 hover:text-gray-900 py-2 text-left"
+                onClick={handleSignOut}
               >
                 Sign Out
-              </button>
+              </Button>
             </div>
           )}
         </div>

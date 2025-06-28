@@ -128,3 +128,8 @@
 .form-link {
   @apply text-blue-600 hover:underline;
 }
+
+/* Ensure all text inputs, textareas, and selects have slight rounding globally */
+input[type="text"], input[type="email"], input[type="password"], textarea, select {
+  @apply rounded-md;
+}

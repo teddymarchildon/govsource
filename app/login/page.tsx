@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 function LoginPageInner() {
   const [email, setEmail] = useState('');
@@ -92,12 +94,12 @@ function LoginPageInner() {
                   Email address
                 </label>
                 <div className="mt-1">
-                  <input
+                  <Input
                     type="email"
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                    className="block w-full"
                     placeholder="your@email.com"
                     required
                   />
@@ -105,13 +107,13 @@ function LoginPageInner() {
               </div>
 
               <div>
-                <button
+                <Button
                   type="submit"
-                  className="flex w-full justify-center rounded-md border border-transparent bg-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+                  className="flex w-full justify-center"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Sending link...' : 'Send link'}
-                </button>
+                </Button>
               </div>
             </form>
           )}
