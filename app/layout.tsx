@@ -4,6 +4,7 @@ import './globals.css';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { AuthProvider } from '../contexts/AuthContext';
+import { SidebarProvider } from '../contexts/SidebarContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import FeedbackForm from '@/components/FeedbackForm';
@@ -46,6 +47,7 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable}`}>
       <body className={`${inter.className} font-sans`}>
         <AuthProvider>
+          <SidebarProvider>
             <div className="min-h-screen bg-gray-50">
               <Header />
               <Sidebar />
@@ -54,6 +56,7 @@ export default async function RootLayout({
               </main>
             </div>
             <FeedbackForm />
+          </SidebarProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

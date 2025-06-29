@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import { getSavedBills, getSavedCongressmen, getSavedAgencies, getSavedJudges, getSavedClusters, getSavedAgencyDocuments } from '../services/api';
 import {
   Home,
@@ -22,6 +23,7 @@ import LoadingIndicator from './ui/LoadingIndicator';
 export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { isMobileOpen, setIsMobileOpen } = useSidebar();
   const [savedItems, setSavedItems] = useState<Array<{
     id: string;
     type: 'bill' | 'congressman' | 'agency' | 'judge' | 'cluster' | 'agencyDocument';
@@ -30,7 +32,6 @@ export default function Sidebar() {
     timestamp?: string;
   }>>([]);
   const [loading, setLoading] = useState(true);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
     const fetchSavedItems = async () => {
@@ -161,18 +162,6 @@ export default function Sidebar() {
   const isActive = (path: string) => {
     return pathname === path ? 'bg-gray-100 text-primary font-medium' : '';
   };
-
-  // Fixed button to toggle sidebar on mobile
-  const toggleButton = (
-    <button
-      id="sidebar-toggle"
-      onClick={() => setIsMobileOpen(!isMobileOpen)}
-      className="md:hidden fixed bottom-4 right-4 bg-primary text-white rounded-full p-3 shadow-lg z-20"
-      aria-label="Toggle sidebar"
-    >
-      <Menu className="h-6 w-6" />
-    </button>
-  );
 
   return (
     <>
@@ -334,7 +323,6 @@ export default function Sidebar() {
           </div>
         </div>
       </aside>
-      {toggleButton}
     </>
   );
 }

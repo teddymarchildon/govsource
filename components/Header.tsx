@@ -9,6 +9,8 @@ import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useSidebar } from '../contexts/SidebarContext';
+import { Menu } from 'lucide-react';
 
 export default function Header() {
   const { user, signOut, loading } = useAuth();
@@ -18,6 +20,7 @@ export default function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const { isMobileOpen, setIsMobileOpen } = useSidebar();
 
   // Use our custom search hook
   const {
@@ -94,6 +97,17 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
+            {/* Hamburger sidebar toggle on mobile using shadcn Button */}
+            <Button
+              id="sidebar-toggle"
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              className="md:hidden mr-2"
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="h-6 w-6 text-primary" />
+            </Button>
             <Link href="/" className="text-xl font-bold text-primary">
               GovSource
             </Link>
