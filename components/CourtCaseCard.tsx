@@ -92,13 +92,6 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
               ))}
             </div>
           )}
-
-          {primaryOpinion?.pdf_file_path && (
-            <div className="text-xs text-gray-500 flex items-center">
-              <File className="h-3 w-3 inline-block mr-1" />
-              <span className="font-medium">PDF Available</span>
-            </div>
-          )}
         </div>
       </CardFooter>
     </Card>
