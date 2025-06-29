@@ -294,7 +294,7 @@ export default function CongressmanDetailPage() {
               <Button
                 variant="ghost"
                 onClick={() => setActiveTab('bills')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
+                className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
                   activeTab === 'bills'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -308,7 +308,7 @@ export default function CongressmanDetailPage() {
               <Button
                 variant="ghost"
                 onClick={() => setActiveTab('terms')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
+                className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
                   activeTab === 'terms'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -322,7 +322,7 @@ export default function CongressmanDetailPage() {
               <Button
                 variant="ghost"
                 onClick={() => setActiveTab('statistics')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
+                className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
                   activeTab === 'statistics'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

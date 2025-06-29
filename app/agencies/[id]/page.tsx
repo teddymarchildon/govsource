@@ -135,7 +135,7 @@ export default function AgencyDetailPage() {
           <Button
             variant="ghost"
             onClick={() => setActiveTab('subagencies')}
-            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
+            className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
               activeTab === 'subagencies'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -149,7 +149,7 @@ export default function AgencyDetailPage() {
           <Button
             variant="ghost"
             onClick={() => setActiveTab('rules')}
-            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
+            className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
               activeTab === 'rules'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
