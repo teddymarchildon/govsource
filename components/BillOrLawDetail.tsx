@@ -11,6 +11,8 @@ import { BillText, Congressman, BillSummary } from '@/types/types';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from './ui/card';
 import { BrainCog, X } from 'lucide-react';
 
 interface BillAction {
@@ -106,7 +108,6 @@ export default function BillOrLawDetail({
         </div>
         <h1 className="text-2xl md:text-3xl font-bold mb-2">{title}</h1>
         <h2 className="text-lg md:text-xl mb-4">{number}</h2>
-
         <div className="mb-6">
           <div className="text-sm mb-1">
             <span className="font-medium">{dateLabel}:</span> {date && formatDate(date)}
@@ -124,162 +125,154 @@ export default function BillOrLawDetail({
           {/* Tab Navigation (always visible) */}
           <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
             <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('details')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-3 md:py-4 text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'details'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Summary
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('text')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-3 md:py-4 text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'text'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Text
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  activeTab === 'text'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
-                  {texts?.length || 0}
-                </span>
-              </button>
-              <button
+                <Badge variant={activeTab === 'text' ? 'secondary' : 'outline'}>{texts?.length || 0}</Badge>
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('sponsors')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-3 md:py-4 text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'sponsors'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Sponsors
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  activeTab === 'sponsors'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
-                  {(sponsors?.length || 0) + (cosponsors?.length || 0)}
-                </span>
-              </button>
-              <button
+                <Badge variant={activeTab === 'sponsors' ? 'secondary' : 'outline'}>{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('actions')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-3 md:py-4 text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'actions'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Actions
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  activeTab === 'actions'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
-                  {actions?.length || 0}
-                </span>
-              </button>
+                <Badge variant={activeTab === 'actions' ? 'secondary' : 'outline'}>{actions?.length || 0}</Badge>
+              </Button>
             </nav>
           </div>
 
           {/* Tab Content (scrollable) */}
           <div className="flex-1 min-h-0 overflow-y-auto">
             {activeTab === 'details' && (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-6">
+              <Card className="overflow-hidden">
+                <CardContent className="p-6">
                   {summary && summary.text ? (
-                    <div className="prose max-w-none mb-6">
+                    <div className="mb-6">
                       <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
                         {getSummaryText()}
                       </div>
                       {needsTruncation && (
-                        <button
+                        <Button
+                          variant="link"
                           onClick={() => setShowFullSummary(!showFullSummary)}
-                          className="text-primary hover:underline text-sm font-medium mt-2"
+                          className="text-primary text-sm font-medium mt-2 px-0"
                         >
                           {showFullSummary ? 'See less' : 'See more'}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   ) : (
-                    <div className="text-gray-500 italic">No summary available for this bill.</div>
+                    <CardDescription>No summary available for this bill.</CardDescription>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
             {activeTab === 'sponsors' && (
               <div className="space-y-8">
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Sponsors ({sponsors?.length || 0})</h2>
-                  {sponsors && sponsors.length > 0 ? (
-                    <div className="bg-white rounded-lg shadow p-4 max-h-[600px] overflow-y-auto">
-                      {sponsors.map((sponsor) => (
-                        <div key={sponsor.id} className="mb-4 last:mb-0">
-                          <Link
-                            href={`/congressmen/${sponsor.id}`}
-                            className="font-medium hover:underline"
-                          >
-                            {sponsor.full_name}
-                          </Link>
-                          <div className="text-sm text-gray-600">
-                            {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p>No sponsors found</p>
-                  )}
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Cosponsors ({cosponsors?.length || 0})</h2>
-                  {cosponsors && cosponsors.length > 0 ? (
-                    <div className="bg-white rounded-lg shadow p-4 max-h-[600px] overflow-y-auto">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {cosponsors.map((cosponsor) => (
-                          <div key={cosponsor.id} className="mb-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Sponsors ({sponsors?.length || 0})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {sponsors && sponsors.length > 0 ? (
+                      <div className="max-h-[600px] overflow-y-auto">
+                        {sponsors.map((sponsor) => (
+                          <div key={sponsor.id} className="mb-4 last:mb-0">
                             <Link
-                              href={`/congressmen/${cosponsor.id}`}
-                              className="font-medium hover:underline text-sm"
+                              href={`/congressmen/${sponsor.id}`}
+                              className="font-medium hover:underline"
                             >
-                              {cosponsor.full_name}
+                              {sponsor.full_name}
                             </Link>
-                            <div className="text-xs text-gray-600">
-                              {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
+                            <div className="text-sm text-gray-600">
+                              {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
                             </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  ) : (
-                    <p>No cosponsors found</p>
-                  )}
-                </div>
+                    ) : (
+                      <CardDescription>No sponsors found</CardDescription>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cosponsors ({cosponsors?.length || 0})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {cosponsors && cosponsors.length > 0 ? (
+                      <div className="max-h-[600px] overflow-y-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {cosponsors.map((cosponsor) => (
+                            <div key={cosponsor.id} className="mb-2">
+                              <Link
+                                href={`/congressmen/${cosponsor.id}`}
+                                className="font-medium hover:underline text-sm"
+                              >
+                                {cosponsor.full_name}
+                              </Link>
+                              <div className="text-xs text-gray-600">
+                                {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <CardDescription>No cosponsors found</CardDescription>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
 
             {activeTab === 'actions' && (
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 md:p-6">
-                  <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</h2>
+              <Card>
+                <CardContent className="p-4 md:p-6">
+                  <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
                   {actions && actions.length > 0 ? (
                     <div className="space-y-4">
                       {actions.map((action) => (
                         <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
                           <div className="flex items-start">
                             <div className="flex-shrink-0">
-                              <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                                <span className="text-secondary-foreground text-sm font-medium">
-                                  {formatDate(action.date)?.split(' ')[0]}
-                                </span>
-                              </div>
+                              <Badge variant="secondary" className="h-8 w-8 flex items-center justify-center text-sm font-medium rounded-full">
+                                {formatDate(action.date)?.split(' ')[0]}
+                              </Badge>
                             </div>
                             <div className="ml-4">
                               <p className="text-sm text-gray-900">{action.text}</p>
@@ -292,16 +285,16 @@ export default function BillOrLawDetail({
                       ))}
                     </div>
                   ) : (
-                    <p>No actions found</p>
+                    <CardDescription>No actions found</CardDescription>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
 
             {activeTab === 'text' && (
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 md:p-6">
-                  <h2 className="text-xl font-semibold mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Texts</h2>
+              <Card>
+                <CardContent className="p-4 md:p-6">
+                  <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Texts</CardTitle>
                   {texts && texts.length > 0 ? (
                     <div>
                       {/** Sort texts by date descending (most recent first) */}
@@ -335,9 +328,9 @@ export default function BillOrLawDetail({
                                     {text.pdf_file_path ? (
                                       <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
                                     ) : (
-                                      <div className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                      <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
                                         No PDF available for this version.
-                                      </div>
+                                      </CardDescription>
                                     )}
                                   </div>
                                 </AccordionContent>
@@ -348,10 +341,10 @@ export default function BillOrLawDetail({
                       })()}
                     </div>
                   ) : (
-                    <p>No {itemType} texts available</p>
+                    <CardDescription>No {itemType} texts available</CardDescription>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>

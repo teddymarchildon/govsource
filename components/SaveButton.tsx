@@ -10,6 +10,7 @@ import {
   saveCluster, unsaveCluster, isClusterSaved,
   saveAgencyDocument, unsaveAgencyDocument, isAgencyDocumentSaved
 } from '../services/api';
+import { Button } from './ui/button';
 
 interface SaveButtonProps {
   itemId: string;
@@ -128,10 +129,12 @@ export default function SaveButton({ itemId, itemType, className = '' }: SaveBut
   };
 
   return (
-    <button
+    <Button
       onClick={handleToggleSave}
       disabled={isLoading}
-      className={`inline-flex items-center px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50 ${className}`}
+      variant="outline"
+      size="sm"
+      className={`inline-flex items-center ${className}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -148,6 +151,6 @@ export default function SaveButton({ itemId, itemType, className = '' }: SaveBut
         />
       </svg>
       {isSaved ? 'Watching' : 'Watch'}
-    </button>
+    </Button>
   );
 }

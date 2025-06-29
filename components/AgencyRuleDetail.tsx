@@ -10,6 +10,7 @@ import Link from 'next/link';
 import AiChat from './AiChat';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Button } from './ui/button';
+import { Card, CardContent, CardTitle, CardDescription } from './ui/card';
 import { BrainCog, X } from 'lucide-react';
 
 type TabType = 'details' | 'text';
@@ -71,62 +72,62 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           {/* Tab Navigation (always visible) */}
           <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
             <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('details')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-3 md:py-4 text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'details'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Summary
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('text')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-3 md:py-4 text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'text'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Text
-              </button>
+              </Button>
             </nav>
           </div>
 
           {/* Tab Content (scrollable) */}
           <div className="flex-1 min-h-0 overflow-y-auto">
             {activeTab === 'details' && (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-6">
+              <Card className="overflow-hidden">
+                <CardContent className="p-6">
                   {rule.abstract ? (
-                    <div className="prose max-w-none mb-6">
+                    <div className="mb-6">
                       <div dangerouslySetInnerHTML={{ __html: rule.abstract }} />
                     </div>
                   ) : (
-                    <div className="text-gray-500 italic">No summary available for this rule.</div>
+                    <CardDescription>No summary available for this rule.</CardDescription>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
 
             {activeTab === 'text' && (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">Agency Rule Text</h2>
+              <Card className="overflow-hidden">
+                <CardContent className="p-6">
+                  <CardTitle className="mb-4">Agency Rule Text</CardTitle>
                   <div className="h-[400px] md:h-[600px]">
                     {rule.pdf_file_path ? (
                       <PdfViewer storagePath={rule.pdf_file_path} storageBucket="agency-docs" className="h-full" />
                     ) : rule.pdf_url ? (
                       <PdfViewer pdfUrl={rule.pdf_url} className="h-full" />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-gray-500">
-                        No PDF available
-                      </div>
+                      <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
                     )}
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>

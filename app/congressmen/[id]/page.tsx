@@ -8,6 +8,9 @@ import Breadcrumbs from '../../../components/Breadcrumbs';
 import { Bill, Congressman, CongressmanTerm } from '../../../types/types';
 import SaveButton from '../../../components/SaveButton';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 type TabType = 'bills' | 'terms' | 'statistics';
 
@@ -274,9 +277,9 @@ export default function CongressmanDetailPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">{congressman.full_name}</h1>
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm md:text-base">
-                <div className={`px-2 py-1 rounded-md inline-flex items-center ${getPartyColor(congressman.party)}`}>
+                <Badge variant="secondary" className="px-2 py-1">
                   {congressman.party}
-                </div>
+                </Badge>
                 <div>{getChamberInfo()}</div>
               </div>
             </div>
@@ -288,50 +291,45 @@ export default function CongressmanDetailPage() {
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 mb-6 overflow-x-auto">
             <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('bills')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'bills'
-                    ? 'border-primary text-primary font-medium'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Bills
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  activeTab === 'bills'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
+                <Badge variant={activeTab === 'bills' ? 'secondary' : 'outline'}>
                   {sponsoredBills.length + cosponsoredBills.length}
-                </span>
-              </button>
-              <button
+                </Badge>
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('terms')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'terms'
-                    ? 'border-primary text-primary font-medium'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Terms
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  activeTab === 'terms'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
+                <Badge variant={activeTab === 'terms' ? 'secondary' : 'outline'}>
                   {terms.length}
-                </span>
-              </button>
-              <button
+                </Badge>
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab('statistics')}
-                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 ${
+                className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
                   activeTab === 'statistics'
-                    ? 'border-primary text-primary font-medium'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 Statistics
-              </button>
+              </Button>
             </nav>
           </div>
 
@@ -366,160 +364,178 @@ export default function CongressmanDetailPage() {
             )}
 
             {activeTab === 'terms' && (
-              <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                <h2 className="text-xl font-semibold mb-4">Congressional Terms</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Congress
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Years
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Position
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {terms.map((term, index) => (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {term.congress}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {formatTermYears(term)}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {formatTermPosition(term)}
-                          </td>
+              <Card className="bg-white rounded-lg shadow p-4 md:p-6">
+                <CardHeader className="p-0 mb-4">
+                  <CardTitle className="text-xl font-semibold">Congressional Terms</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Congress
+                          </th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Years
+                          </th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Position
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {terms.map((term, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {term.congress}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              {formatTermYears(term)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              {formatTermPosition(term)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {activeTab === 'statistics' && stats && (
               <div className="space-y-8">
                 {/* Summary Statistics */}
-                <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                  <h3 className="text-xl font-semibold mb-4">Summary</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-500">Total Bills</div>
-                      <div className="text-2xl font-bold">{stats.totalBills}</div>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-500">Sponsored</div>
-                      <div className="text-2xl font-bold">{sponsoredBills.length}</div>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-500">Cosponsored</div>
-                      <div className="text-2xl font-bold">{cosponsoredBills.length}</div>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-500">Became Law</div>
-                      <div className="text-2xl font-bold">{(stats.sponsoredBecameLaw + stats.cosponsoredBecameLaw)}</div>
-                      <div className="text-xs text-gray-500">
-                        {stats.totalBills > 0 ? Math.round(((stats.sponsoredBecameLaw + stats.cosponsoredBecameLaw) / stats.totalBills) * 100) : 0}% success rate
+                <Card className="bg-white rounded-lg shadow p-4 md:p-6">
+                  <CardHeader className="p-0 mb-4">
+                    <CardTitle className="text-xl font-semibold">Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-500">Total Bills</div>
+                        <div className="text-2xl font-bold">{stats.totalBills}</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-500">Sponsored</div>
+                        <div className="text-2xl font-bold">{sponsoredBills.length}</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-500">Cosponsored</div>
+                        <div className="text-2xl font-bold">{cosponsoredBills.length}</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-500">Became Law</div>
+                        <div className="text-2xl font-bold">{(stats.sponsoredBecameLaw + stats.cosponsoredBecameLaw)}</div>
+                        <div className="text-xs text-gray-500">
+                          {stats.totalBills > 0 ? Math.round(((stats.sponsoredBecameLaw + stats.cosponsoredBecameLaw) / stats.totalBills) * 100) : 0}% success rate
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
                 {/* Policy Area Breakdown */}
-                <div className="bg-gray-50 rounded-lg p-4 md:p-6">
-                  <h3 className="text-xl font-semibold mb-4">Policy Area Breakdown</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(stats.policyAreaStats)
-                      .sort(([, dataA]: [string, any], [, dataB]: [string, any]) => dataB.total - dataA.total)
-                      .slice(0, 6)
-                      .map(([area, data]: [string, any]) => (
-                        <div key={area} className="bg-white rounded-lg p-4 shadow-sm">
-                          <div className="font-medium mb-2">{area}</div>
-                          <div className="space-y-2">
-                            <div>
-                              <div className="flex justify-between text-sm">
-                                <span>Total Bills</span>
-                                <span className="font-medium">{data.total}</span>
+                <Card className="bg-gray-50 rounded-lg p-4 md:p-6">
+                  <CardHeader className="p-0 mb-4">
+                    <CardTitle className="text-xl font-semibold">Policy Area Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(stats.policyAreaStats)
+                        .sort(([, dataA]: [string, any], [, dataB]: [string, any]) => dataB.total - dataA.total)
+                        .slice(0, 6)
+                        .map(([area, data]: [string, any]) => (
+                          <Card key={area} className="bg-white rounded-lg p-4 shadow-sm">
+                            <CardHeader className="p-0 mb-2">
+                              <CardTitle className="font-medium text-base mb-2">{area}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0 space-y-2">
+                              <div>
+                                <div className="flex justify-between text-sm">
+                                  <span>Total Bills</span>
+                                  <span className="font-medium">{data.total}</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-primary h-2 rounded-full"
+                                    style={{ width: `${(data.total / stats.totalBills) * 100}%` }}
+                                  ></div>
+                                </div>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-primary h-2 rounded-full"
-                                  style={{ width: `${(data.total / stats.totalBills) * 100}%` }}
-                                ></div>
+                              <div>
+                                <div className="flex justify-between text-sm">
+                                  <span>Became Law</span>
+                                  <span className="font-medium">{data.becameLaw}</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-green-600 h-2 rounded-full"
+                                    style={{ width: `${(data.becameLaw / data.total) * 100}%` }}
+                                  ></div>
+                                </div>
                               </div>
-                            </div>
-                            <div>
-                              <div className="flex justify-between text-sm">
-                                <span>Became Law</span>
-                                <span className="font-medium">{data.becameLaw}</span>
+                              <div>
+                                <div className="flex justify-between text-sm">
+                                  <span>Cross-Party</span>
+                                  <span className="font-medium">{data.crossParty}</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-purple-600 h-2 rounded-full"
+                                    style={{ width: `${(data.crossParty / data.total) * 100}%` }}
+                                  ></div>
+                                </div>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-green-600 h-2 rounded-full"
-                                  style={{ width: `${(data.becameLaw / data.total) * 100}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="flex justify-between text-sm">
-                                <span>Cross-Party</span>
-                                <span className="font-medium">{data.crossParty}</span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-purple-600 h-2 rounded-full"
-                                  style={{ width: `${(data.crossParty / data.total) * 100}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Legislative Activity Over Time Section */}
-                <div className="bg-gray-50 rounded-lg p-4 md:p-6">
-                  <h3 className="text-xl font-semibold mb-4">Legislative Activity Over Time</h3>
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 text-xs">Year</th>
-                            <th className="text-right py-2 text-xs">Total Bills</th>
-                            <th className="text-right py-2 text-xs">Sponsored</th>
-                            <th className="text-right py-2 text-xs">Cosponsored</th>
-                            <th className="text-right py-2 text-xs">Became Law</th>
-                            <th className="text-right py-2 text-xs">Success Rate</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Object.entries(stats.activityByYear)
-                            .sort(([yearA], [yearB]) => parseInt(yearB) - parseInt(yearA))
-                            .map(([year, data]: [string, any]) => (
-                              <tr key={year} className="border-b">
-                                <td className="py-2 text-sm">{year}</td>
-                                <td className="text-right py-2 text-sm">{data.total}</td>
-                                <td className="text-right py-2 text-sm">{data.sponsored}</td>
-                                <td className="text-right py-2 text-sm">{data.cosponsored}</td>
-                                <td className="text-right py-2 text-sm">{data.becameLaw}</td>
-                                <td className="text-right py-2 text-sm">
-                                  {Math.round((data.becameLaw / data.total) * 100)}%
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
+                <Card className="bg-gray-50 rounded-lg p-4 md:p-6">
+                  <CardHeader className="p-0 mb-4">
+                    <CardTitle className="text-xl font-semibold">Legislative Activity Over Time</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="bg-white rounded-lg p-4 shadow-sm">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 text-xs">Year</th>
+                              <th className="text-right py-2 text-xs">Total Bills</th>
+                              <th className="text-right py-2 text-xs">Sponsored</th>
+                              <th className="text-right py-2 text-xs">Cosponsored</th>
+                              <th className="text-right py-2 text-xs">Became Law</th>
+                              <th className="text-right py-2 text-xs">Success Rate</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(stats.activityByYear)
+                              .sort(([yearA], [yearB]) => parseInt(yearB) - parseInt(yearA))
+                              .map(([year, data]: [string, any]) => (
+                                <tr key={year} className="border-b">
+                                  <td className="py-2 text-sm">{year}</td>
+                                  <td className="text-right py-2 text-sm">{data.total}</td>
+                                  <td className="text-right py-2 text-sm">{data.sponsored}</td>
+                                  <td className="text-right py-2 text-sm">{data.cosponsored}</td>
+                                  <td className="text-right py-2 text-sm">{data.becameLaw}</td>
+                                  <td className="text-right py-2 text-sm">
+                                    {Math.round((data.becameLaw / data.total) * 100)}%
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>

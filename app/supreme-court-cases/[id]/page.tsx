@@ -13,6 +13,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { Button } from '@/components/ui/button';
 import { BrainCog, X } from 'lucide-react';
+import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function SupremeCourtCaseDetailPage() {
   const params = useParams();
@@ -148,17 +149,18 @@ export default function SupremeCourtCaseDetailPage() {
             <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
               <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
                 {sortedOpinions.map((opinion, idx) => (
-                  <button
+                  <Button
                     key={opinion.id}
+                    variant="ghost"
                     onClick={() => setActiveTab(idx)}
-                    className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 transition-colors duration-200 ${
+                    className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-3 md:py-4 text-base md:text-lg font-medium transition-colors duration-200 ${
                       activeTab === idx
-                        ? 'border-primary text-primary font-medium'
+                        ? 'border-primary text-primary'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
                     {opinion.type ? opinion.type.charAt(0).toUpperCase() + opinion.type.slice(1) : 'Opinion'}
-                  </button>
+                  </Button>
                 ))}
               </nav>
             </div>

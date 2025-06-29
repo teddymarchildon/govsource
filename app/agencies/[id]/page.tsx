@@ -9,6 +9,10 @@ import AgencyCard from '../../../components/AgencyCard';
 import SaveButton from '../../../components/SaveButton';
 import AgencyDocuments from '../../../components/AgencyDocuments';
 import Breadcrumbs from '../../../components/Breadcrumbs';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 export default function AgencyDetailPage() {
   const params = useParams();
@@ -52,10 +56,7 @@ export default function AgencyDetailPage() {
     return (
       <div className="flex justify-center items-center min-h-screen -mt-16">
         <div className="text-center">
-          <svg className="animate-spin h-12 w-12 mx-auto text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+          <LoadingIndicator size="large" />
           <p className="mt-3 text-lg text-gray-600">Loading agency details...</p>
         </div>
       </div>
@@ -97,79 +98,79 @@ export default function AgencyDetailPage() {
         ]}
       />
 
-      {/* Agency Header with Description */}
-      <div className="bg-white shadow rounded-lg mb-6 overflow-hidden">
-        <div className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {agency.name}
-                {agency.short_name && (
-                  <span className="ml-2 text-lg text-gray-500">({agency.short_name})</span>
-                )}
-              </h1>
-              {agency.parent && (
-                <p className="mt-2 text-gray-600">
-                  <span className="font-medium">Part of:</span>{' '}
-                  <Link href={`/agencies/${agency.parent.id}`} className="text-primary hover:underline">
-                    {agency.parent.name}
-                  </Link>
-                </p>
-              )}
-            </div>
-            <div className="mt-4 md:mt-0 flex items-center space-x-4">
-              <SaveButton itemId={agencyId} itemType="agency" />
-            </div>
-          </div>
-
-          {/* Agency Description */}
-          <div className="mt-4 border-t border-gray-200 pt-4">
-            {agency.description ? (
-              <p className="text-gray-700 whitespace-pre-line">{agency.description}</p>
-            ) : (
-              <p className="text-gray-500 italic">No description available for this agency.</p>
+      {/* Agency Header (match CongressmanDetailPage style) */}
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">{agency.name}
+            {agency.short_name && (
+              <span className="ml-2 text-lg text-gray-500">({agency.short_name})</span>
             )}
-          </div>
+          </h1>
+          {agency.parent && (
+            <div className="text-gray-600 text-sm mb-1">
+              <span className="font-medium">Part of:</span>{' '}
+              <Link href={`/agencies/${agency.parent.id}`} className="text-primary hover:underline">
+                {agency.parent.name}
+              </Link>
+            </div>
+          )}
+        </div>
+        <div className="mt-4 md:mt-0">
+          <SaveButton itemId={agencyId} itemType="agency" />
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('subagencies')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'subagencies'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Sub-Agencies
-              <span className={`ml-2 py-0.5 px-2 text-xs rounded-full ${activeTab === 'subagencies' ? 'bg-secondary text-secondary-foreground' : 'bg-gray-100'}`}>
-                {childAgencies.length}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('rules')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'rules'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Rules
-              <span className={`ml-2 py-0.5 px-2 text-xs rounded-full ${activeTab === 'rules' ? 'bg-secondary text-secondary-foreground' : 'bg-gray-100'}`}>
-                {agencyRulesCount}
-              </span>
-            </button>
-          </nav>
-        </div>
+      {/* Agency Description (separate section) */}
+      <div className="mb-8">
+        {agency.description ? (
+          <p className="text-gray-700 whitespace-pre-line">{agency.description}</p>
+        ) : (
+          <p className="text-gray-500 italic">No description available for this agency.</p>
+        )}
+      </div>
 
-        <div className="p-6">
+      {/* Tab Navigation (moved out of Card, styled like CongressmanDetailPage) */}
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+        <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
+          <Button
+            variant="ghost"
+            onClick={() => setActiveTab('subagencies')}
+            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
+              activeTab === 'subagencies'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Sub-Agencies
+            <Badge variant={activeTab === 'subagencies' ? 'secondary' : 'outline'} className="ml-2">
+              {childAgencies.length}
+            </Badge>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setActiveTab('rules')}
+            className={`py-3 md:py-4 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-base md:text-lg font-medium transition-colors duration-200 ${
+              activeTab === 'rules'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Rules
+            <Badge variant={activeTab === 'rules' ? 'secondary' : 'outline'} className="ml-2">
+              {agencyRulesCount}
+            </Badge>
+          </Button>
+        </nav>
+      </div>
+
+      {/* Tab Content (inside Card) */}
+      <Card className="bg-white shadow rounded-lg overflow-hidden">
+        <CardContent className="p-6">
           {activeTab === 'subagencies' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Sub-Agencies</h2>
+              <CardHeader className="p-0 mb-4">
+                <CardTitle className="text-xl font-semibold text-gray-900">Sub-Agencies</CardTitle>
+              </CardHeader>
               {childAgencies.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {childAgencies.map((childAgency) => (
@@ -183,21 +184,22 @@ export default function AgencyDetailPage() {
                   </svg>
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No sub-agencies</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    This agency does not have any sub-agencies in our database.
+                    This agency does not have any sub-agencies.
                   </p>
                 </div>
               )}
             </div>
           )}
-
           {activeTab === 'rules' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Rules</h2>
+              <CardHeader className="p-0 mb-4">
+                <CardTitle className="text-xl font-semibold text-gray-900">Rules</CardTitle>
+              </CardHeader>
               <AgencyDocuments agencyId={agencyId} />
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
