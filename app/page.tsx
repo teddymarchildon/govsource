@@ -185,9 +185,7 @@ function HomeContent() {
           return {
             ...item,
             // Format sponsor to match the expected structure
-            sponsor: item.sponsor && item.sponsor.length > 0 ?
-              item.sponsor[0].congressman :
-              undefined,
+            sponsor: item.sponsor && item.sponsor.length > 0 ? { congressman: item.sponsor[0].congressman } : undefined,
             // Add most recent action
             most_recent_action: sortedActions.length > 0 ? sortedActions[0] : null,
             // Remove the actions array to keep the response clean
