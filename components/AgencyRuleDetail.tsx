@@ -9,6 +9,8 @@ import { AgencyDocument } from '@/types/types';
 import Link from 'next/link';
 import AiChat from './AiChat';
 import { AuthProvider } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { MessageCircle, X } from 'lucide-react';
 
 type TabType = 'details' | 'text';
 
@@ -18,6 +20,7 @@ interface AgencyRuleDetailProps {
 
 export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
+  const [showMobileChat, setShowMobileChat] = useState(false);
 
   return (
     <div className="container mx-auto px-4 py-8 relative min-h-screen">
@@ -128,8 +131,8 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           </div>
         </div>
 
-        {/* Right: AI Chat Panel */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12">
+        {/* Right: AI Chat Panel (desktop) */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12 hidden md:flex">
           <AuthProvider>
             <AiChat
               documentType="agencyDocument"
@@ -139,6 +142,56 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
             />
           </AuthProvider>
         </div>
+        {/* Mobile: Floating AI Chat Bubble */}
+        <>
+          {/* Floating button (bottom right) */}
+          {!showMobileChat && (
+            <Button
+              variant="default"
+              size="icon"
+              className="fixed bottom-4 right-4 z-40 shadow-lg md:hidden"
+              onClick={() => setShowMobileChat(true)}
+              aria-label="Open AI Chat"
+              style={{ borderRadius: '9999px' }}
+            >
+              <MessageCircle className="h-7 w-7" />
+            </Button>
+          )}
+          {/* Modal overlay with AiChat */}
+          {showMobileChat && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center md:hidden bg-black/40" onClick={() => setShowMobileChat(false)}>
+              <div
+                className="w-full max-w-lg mx-auto bg-white rounded-t-xl shadow-2xl border border-gray-200 flex flex-col h-[65vh]"
+                style={{
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                  borderTopLeftRadius: '1.25rem',
+                  borderTopRightRadius: '1.25rem',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Close button */}
+                <button
+                  className="absolute top-2 right-4 z-10 text-gray-500 hover:text-gray-800"
+                  onClick={() => setShowMobileChat(false)}
+                  aria-label="Close AI Chat"
+                  type="button"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+                <div className="flex-1 flex flex-col">
+                  <AuthProvider>
+                    <AiChat
+                      documentType="agencyDocument"
+                      documentId={rule.id}
+                      documentTitle={rule.title}
+                      htmlFilePath={rule.html_file_path}
+                    />
+                  </AuthProvider>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       </div>
     </div>
   );

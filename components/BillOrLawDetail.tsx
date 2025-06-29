@@ -10,6 +10,8 @@ import AiChat from './AiChat';
 import { BillText, Congressman, BillSummary } from '@/types/types';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
+import { Button } from './ui/button';
+import { MessageCircle, X } from 'lucide-react';
 
 interface BillAction {
   id: string;
@@ -62,6 +64,7 @@ export default function BillOrLawDetail({
 }: BillOrLawDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showFullSummary, setShowFullSummary] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false);
   const latestText = texts.length > 0 ? texts[0] : null;
 
   const itemType = isLaw ? 'law' : 'bill';
@@ -345,8 +348,8 @@ export default function BillOrLawDetail({
             )}
           </div>
         </div>
-        {/* Right: AI Chat Panel */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12">
+        {/* Right: AI Chat Panel (desktop) */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12 hidden md:flex">
           <AuthProvider>
             <AiChat
               documentType={itemType}
@@ -370,6 +373,70 @@ export default function BillOrLawDetail({
             />
           </AuthProvider>
         </div>
+        {/* Mobile: Floating AI Chat Bubble */}
+        <>
+          {/* Floating button (bottom right) */}
+          {!showMobileChat && (
+            <Button
+              variant="default"
+              size="icon"
+              className="fixed bottom-4 right-4 z-40 shadow-lg md:hidden"
+              onClick={() => setShowMobileChat(true)}
+              aria-label="Open AI Chat"
+              style={{ borderRadius: '9999px' }}
+            >
+              <MessageCircle className="h-7 w-7" />
+            </Button>
+          )}
+          {/* Modal overlay with AiChat */}
+          {showMobileChat && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center md:hidden bg-black/40" onClick={() => setShowMobileChat(false)}>
+              <div
+                className="w-full max-w-lg mx-auto bg-white rounded-t-xl shadow-2xl border border-gray-200 flex flex-col h-[65vh]"
+                style={{
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                  borderTopLeftRadius: '1.25rem',
+                  borderTopRightRadius: '1.25rem',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Close button */}
+                <button
+                  className="absolute top-2 right-4 z-10 text-gray-500 hover:text-gray-800"
+                  onClick={() => setShowMobileChat(false)}
+                  aria-label="Close AI Chat"
+                  type="button"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+                <div className="flex-1 flex flex-col">
+                  <AuthProvider>
+                    <AiChat
+                      documentType={itemType}
+                      documentId={item.id}
+                      documentTitle={title}
+                      htmlFilePath={latestText?.html_file_path}
+                      diffHtmlFilePaths={
+                        texts.length > 1
+                          ? [...texts]
+                              .sort((a, b) => {
+                                const dateA = a.date ? new Date(a.date).getTime() : 0;
+                                const dateB = b.date ? new Date(b.date).getTime() : 0;
+                                if (!a.date) return 1;
+                                if (!b.date) return -1;
+                                return dateB - dateA;
+                              })
+                              .slice(0, 2)
+                              .map((t) => t.html_file_path)
+                          : undefined
+                      }
+                    />
+                  </AuthProvider>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       </div>
     </div>
   );

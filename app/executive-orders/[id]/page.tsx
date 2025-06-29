@@ -9,6 +9,8 @@ import SaveButton from '@/components/SaveButton';
 import AiChat from '@/components/AiChat';
 import { AuthProvider } from '@/contexts/AuthContext';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { Button } from '@/components/ui/button';
+import { MessageCircle, X } from 'lucide-react';
 
 interface ExecutiveOrder {
   id: string;
@@ -35,6 +37,7 @@ export default function ExecutiveOrderDetailPage() {
   const [order, setOrder] = useState<ExecutiveOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('text');
+  const [showMobileChat, setShowMobileChat] = useState(false);
     
 
   useEffect(() => {
@@ -178,8 +181,8 @@ export default function ExecutiveOrderDetailPage() {
           </div>
         </div>
 
-        {/* Right: AI Chat Panel */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12">
+        {/* Right: AI Chat Panel (desktop) */}
+        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12 hidden md:flex">
           <AuthProvider>
             <AiChat
               documentType="executiveOrder"
@@ -189,6 +192,56 @@ export default function ExecutiveOrderDetailPage() {
             />
           </AuthProvider>
         </div>
+        {/* Mobile: Floating AI Chat Bubble */}
+        <>
+          {/* Floating button (bottom right) */}
+          {!showMobileChat && (
+            <Button
+              variant="default"
+              size="icon"
+              className="fixed bottom-4 right-4 z-40 shadow-lg md:hidden"
+              onClick={() => setShowMobileChat(true)}
+              aria-label="Open AI Chat"
+              style={{ borderRadius: '9999px' }}
+            >
+              <MessageCircle className="h-7 w-7" />
+            </Button>
+          )}
+          {/* Modal overlay with AiChat */}
+          {showMobileChat && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center md:hidden bg-black/40" onClick={() => setShowMobileChat(false)}>
+              <div
+                className="w-full max-w-lg mx-auto bg-white rounded-t-xl shadow-2xl border border-gray-200 flex flex-col h-[65vh]"
+                style={{
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                  borderTopLeftRadius: '1.25rem',
+                  borderTopRightRadius: '1.25rem',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Close button */}
+                <button
+                  className="absolute top-2 right-4 z-10 text-gray-500 hover:text-gray-800"
+                  onClick={() => setShowMobileChat(false)}
+                  aria-label="Close AI Chat"
+                  type="button"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+                <div className="flex-1 flex flex-col">
+                  <AuthProvider>
+                    <AiChat
+                      documentType="executiveOrder"
+                      documentId={order.id}
+                      documentTitle={order.title}
+                      htmlFilePath={order.html_file_path}
+                    />
+                  </AuthProvider>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       </div>
     </div>
   );
