@@ -143,6 +143,13 @@ export default function BillOrLawDetail({
                 }`}
               >
                 Text
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  activeTab === 'text'
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'bg-gray-100 text-gray-900'
+                }`}>
+                  {texts?.length || 0}
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab('sponsors')}
