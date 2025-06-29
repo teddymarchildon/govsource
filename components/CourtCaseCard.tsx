@@ -31,6 +31,13 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
   // Get the primary opinion (usually the majority opinion)
   const primaryOpinion = cluster.opinions?.find((o: CourtOpinion) => o.type === 'majority') || cluster.opinions?.[0];
 
+  // Helper to map opinion type for display
+  function mapOpinionType(type?: string) {
+    if (!type) return 'Unknown';
+    if (type === '010combined') return 'Combined';
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
   // Count opinions by type
   const opinionCounts = cluster.opinions?.reduce((acc: Record<string, number>, opinion: CourtOpinion) => {
     const type = opinion.type || 'Unknown';
@@ -87,7 +94,7 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
                   variant="outline"
                   className="font-normal"
                 >
-                  {count} {type}
+                  {count} {mapOpinionType(type)}
                 </Badge>
               ))}
             </div>

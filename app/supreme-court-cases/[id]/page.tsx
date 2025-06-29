@@ -83,6 +83,13 @@ export default function SupremeCourtCaseDetailPage() {
     ? new Date(Math.max(...cluster.opinions.map(o => new Date(o.date || '').getTime())))
     : null;
 
+  // Helper to map opinion type for display
+  function mapOpinionType(type?: string) {
+    if (!type) return 'Opinion';
+    if (type === '010combined') return 'Combined';
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -159,7 +166,7 @@ export default function SupremeCourtCaseDetailPage() {
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    {opinion.type ? opinion.type.charAt(0).toUpperCase() + opinion.type.slice(1) : 'Opinion'}
+                    {mapOpinionType(opinion.type)}
                   </Button>
                 ))}
               </nav>
@@ -176,7 +183,7 @@ export default function SupremeCourtCaseDetailPage() {
                     return (
                       <div>
                         <h2 className="text-xl font-semibold mb-4">
-                          {opinion.type ? opinion.type.charAt(0).toUpperCase() + opinion.type.slice(1) : 'Opinion'}
+                          {mapOpinionType(opinion.type)}
                         </h2>
                         <div className="mb-4">
                           <div className="mb-2">
