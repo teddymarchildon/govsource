@@ -432,6 +432,22 @@ A table for storing user feedback.
 **Relationships:**
 - References `auth.users.id` via `user_id`
 
+### Ranked Item
+A table for ranking and featuring important items of various types (bills, laws, agency documents, court cases, etc).
+
+**Columns:**
+- `id` bigint (PK, identity)
+- `created_at` timestamptz (default: now())
+- `updated_at` timestamptz (default: now())
+- `item_type` text (required) — The type of item (e.g., 'bill', 'law', 'agency_document', 'cluster', 'executive_order')
+- `item_id` bigint (required) — The ID of the referenced item
+- `rank` bigint (required) — The order or priority for display
+- `effectively_ranked_at` timestamptz (nullable) — When this ranking became effective
+- `ranking_ended_at` timestamptz (nullable) — When this ranking ended (if applicable)
+
+**Relationships:**
+- None (item_type and item_id are used to reference other tables generically)
+
 ## Auth Schema Tables
 
 The auth schema contains tables managed by Supabase Auth, including:

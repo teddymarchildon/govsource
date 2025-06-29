@@ -19,6 +19,9 @@ import {
 } from '../services/api';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { getLoginUrl } from '@/utils/utils';
+import ExecutiveOrderCard from '../components/ExecutiveOrderCard';
+import AgencyRuleCard from '../components/AgencyRuleCard';
+import CourtCaseCard from '../components/CourtCaseCard';
 
 function HomeContent() {
   const router = useRouter();
@@ -46,6 +49,10 @@ function HomeContent() {
   const [recentBills, setRecentBills] = useState<Bill[]>([]);
   const [recentLaws, setRecentLaws] = useState<Law[]>([]);
   const [recentLegislationLoading, setRecentLegislationLoading] = useState(false);
+
+  // Popular section state
+  const [popularItems, setPopularItems] = useState<any[]>([]);
+  const [popularLoading, setPopularLoading] = useState(true);
 
   // Fetch user data when logged in
   useEffect(() => {
@@ -205,14 +212,151 @@ function HomeContent() {
     fetchRecentLegislation();
   }, [user, userPreferences]);
 
+  // Fetch popular items from ranked_item
+  useEffect(() => {
+    const fetchPopularItems = async () => {
+      setPopularLoading(true);
+      try {
+        // 1. Fetch top 8 ranked items (where ranking_ended_at is null)
+        const { data: ranked, error: rankedError } = await supabase
+          .from('ranked_item')
+          .select('*')
+          .is('ranking_ended_at', null)
+          .order('rank', { ascending: true })
+          .limit(8);
+        if (rankedError) throw rankedError;
+        if (!ranked || ranked.length === 0) {
+          setPopularItems([]);
+          setPopularLoading(false);
+          return;
+        }
+
+        // 2. For each ranked item, fetch the full data
+        const fetchItem = async (item: any) => {
+          switch (item.item_type) {
+            case 'bill': {
+              const { data, error } = await supabase
+                .from('bill')
+                .select(`*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)`)
+                .eq('id', item.item_id)
+                .single();
+              if (error || !data) return null;
+              // Format sponsor and most_recent_action
+              const sortedActions = data.actions ? [...data.actions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+              return { ...item, item_type: 'bill', data: { ...data, sponsor: data.sponsor && data.sponsor.length > 0 ? { congressman: data.sponsor[0].congressman } : undefined, most_recent_action: sortedActions.length > 0 ? sortedActions[0] : null, actions: undefined } };
+            }
+            case 'law': {
+              const { data, error } = await supabase
+                .from('bill')
+                .select(`*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)`)
+                .eq('id', item.item_id)
+                .not('law_enacted_date', 'is', null)
+                .single();
+              if (error || !data) return null;
+              const sortedActions = data.actions ? [...data.actions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+              return { ...item, item_type: 'law', data: { ...data, sponsor: data.sponsor && data.sponsor.length > 0 ? data.sponsor[0].congressman : undefined, most_recent_action: sortedActions.length > 0 ? sortedActions[0] : null, actions: undefined } };
+            }
+            case 'agency_document': {
+              // Fetch agency_document and its agency (if any)
+              const { data, error } = await supabase
+                .from('agency_document')
+                .select(`*, agency_link:agency_agencydocument!agency_document_id(agency:agency(*))`)
+                .eq('id', item.item_id)
+                .single();
+              if (error || !data) return null;
+              // Attach agency if available
+              let agency = undefined;
+              if (data.agency_link && data.agency_link.length > 0 && data.agency_link[0].agency) {
+                agency = data.agency_link[0].agency;
+              }
+              return { ...item, item_type: data.subtype === 'Executive Order' ? 'executive_order' : 'agency_document', data: { ...data, agency } };
+            }
+            case 'cluster': {
+              // Fetch cluster and its opinions (with author)
+              const { data, error } = await supabase
+                .from('cluster')
+                .select(`*, court:court(*), opinions:court_opinion!cluster_id(*, author:judge(*))`)
+                .eq('id', item.item_id)
+                .single();
+              if (error || !data) return null;
+              return { ...item, item_type: 'cluster', data };
+            }
+            case 'executive_order': {
+              // Executive orders are stored as agency_document with subtype 'Executive Order'
+              const { data, error } = await supabase
+                .from('agency_document')
+                .select(`*, agency_link:agency_agencydocument!agency_document_id(agency:agency(*))`)
+                .eq('id', item.item_id)
+                .eq('subtype', 'Executive Order')
+                .single();
+              if (error || !data) return null;
+              let agency = undefined;
+              if (data.agency_link && data.agency_link.length > 0 && data.agency_link[0].agency) {
+                agency = data.agency_link[0].agency;
+              }
+              return { ...item, item_type: 'executive_order', data: { ...data, agency } };
+            }
+            default:
+              return null;
+          }
+        };
+
+        const itemsWithData = await Promise.all(ranked.map(fetchItem));
+        // Filter out nulls and items with missing data
+        setPopularItems(itemsWithData.filter(Boolean));
+      } catch (err) {
+        console.error('Error fetching popular items:', err);
+        setPopularItems([]);
+      } finally {
+        setPopularLoading(false);
+      }
+    };
+    fetchPopularItems();
+  }, []);
+
   // Render logged-in user experience
   if (user) {
     return (
       <div className="container mx-auto px-4 py-8">
+        {/* Popular Section */}
+        <div className="mb-10">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Popular now</h2>
+          </div>
+          {popularLoading ? (
+            <div className="flex justify-center items-center h-32">
+              <LoadingIndicator size="large" />
+            </div>
+          ) : popularItems.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+              <p className="text-gray-700">No popular items found.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {popularItems.map((item) => {
+                switch (item.item_type) {
+                  case 'bill':
+                    return <BillCard key={`popular-bill-${item.data.id}`} bill={item.data} />;
+                  case 'law':
+                    return <LawCard key={`popular-law-${item.data.id}`} law={item.data} />;
+                  case 'executive_order':
+                    return <ExecutiveOrderCard key={`popular-execorder-${item.data.id}`} order={item.data} />;
+                  case 'agency_document':
+                    return <AgencyRuleCard key={`popular-agencydoc-${item.data.id}`} rule={item.data} />;
+                  case 'cluster':
+                    return <CourtCaseCard key={`popular-cluster-${item.data.id}`} cluster={item.data} />;
+                  default:
+                    return null;
+                }
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Recent Legislation in Your Policy Areas */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Legislative updates in your policy areas</h2>
+            <h2 className="text-xl font-semibold">Your policy areas</h2>
             <Link href="/bills" className="text-sm text-primary hover:underline">
               View all legislation
             </Link>
@@ -499,8 +643,43 @@ function HomeContent() {
     <div className="container mx-auto px-4 py-8">
       {/* Welcome Section */}
       <div className="bg-primary rounded-lg shadow-md p-6 mb-8 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome to GovSource!</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome to GovSource</h1>
         <p className="mb-4">Use AI to discover, track, and understand US federal legislation, court cases, and more.</p>
+      </div>
+
+      {/* Popular Section (moved below Welcome) */}
+      <div className="mb-10">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Popular now</h2>
+        </div>
+        {popularLoading ? (
+          <div className="flex justify-center items-center h-32">
+            <LoadingIndicator size="large" />
+          </div>
+        ) : popularItems.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+            <p className="text-gray-700">No popular items found.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {popularItems.map((item) => {
+              switch (item.item_type) {
+                case 'bill':
+                  return <BillCard key={`popular-bill-${item.data.id}`} bill={item.data} />;
+                case 'law':
+                  return <LawCard key={`popular-law-${item.data.id}`} law={item.data} />;
+                case 'executive_order':
+                  return <ExecutiveOrderCard key={`popular-execorder-${item.data.id}`} order={item.data} />;
+                case 'agency_document':
+                  return <AgencyRuleCard key={`popular-agencydoc-${item.data.id}`} rule={item.data} />;
+                case 'cluster':
+                  return <CourtCaseCard key={`popular-cluster-${item.data.id}`} cluster={item.data} />;
+                default:
+                  return null;
+              }
+            })}
+          </div>
+        )}
       </div>
 
       {/* Why Sign Up Section */}
