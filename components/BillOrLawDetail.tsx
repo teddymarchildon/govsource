@@ -11,7 +11,7 @@ import { BillText, Congressman, BillSummary } from '@/types/types';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Button } from './ui/button';
-import { MessageCircle, X } from 'lucide-react';
+import { BrainCog, X } from 'lucide-react';
 
 interface BillAction {
   id: string;
@@ -385,7 +385,7 @@ export default function BillOrLawDetail({
               aria-label="Open AI Chat"
               style={{ borderRadius: '9999px' }}
             >
-              <MessageCircle className="h-7 w-7" />
+              <BrainCog className="h-7 w-7" />
             </Button>
           )}
           {/* Modal overlay with AiChat */}

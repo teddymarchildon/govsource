@@ -10,7 +10,7 @@ import Link from 'next/link';
 import AiChat from './AiChat';
 import { AuthProvider } from '../contexts/AuthContext';
 import { Button } from './ui/button';
-import { MessageCircle, X } from 'lucide-react';
+import { BrainCog, X } from 'lucide-react';
 
 type TabType = 'details' | 'text';
 
@@ -154,7 +154,7 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
               aria-label="Open AI Chat"
               style={{ borderRadius: '9999px' }}
             >
-              <MessageCircle className="h-7 w-7" />
+              <BrainCog className="h-7 w-7" />
             </Button>
           )}
           {/* Modal overlay with AiChat */}

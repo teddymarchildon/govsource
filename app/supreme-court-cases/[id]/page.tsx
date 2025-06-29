@@ -12,7 +12,7 @@ import AiChat from '../../../components/AiChat';
 import { AuthProvider } from '@/contexts/AuthContext';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, X } from 'lucide-react';
+import { BrainCog, X } from 'lucide-react';
 
 export default function SupremeCourtCaseDetailPage() {
   const params = useParams();
@@ -235,7 +235,7 @@ export default function SupremeCourtCaseDetailPage() {
               aria-label="Open AI Chat"
               style={{ borderRadius: '9999px' }}
             >
-              <MessageCircle className="h-7 w-7" />
+              <BrainCog className="h-7 w-7" />
             </Button>
           )}
           {/* Modal overlay with AiChat */}
