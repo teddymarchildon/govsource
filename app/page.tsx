@@ -590,7 +590,7 @@ function HomeContent() {
         {/* Recent Executive Orders */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Recent Executive Orders</h2>
+            <h2 className="text-2xl font-bold">Executive Orders</h2>
             <Link href="/executive-orders" className="text-sm text-primary hover:underline">
               View executive orders
             </Link>
