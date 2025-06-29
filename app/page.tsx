@@ -356,7 +356,7 @@ function HomeContent() {
         {/* Recent Legislation in Your Policy Areas */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Your policy areas</h2>
+            <h2 className="text-2xl font-bold">Your policy areas</h2>
             <Link href="/bills" className="text-sm text-primary hover:underline">
               View all legislation
             </Link>
@@ -410,7 +410,7 @@ function HomeContent() {
 
         {/* Your Saved Items */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Your Saved Items</h2>
+          <h2 className="text-2xl font-bold">Your Saved Items</h2>
 
           {/* Tabs */}
           <div className="border-b border-gray-200 mb-4">
@@ -592,7 +592,7 @@ function HomeContent() {
         {/* Recent Executive Orders */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Recent Executive Orders</h2>
+            <h2 className="text-2xl font-bold">Recent Executive Orders</h2>
             <Link href="/executive-orders" className="text-sm text-primary hover:underline">
               View executive orders
             </Link>
@@ -698,7 +698,7 @@ function HomeContent() {
       {/* Recent Executive Orders */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Recent Executive Orders</h2>
+          <h2 className="text-2xl font-bold">Recent Executive Orders</h2>
           <Link href="/executive-orders" className="text-sm text-primary hover:underline">
             View all
           </Link>
@@ -743,7 +743,7 @@ function HomeContent() {
       {/* Bills Filter/Search and Grid */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Recent Legislation</h2>
+          <h2 className="text-2xl font-bold">Recent Legislation</h2>
           <Link href="/bills" className="text-sm text-primary hover:underline">
             View all
           </Link>
