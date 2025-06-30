@@ -9,6 +9,7 @@ type AuthContextType = {
   user: AppUser | null;
   loading: boolean;
   signInWithMagicLink: (email: string, redirectUrl?: string) => Promise<void>;
+  signInWithGoogle: (redirectUrl?: string) => Promise<void>;
   signOut: () => Promise<void>;
   isPaidSubscriber: boolean;
   subscription: any | null;
@@ -85,6 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const signInWithGoogle = async (redirectUrl?: string) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl || (process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding')
+      }
+    });
+    if (error) throw error;
+  };
+
   const signOut = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signOut();
@@ -99,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       signInWithMagicLink,
+      signInWithGoogle,
       signOut,
       isPaidSubscriber,
       subscription
