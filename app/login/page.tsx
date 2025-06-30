@@ -152,7 +152,7 @@ function LoginPageInner() {
               </form>
 
               {/* Divider with OR */}
-              <div className="flex items-center my-6">
+              <div className="flex items-center my-3">
                 <div className="flex-grow border-t border-gray-300" />
                 <span className="mx-4 text-gray-500 font-small">or</span>
                 <div className="flex-grow border-t border-gray-300" />
@@ -161,7 +161,7 @@ function LoginPageInner() {
               {/* Google Sign-In Button */}
               <Button
                 type="button"
-                className="flex w-full justify-center items-center"
+                className="flex w-full justify-center items-center mt-3"
                 variant="outline"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
