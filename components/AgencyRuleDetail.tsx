@@ -66,41 +66,43 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
       {/* Main Content: 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
         {/* Left: Tabs */}
-        <div className="h-full overflow-y-auto">
-          <Tabs defaultValue="details" className="w-full h-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="details">Summary</TabsTrigger>
-              <TabsTrigger value="text">Text</TabsTrigger>
+        <div className="h-[600px] md:h-[600px] overflow-hidden">
+          <Tabs defaultValue="details" className="w-full h-full flex flex-col">
+            <TabsList className="mb-4 justify-start bg-transparent">
+              <TabsTrigger value="details" className="bg-transparent">Summary</TabsTrigger>
+              <TabsTrigger value="text" className="bg-transparent">Text</TabsTrigger>
             </TabsList>
-            <TabsContent value="details">
-              <Card className="overflow-hidden">
-                <CardContent className="p-6">
-                  {rule.abstract ? (
-                    <div className="mb-6">
-                      <div dangerouslySetInnerHTML={{ __html: rule.abstract }} />
-                    </div>
-                  ) : (
-                    <CardDescription>No summary available for this rule.</CardDescription>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="text">
-              <Card className="overflow-hidden">
-                <CardContent className="p-6">
-                  <CardTitle className="mb-4">Agency Rule Text</CardTitle>
-                  <div className="h-[400px] md:h-[600px]">
-                    {rule.pdf_file_path ? (
-                      <PdfViewer storagePath={rule.pdf_file_path} storageBucket="agency-docs" className="h-full" />
-                    ) : rule.pdf_url ? (
-                      <PdfViewer pdfUrl={rule.pdf_url} className="h-full" />
+            <div className="flex-1 overflow-y-auto">
+              <TabsContent value="details">
+                <Card className="overflow-hidden">
+                  <CardContent className="p-6">
+                    {rule.abstract ? (
+                      <div className="mb-6">
+                        <div dangerouslySetInnerHTML={{ __html: rule.abstract }} />
+                      </div>
                     ) : (
-                      <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
+                      <CardDescription>No summary available for this rule.</CardDescription>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="text">
+                <Card className="overflow-hidden">
+                  <CardContent className="p-6">
+                    <CardTitle className="mb-4">Agency Rule Text</CardTitle>
+                    <div className="h-[400px] md:h-[600px]">
+                      {rule.pdf_file_path ? (
+                        <PdfViewer storagePath={rule.pdf_file_path} storageBucket="agency-docs" className="h-full" />
+                      ) : rule.pdf_url ? (
+                        <PdfViewer pdfUrl={rule.pdf_url} className="h-full" />
+                      ) : (
+                        <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
         {/* Right: Sticky AiChat Panel */}

@@ -11,9 +11,7 @@ import PdfViewer from '../../../components/PdfViewer';
 import AiChat from '../../../components/AiChat';
 import { AuthProvider } from '@/contexts/AuthContext';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
-import { Button } from '@/components/ui/button';
-import { BrainCog, X } from 'lucide-react';
-import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function SupremeCourtCaseDetailPage() {
@@ -22,7 +20,6 @@ export default function SupremeCourtCaseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [showMobileChat, setShowMobileChat] = useState(false);
     
   useEffect(() => {
     const fetchCluster = async () => {
@@ -151,57 +148,59 @@ export default function SupremeCourtCaseDetailPage() {
       {/* Main Content: 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
         {/* Left: Tabs for Opinions */}
-        <div className="h-full overflow-y-auto">
-          <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full">
-            <TabsList className="mb-4">
+        <div className="h-[600px] md:h-[600px] overflow-hidden">
+          <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full flex flex-col">
+            <TabsList className="mb-4 justify-start bg-transparent">
               {sortedOpinions.map((opinion, idx) => (
-                <TabsTrigger key={opinion.id} value={opinion.id}>
+                <TabsTrigger key={opinion.id} value={opinion.id} className="bg-transparent">
                   {mapOpinionType(opinion.type)}
                 </TabsTrigger>
               ))}
             </TabsList>
-            {sortedOpinions.map((opinion, idx) => (
-              <TabsContent key={opinion.id} value={opinion.id}>
-                <Card className="overflow-hidden">
-                  <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">
-                      {mapOpinionType(opinion.type)}
-                    </h2>
-                    <div className="mb-4">
-                      <div className="mb-2">
-                        <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
-                        {opinion.joined_by && opinion.joined_by.length > 0 && (
-                          <span className="ml-2 text-gray-600 text-sm">(Joined by: {opinion.joined_by.length} others)</span>
-                        )}
+            <div className="flex-1 overflow-y-auto">
+              {sortedOpinions.map((opinion, idx) => (
+                <TabsContent key={opinion.id} value={opinion.id}>
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-6">
+                      <h2 className="text-xl font-semibold mb-4">
+                        {mapOpinionType(opinion.type)}
+                      </h2>
+                      <div className="mb-4">
+                        <div className="mb-2">
+                          <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
+                          {opinion.joined_by && opinion.joined_by.length > 0 && (
+                            <span className="ml-2 text-gray-600 text-sm">(Joined by: {opinion.joined_by.length} others)</span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {opinion.date && (
+                            <span>Date: {new Date(opinion.date).toLocaleDateString()}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {opinion.date && (
-                          <span>Date: {new Date(opinion.date).toLocaleDateString()}</span>
-                        )}
-                      </div>
-                    </div>
-                    {opinion.pdf_file_path ? (
-                      <div className="h-[400px] md:h-[600px]">
-                        <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-32 text-gray-500 bg-gray-50 rounded-lg">
-                        No PDF available for this opinion.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            ))}
-            {sortedOpinions.length === 0 && (
-              <TabsContent value="no-opinions">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                  <p className="text-yellow-700">
-                    No opinions available for this case.
-                  </p>
-                </div>
-              </TabsContent>
-            )}
+                      {opinion.pdf_file_path ? (
+                        <div className="h-[400px] md:h-[600px]">
+                          <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-32 text-gray-500 bg-gray-50 rounded-lg">
+                          No PDF available for this opinion.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
+              {sortedOpinions.length === 0 && (
+                <TabsContent value="no-opinions">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                    <p className="text-yellow-700">
+                      No opinions available for this case.
+                    </p>
+                  </div>
+                </TabsContent>
+              )}
+            </div>
           </Tabs>
         </div>
         {/* Right: Sticky AiChat Panel */}

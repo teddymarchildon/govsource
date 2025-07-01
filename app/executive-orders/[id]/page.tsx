@@ -143,25 +143,27 @@ export default function ExecutiveOrderDetailPage() {
       {/* Main Content: 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
         {/* Left: Tabs */}
-        <div className="h-full overflow-y-auto">
-          <Tabs defaultValue="text" className="w-full h-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="text">Text</TabsTrigger>
+        <div className="h-[600px] md:h-[600px] overflow-hidden">
+          <Tabs defaultValue="text" className="w-full h-full flex flex-col">
+            <TabsList className="mb-4 justify-start bg-transparent">
+              <TabsTrigger value="text" className="bg-transparent">Text</TabsTrigger>
             </TabsList>
-            <TabsContent value="text">
-              <Card className="overflow-hidden">
-                <CardContent className="p-6">
-                  <CardTitle className="mb-4">Executive Order Text</CardTitle>
-                  <div className="h-[400px] md:h-[600px]">
-                    {order.pdf_file_path ? (
-                      <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" />
-                    ) : (
-                      <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            <div className="flex-1 overflow-y-auto">
+              <TabsContent value="text">
+                <Card className="overflow-hidden">
+                  <CardContent className="p-6">
+                    <CardTitle className="mb-4">Executive Order Text</CardTitle>
+                    <div className="h-[400px] md:h-[600px]">
+                      {order.pdf_file_path ? (
+                        <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" />
+                      ) : (
+                        <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
         {/* Right: Sticky AiChat Panel */}
