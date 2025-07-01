@@ -9,9 +9,8 @@ import { AgencyDocument } from '@/types/types';
 import Link from 'next/link';
 import AiChat from './AiChat';
 import { AuthProvider } from '../contexts/AuthContext';
-import { Button } from './ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from './ui/card';
-import { BrainCog, X } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 type TabType = 'details' | 'text';
 
@@ -21,10 +20,9 @@ interface AgencyRuleDetailProps {
 
 export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
-  const [showMobileChat, setShowMobileChat] = useState(false);
 
   return (
-    <div className="container mx-auto px-4 py-8 relative min-h-screen">
+    <div className="container mx-auto px-4 py-8">
       {/* Breadcrumb and Top Section (Full Width) */}
       <Breadcrumbs
         steps={[
@@ -65,41 +63,16 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
         </div>
       </div>
 
-      {/* Main Content: Two-column responsive layout */}
-      <div className="flex flex-col md:flex-row gap-8 min-h-[400px] md:h-[calc(100vh-300px)] md:min-h-0">
-        {/* Left: Agency Rule Details (Tabs, etc.) */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 overflow-y-auto">
-          {/* Tab Navigation (always visible) */}
-          <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
-            <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('details')}
-                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-2 md:py-3 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'details'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Summary
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('text')}
-                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-2 md:py-3 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'text'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Text
-              </Button>
-            </nav>
-          </div>
-
-          {/* Tab Content (scrollable) */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {activeTab === 'details' && (
+      {/* Main Content: 2-column grid */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
+        {/* Left: Tabs */}
+        <div className="h-full overflow-y-auto">
+          <Tabs defaultValue="details" className="w-full h-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="details">Summary</TabsTrigger>
+              <TabsTrigger value="text">Text</TabsTrigger>
+            </TabsList>
+            <TabsContent value="details">
               <Card className="overflow-hidden">
                 <CardContent className="p-6">
                   {rule.abstract ? (
@@ -111,9 +84,8 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                   )}
                 </CardContent>
               </Card>
-            )}
-
-            {activeTab === 'text' && (
+            </TabsContent>
+            <TabsContent value="text">
               <Card className="overflow-hidden">
                 <CardContent className="p-6">
                   <CardTitle className="mb-4">Agency Rule Text</CardTitle>
@@ -128,71 +100,24 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </TabsContent>
+          </Tabs>
+        </div>
+        {/* Right: Sticky AiChat Panel */}
+        <div className="relative h-full">
+          <div className="md:sticky md:top-28 h-full">
+            <div className="h-full overflow-y-auto">
+              <AuthProvider>
+                <AiChat
+                  documentType="agencyDocument"
+                  documentId={rule.id}
+                  documentTitle={rule.title}
+                  htmlFilePath={rule.html_file_path}
+                />
+              </AuthProvider>
+            </div>
           </div>
         </div>
-
-        {/* Right: AI Chat Panel (desktop) */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12 hidden md:flex">
-          <AuthProvider>
-            <AiChat
-              documentType="agencyDocument"
-              documentId={rule.id}
-              documentTitle={rule.title}
-              htmlFilePath={rule.html_file_path}
-            />
-          </AuthProvider>
-        </div>
-        {/* Mobile: Floating AI Chat Bubble */}
-        <>
-          {/* Floating button (bottom right) */}
-          {!showMobileChat && (
-            <Button
-              variant="default"
-              size="icon"
-              className="fixed bottom-4 right-4 z-40 shadow-lg md:hidden"
-              onClick={() => setShowMobileChat(true)}
-              aria-label="Open AI Chat"
-              style={{ borderRadius: '9999px' }}
-            >
-              <BrainCog className="h-7 w-7" />
-            </Button>
-          )}
-          {/* Modal overlay with AiChat */}
-          {showMobileChat && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center md:hidden bg-black/40" onClick={() => setShowMobileChat(false)}>
-              <div
-                className="w-full max-w-lg mx-auto bg-white rounded-t-xl shadow-2xl border border-gray-200 flex flex-col h-[65vh]"
-                style={{
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                  borderTopLeftRadius: '1.25rem',
-                  borderTopRightRadius: '1.25rem',
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Close button */}
-                <button
-                  className="absolute top-2 right-4 z-10 text-gray-500 hover:text-gray-800"
-                  onClick={() => setShowMobileChat(false)}
-                  aria-label="Close AI Chat"
-                  type="button"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-                <div className="flex-1 flex flex-col">
-                  <AuthProvider>
-                    <AiChat
-                      documentType="agencyDocument"
-                      documentId={rule.id}
-                      documentTitle={rule.title}
-                      htmlFilePath={rule.html_file_path}
-                    />
-                  </AuthProvider>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
       </div>
     </div>
   );

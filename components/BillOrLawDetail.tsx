@@ -8,12 +8,11 @@ import PdfViewer from './PdfViewer';
 import Breadcrumbs from './Breadcrumbs';
 import AiChat from './AiChat';
 import { BillText, Congressman, BillSummary } from '@/types/types';
-import { AuthProvider } from '../contexts/AuthContext';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from './ui/card';
-import { BrainCog, X } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface BillAction {
   id: string;
@@ -91,100 +90,63 @@ export default function BillOrLawDetail({
   const needsTruncation = summary?.text && summary.text.length > 1000;
 
   return (
-    <div className="container mx-auto px-4 py-8 relative min-h-screen">
-      {/* Breadcrumb and Top Section (Full Width) */}
-      <Breadcrumbs
-        steps={[
-          { label: 'Home', href: '/' },
-          { label: isLaw ? 'Laws' : 'Bills', href: isLaw ? '/laws' : '/bills' },
-          { label: number }
-        ]}
-      />
+    <div className="container mx-auto px-4 py-8">
+      {/* Breadcrumbs */}
+      <div className="mb-2">
+        <Breadcrumbs
+          steps={[
+            { label: 'Home', href: '/' },
+            { label: isLaw ? 'Laws' : 'Bills', href: isLaw ? '/laws' : '/bills' },
+            { label: number }
+          ]}
+        />
+      </div>
 
-      <div className="mb-8">
-        <div className="mb-2 flex justify-between items-center">
-          <span className="text-gray-600">{item.policy_area || 'Uncategorized'}</span>
-          {!isLaw && <SaveButton itemId={item.id} itemType="bill" />}
+      {/* Header Row: Title, Meta, Watch Button */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <div className="text-gray-600 mb-1">{item.policy_area || 'Uncategorized'}</div>
+          <h1 className="text-2xl md:text-3xl font-bold mb-1">{title}</h1>
+          <div className="text-lg md:text-xl mb-2">{number}</div>
+          <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+            <div>
+              <span className="font-medium">{dateLabel}:</span> {date && formatDate(date)}
+            </div>
+            <div>
+              <span className="font-medium">Congress:</span> {item.congress}
+            </div>
+          </div>
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">{title}</h1>
-        <h2 className="text-lg md:text-xl mb-4">{number}</h2>
-        <div className="mb-6">
-          <div className="text-sm mb-1">
-            <span className="font-medium">{dateLabel}:</span> {date && formatDate(date)}
-          </div>
-          <div className="text-sm">
-            <span className="font-medium">Congress:</span> {item.congress}
-          </div>
+        <div className="flex items-center gap-2">
+          {/* Watch/Save Button */}
+          {!isLaw && <SaveButton itemId={item.id} itemType="bill" />}
         </div>
       </div>
 
-      {/* Main Content: Two-column responsive layout */}
-      <div className="flex flex-col md:flex-row gap-8 min-h-[400px] md:h-[calc(100vh-300px)] md:min-h-0">
-        {/* Left: Bill/Law Details (Tabs, etc.) */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 overflow-y-auto">
-          {/* Tab Navigation (always visible) */}
-          <div className="border-b border-gray-200 mb-6 overflow-x-auto shrink-0">
-            <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('details')}
-                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-2 md:py-3 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'details'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Summary
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('text')}
-                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-2 md:py-3 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'text'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Text
-                <Badge variant={activeTab === 'text' ? 'secondary' : 'outline'}>{texts?.length || 0}</Badge>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('sponsors')}
-                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-2 md:py-3 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'sponsors'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Sponsors
-                <Badge variant={activeTab === 'sponsors' ? 'secondary' : 'outline'}>{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('actions')}
-                className={`inline-flex items-center gap-2 border-b-2 rounded-none px-1 py-2 md:py-3 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'actions'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Actions
-                <Badge variant={activeTab === 'actions' ? 'secondary' : 'outline'}>{actions?.length || 0}</Badge>
-              </Button>
-            </nav>
-          </div>
-
-          {/* Tab Content (scrollable) */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {activeTab === 'details' && (
-              <Card className="overflow-hidden">
+      {/* Main Content: 2-column grid */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
+        {/* Left: Tabs */}
+        <div className="h-full overflow-y-auto">
+          <Tabs defaultValue="summary" className="w-full h-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="summary">Summary</TabsTrigger>
+              <TabsTrigger value="text">
+                Text <Badge variant="outline" className="ml-1">{texts?.length || 0}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="sponsors">
+                Sponsors <Badge variant="outline" className="ml-1">{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="actions">
+                Actions <Badge variant="outline" className="ml-1">{actions?.length || 0}</Badge>
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="summary">
+              {/* Summary Card */}
+              <Card>
                 <CardContent className="p-6">
-                  {summary && summary.text ? (
-                    <div className="mb-6">
-                      <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
-                        {getSummaryText()}
-                      </div>
+                  {summary?.text ? (
+                    <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
+                      {getSummaryText()}
                       {needsTruncation && (
                         <Button
                           variant="link"
@@ -200,8 +162,52 @@ export default function BillOrLawDetail({
                   )}
                 </CardContent>
               </Card>
-            )}
-            {activeTab === 'sponsors' && (
+            </TabsContent>
+            <TabsContent value="text">
+              {/* Texts Accordion */}
+              {(() => {
+                const sortedTexts = [...texts].sort((a, b) => {
+                  const dateA = a.date ? new Date(a.date).getTime() : 0;
+                  const dateB = b.date ? new Date(b.date).getTime() : 0;
+                  if (!a.date) return 1;
+                  if (!b.date) return -1;
+                  return dateB - dateA;
+                });
+                return (
+                  <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
+                    {sortedTexts.map((text) => (
+                      <AccordionItem key={text.id} value={text.id.toString()}>
+                        <AccordionTrigger>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">
+                              {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
+                            </span>
+                            {text.date && (
+                              <span className="text-xs text-gray-500">
+                                {formatDate(text.date)}
+                              </span>
+                            )}
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="h-[400px] md:h-[600px] border rounded">
+                            {text.pdf_file_path ? (
+                              <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
+                            ) : (
+                              <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                No PDF available for this version.
+                              </CardDescription>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                );
+              })()}
+            </TabsContent>
+            <TabsContent value="sponsors">
+              {/* Sponsors/Cosponsors Cards */}
               <div className="space-y-8">
                 <Card>
                   <CardHeader>
@@ -258,9 +264,9 @@ export default function BillOrLawDetail({
                   </CardContent>
                 </Card>
               </div>
-            )}
-
-            {activeTab === 'actions' && (
+            </TabsContent>
+            <TabsContent value="actions">
+              {/* Actions Card */}
               <Card>
                 <CardContent className="p-4 md:p-6">
                   <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
@@ -289,154 +295,37 @@ export default function BillOrLawDetail({
                   )}
                 </CardContent>
               </Card>
-            )}
+            </TabsContent>
+          </Tabs>
+        </div>
 
-            {activeTab === 'text' && (
-              <Card>
-                <CardContent className="p-4 md:p-6">
-                  <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Texts</CardTitle>
-                  {texts && texts.length > 0 ? (
-                    <div>
-                      {/** Sort texts by date descending (most recent first) */}
-                      {(() => {
-                        const sortedTexts = [...texts].sort((a, b) => {
+        {/* Right: Sticky AiChat Panel */}
+        <div className="relative h-full">
+          <div className="md:sticky md:top-28 h-full">
+            <div className="h-full overflow-y-auto">
+              <AiChat
+                documentType={itemType}
+                documentId={item.id}
+                documentTitle={title}
+                htmlFilePath={latestText?.html_file_path}
+                diffHtmlFilePaths={
+                  texts.length > 1
+                    ? [...texts]
+                        .sort((a, b) => {
                           const dateA = a.date ? new Date(a.date).getTime() : 0;
                           const dateB = b.date ? new Date(b.date).getTime() : 0;
-                          // Place entries with missing/invalid dates at the end
                           if (!a.date) return 1;
                           if (!b.date) return -1;
                           return dateB - dateA;
-                        });
-                        return (
-                          <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
-                            {sortedTexts.map((text) => (
-                              <AccordionItem key={text.id} value={text.id.toString()}>
-                                <AccordionTrigger>
-                                  <div className="flex flex-col items-start">
-                                    <span className="font-medium">
-                                      {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
-                                    </span>
-                                    {text.date && (
-                                      <span className="text-xs text-gray-500">
-                                        {formatDate(text.date)}
-                                      </span>
-                                    )}
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="h-[400px] md:h-[600px] border rounded">
-                                    {text.pdf_file_path ? (
-                                      <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
-                                    ) : (
-                                      <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
-                                        No PDF available for this version.
-                                      </CardDescription>
-                                    )}
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            ))}
-                          </Accordion>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <CardDescription>No {itemType} texts available</CardDescription>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                        })
+                        .slice(0, 2)
+                        .map((t) => t.html_file_path)
+                    : undefined
+                }
+              />
+            </div>
           </div>
         </div>
-        {/* Right: AI Chat Panel (desktop) */}
-        <div className="w-full md:w-1/2 h-full flex flex-col min-h-0 md:border-l md:pl-8 border-gray-200 overflow-y-auto bg-gray-50 p-2 md:p-3 pb-8 md:pb-12 hidden md:flex">
-          <AuthProvider>
-            <AiChat
-              documentType={itemType}
-              documentId={item.id}
-              documentTitle={title}
-              htmlFilePath={latestText?.html_file_path}
-              diffHtmlFilePaths={
-                texts.length > 1
-                  ? [...texts]
-                      .sort((a, b) => {
-                        const dateA = a.date ? new Date(a.date).getTime() : 0;
-                        const dateB = b.date ? new Date(b.date).getTime() : 0;
-                        if (!a.date) return 1;
-                        if (!b.date) return -1;
-                        return dateB - dateA;
-                      })
-                      .slice(0, 2)
-                      .map((t) => t.html_file_path)
-                  : undefined
-              }
-            />
-          </AuthProvider>
-        </div>
-        {/* Mobile: Floating AI Chat Bubble */}
-        <>
-          {/* Floating button (bottom right) */}
-          {!showMobileChat && (
-            <Button
-              variant="default"
-              size="icon"
-              className="fixed bottom-4 right-4 z-40 shadow-lg md:hidden"
-              onClick={() => setShowMobileChat(true)}
-              aria-label="Open AI Chat"
-              style={{ borderRadius: '9999px' }}
-            >
-              <BrainCog className="h-7 w-7" />
-            </Button>
-          )}
-          {/* Modal overlay with AiChat */}
-          {showMobileChat && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center md:hidden bg-black/40" onClick={() => setShowMobileChat(false)}>
-              <div
-                className="w-full max-w-lg mx-auto bg-white rounded-t-xl shadow-2xl border border-gray-200 flex flex-col h-[65vh]"
-                style={{
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                  borderTopLeftRadius: '1.25rem',
-                  borderTopRightRadius: '1.25rem',
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Close button */}
-                <button
-                  className="absolute top-2 right-4 z-10 text-gray-500 hover:text-gray-800"
-                  onClick={() => setShowMobileChat(false)}
-                  aria-label="Close AI Chat"
-                  type="button"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-                <div className="flex-1 flex flex-col">
-                  <AuthProvider>
-                    <AiChat
-                      documentType={itemType}
-                      documentId={item.id}
-                      documentTitle={title}
-                      htmlFilePath={latestText?.html_file_path}
-                      diffHtmlFilePaths={
-                        texts.length > 1
-                          ? [...texts]
-                              .sort((a, b) => {
-                                const dateA = a.date ? new Date(a.date).getTime() : 0;
-                                const dateB = b.date ? new Date(b.date).getTime() : 0;
-                                if (!a.date) return 1;
-                                if (!b.date) return -1;
-                                return dateB - dateA;
-                              })
-                              .slice(0, 2)
-                              .map((t) => t.html_file_path)
-                          : undefined
-                      }
-                    />
-                  </AuthProvider>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
       </div>
     </div>
   );
