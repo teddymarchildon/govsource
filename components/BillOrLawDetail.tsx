@@ -126,176 +126,178 @@ export default function BillOrLawDetail({
       {/* Main Content: 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
         {/* Left: Tabs */}
-        <div className="h-full overflow-y-auto">
-          <Tabs defaultValue="summary" className="w-full h-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="summary">Summary</TabsTrigger>
-              <TabsTrigger value="text">
+        <div className="h-[600px] md:h-[600px] overflow-hidden">
+          <Tabs defaultValue="summary" className="w-full h-full flex flex-col">
+            <TabsList className="mb-4 justify-start bg-transparent">
+              <TabsTrigger value="summary" className="bg-transparent">Summary</TabsTrigger>
+              <TabsTrigger value="text" className="bg-transparent">
                 Text <Badge variant="outline" className="ml-1">{texts?.length || 0}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="sponsors">
+              <TabsTrigger value="sponsors" className="bg-transparent">
                 Sponsors <Badge variant="outline" className="ml-1">{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="actions">
+              <TabsTrigger value="actions" className="bg-transparent">
                 Actions <Badge variant="outline" className="ml-1">{actions?.length || 0}</Badge>
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="summary">
-              {/* Summary Card */}
-              <Card>
-                <CardContent className="p-6">
-                  {summary?.text ? (
-                    <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
-                      {getSummaryText()}
-                      {needsTruncation && (
-                        <Button
-                          variant="link"
-                          onClick={() => setShowFullSummary(!showFullSummary)}
-                          className="text-primary text-sm font-medium mt-2 px-0"
-                        >
-                          {showFullSummary ? 'See less' : 'See more'}
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <CardDescription>No summary available for this bill.</CardDescription>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="text">
-              {/* Texts Accordion */}
-              {(() => {
-                const sortedTexts = [...texts].sort((a, b) => {
-                  const dateA = a.date ? new Date(a.date).getTime() : 0;
-                  const dateB = b.date ? new Date(b.date).getTime() : 0;
-                  if (!a.date) return 1;
-                  if (!b.date) return -1;
-                  return dateB - dateA;
-                });
-                return (
-                  <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
-                    {sortedTexts.map((text) => (
-                      <AccordionItem key={text.id} value={text.id.toString()}>
-                        <AccordionTrigger>
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">
-                              {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
-                            </span>
-                            {text.date && (
-                              <span className="text-xs text-gray-500">
-                                {formatDate(text.date)}
-                              </span>
-                            )}
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="h-[400px] md:h-[600px] border rounded">
-                            {text.pdf_file_path ? (
-                              <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
-                            ) : (
-                              <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
-                                No PDF available for this version.
-                              </CardDescription>
-                            )}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                );
-              })()}
-            </TabsContent>
-            <TabsContent value="sponsors">
-              {/* Sponsors/Cosponsors Cards */}
-              <div className="space-y-8">
+            <div className="flex-1 overflow-y-auto">
+              <TabsContent value="summary">
+                {/* Summary Card */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Sponsors ({sponsors?.length || 0})</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {sponsors && sponsors.length > 0 ? (
-                      <div className="max-h-[600px] overflow-y-auto">
-                        {sponsors.map((sponsor) => (
-                          <div key={sponsor.id} className="mb-4 last:mb-0">
-                            <Link
-                              href={`/congressmen/${sponsor.id}`}
-                              className="font-medium hover:underline"
-                            >
-                              {sponsor.full_name}
-                            </Link>
-                            <div className="text-sm text-gray-600">
-                              {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
+                  <CardContent className="p-6">
+                    {summary?.text ? (
+                      <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
+                        {getSummaryText()}
+                        {needsTruncation && (
+                          <Button
+                            variant="link"
+                            onClick={() => setShowFullSummary(!showFullSummary)}
+                            className="text-primary text-sm font-medium mt-2 px-0"
+                          >
+                            {showFullSummary ? 'See less' : 'See more'}
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <CardDescription>No summary available for this bill.</CardDescription>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="text">
+                {/* Texts Accordion */}
+                {(() => {
+                  const sortedTexts = [...texts].sort((a, b) => {
+                    const dateA = a.date ? new Date(a.date).getTime() : 0;
+                    const dateB = b.date ? new Date(b.date).getTime() : 0;
+                    if (!a.date) return 1;
+                    if (!b.date) return -1;
+                    return dateB - dateA;
+                  });
+                  return (
+                    <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
+                      {sortedTexts.map((text) => (
+                        <AccordionItem key={text.id} value={text.id.toString()}>
+                          <AccordionTrigger>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">
+                                {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
+                              </span>
+                              {text.date && (
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(text.date)}
+                                </span>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="h-[400px] md:h-[600px] border rounded">
+                              {text.pdf_file_path ? (
+                                <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
+                              ) : (
+                                <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                  No PDF available for this version.
+                                </CardDescription>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  );
+                })()}
+              </TabsContent>
+              <TabsContent value="sponsors">
+                {/* Sponsors/Cosponsors Cards */}
+                <div className="space-y-8">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sponsors ({sponsors?.length || 0})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {sponsors && sponsors.length > 0 ? (
+                        <div className="max-h-[600px] overflow-y-auto">
+                          {sponsors.map((sponsor) => (
+                            <div key={sponsor.id} className="mb-4 last:mb-0">
+                              <Link
+                                href={`/congressmen/${sponsor.id}`}
+                                className="font-medium hover:underline"
+                              >
+                                {sponsor.full_name}
+                              </Link>
+                              <div className="text-sm text-gray-600">
+                                {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <CardDescription>No sponsors found</CardDescription>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Cosponsors ({cosponsors?.length || 0})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {cosponsors && cosponsors.length > 0 ? (
+                        <div className="max-h-[600px] overflow-y-auto">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {cosponsors.map((cosponsor) => (
+                              <div key={cosponsor.id} className="mb-2">
+                                <Link
+                                  href={`/congressmen/${cosponsor.id}`}
+                                  className="font-medium hover:underline text-sm"
+                                >
+                                  {cosponsor.full_name}
+                                </Link>
+                                <div className="text-xs text-gray-600">
+                                  {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <CardDescription>No cosponsors found</CardDescription>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+              <TabsContent value="actions">
+                {/* Actions Card */}
+                <Card>
+                  <CardContent className="p-4 md:p-6">
+                    <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
+                    {actions && actions.length > 0 ? (
+                      <div className="space-y-4">
+                        {actions.map((action) => (
+                          <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0">
+                                <Badge variant="secondary" className="h-8 w-8 flex items-center justify-center text-sm font-medium rounded-full">
+                                  {formatDate(action.date)?.split(' ')[0]}
+                                </Badge>
+                              </div>
+                              <div className="ml-4">
+                                <p className="text-sm text-gray-900">{action.text}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {formatDate(action.date)} • {action.type}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <CardDescription>No sponsors found</CardDescription>
+                      <CardDescription>No actions found</CardDescription>
                     )}
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Cosponsors ({cosponsors?.length || 0})</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {cosponsors && cosponsors.length > 0 ? (
-                      <div className="max-h-[600px] overflow-y-auto">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {cosponsors.map((cosponsor) => (
-                            <div key={cosponsor.id} className="mb-2">
-                              <Link
-                                href={`/congressmen/${cosponsor.id}`}
-                                className="font-medium hover:underline text-sm"
-                              >
-                                {cosponsor.full_name}
-                              </Link>
-                              <div className="text-xs text-gray-600">
-                                {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <CardDescription>No cosponsors found</CardDescription>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-            <TabsContent value="actions">
-              {/* Actions Card */}
-              <Card>
-                <CardContent className="p-4 md:p-6">
-                  <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
-                  {actions && actions.length > 0 ? (
-                    <div className="space-y-4">
-                      {actions.map((action) => (
-                        <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-                          <div className="flex items-start">
-                            <div className="flex-shrink-0">
-                              <Badge variant="secondary" className="h-8 w-8 flex items-center justify-center text-sm font-medium rounded-full">
-                                {formatDate(action.date)?.split(' ')[0]}
-                              </Badge>
-                            </div>
-                            <div className="ml-4">
-                              <p className="text-sm text-gray-900">{action.text}</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {formatDate(action.date)} • {action.type}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <CardDescription>No actions found</CardDescription>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
 
