@@ -142,10 +142,10 @@ export default function BillOrLawDetail({
                   Actions <Badge variant="outline" className="ml-1 h-5 text-xs">{actions?.length || 0}</Badge>
                 </TabsTrigger>
               </TabsList>
-              <div className="flex-1 overflow-y-auto">
-                <TabsContent value="summary" className="mt-0">
+              <div className="flex-1 overflow-hidden">
+                <TabsContent value="summary" className="mt-0 h-full">
                   {/* Summary Card */}
-                  <Card>
+                  <Card className="h-full overflow-y-auto">
                     <CardContent className="p-4 md:p-5">
                       {summary?.text ? (
                         <div className="bg-gray-50 p-3 md:p-4 rounded">
@@ -177,9 +177,9 @@ export default function BillOrLawDetail({
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="text" className="mt-0">
-                  <Card>
-                    <CardContent className="p-4 md:p-5 pt-3">
+                <TabsContent value="text" className="mt-0 h-full">
+                  <Card className="h-full flex flex-col">
+                    <CardContent className="p-4 md:p-5 pt-3 flex-1 overflow-y-auto">
                       {(() => {
                         const sortedTexts = [...texts].sort((a, b) => {
                           const dateA = a.date ? new Date(a.date).getTime() : 0;
@@ -205,7 +205,7 @@ export default function BillOrLawDetail({
                                   </div>
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                  <div className="h-[400px] md:h-[500px] border rounded">
+                                  <div className="h-[600px] md:h-[700px] border rounded">
                                     {text.pdf_file_path ? (
                                       <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
                                     ) : (
