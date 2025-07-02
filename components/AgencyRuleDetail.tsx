@@ -22,7 +22,7 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 flex flex-col min-h-screen">
       {/* Breadcrumb and Top Section (Full Width) */}
       <Breadcrumbs
         steps={[
@@ -64,10 +64,10 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
       </div>
 
       {/* Main Content: 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1">
         {/* Left: Tabs */}
-        <div className="h-[600px] md:h-[600px] overflow-hidden">
-          <Tabs defaultValue="details" className="w-full h-full flex flex-col">
+        <div className="h-full overflow-hidden flex flex-col">
+          <Tabs defaultValue="details" className="w-full h-full flex flex-col flex-1">
             <TabsList className="mb-4 justify-start bg-transparent">
               <TabsTrigger value="details" className="bg-transparent">Summary</TabsTrigger>
               <TabsTrigger value="text" className="bg-transparent">Text</TabsTrigger>

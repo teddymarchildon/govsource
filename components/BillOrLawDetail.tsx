@@ -90,7 +90,7 @@ export default function BillOrLawDetail({
   const needsTruncation = summary?.text && summary.text.length > 1000;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 flex flex-col min-h-screen">
       {/* Breadcrumbs */}
       <div className="mb-2">
         <Breadcrumbs
@@ -124,10 +124,10 @@ export default function BillOrLawDetail({
       </div>
 
       {/* Main Content: 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1">
         {/* Left: Tabs */}
-        <div className="h-[600px] md:h-[600px] overflow-hidden">
-          <Tabs defaultValue="summary" className="w-full h-full flex flex-col">
+        <div className="h-full overflow-hidden flex flex-col">
+          <Tabs defaultValue="summary" className="w-full h-full flex flex-col flex-1">
             <TabsList className="mb-4 justify-start bg-transparent">
               <TabsTrigger value="summary" className="bg-transparent">Summary</TabsTrigger>
               <TabsTrigger value="text" className="bg-transparent">
@@ -165,47 +165,50 @@ export default function BillOrLawDetail({
                 </Card>
               </TabsContent>
               <TabsContent value="text">
-                {/* Texts Accordion */}
-                {(() => {
-                  const sortedTexts = [...texts].sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date).getTime() : 0;
-                    const dateB = b.date ? new Date(b.date).getTime() : 0;
-                    if (!a.date) return 1;
-                    if (!b.date) return -1;
-                    return dateB - dateA;
-                  });
-                  return (
-                    <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
-                      {sortedTexts.map((text) => (
-                        <AccordionItem key={text.id} value={text.id.toString()}>
-                          <AccordionTrigger>
-                            <div className="flex flex-col items-start">
-                              <span className="font-medium">
-                                {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
-                              </span>
-                              {text.date && (
-                                <span className="text-xs text-gray-500">
-                                  {formatDate(text.date)}
-                                </span>
-                              )}
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="h-[400px] md:h-[600px] border rounded">
-                              {text.pdf_file_path ? (
-                                <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
-                              ) : (
-                                <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
-                                  No PDF available for this version.
-                                </CardDescription>
-                              )}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  );
-                })()}
+                <Card>
+                  <CardContent className="p-6 pt-3">
+                    {(() => {
+                      const sortedTexts = [...texts].sort((a, b) => {
+                        const dateA = a.date ? new Date(a.date).getTime() : 0;
+                        const dateB = b.date ? new Date(b.date).getTime() : 0;
+                        if (!a.date) return 1;
+                        if (!b.date) return -1;
+                        return dateB - dateA;
+                      });
+                      return (
+                        <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
+                          {sortedTexts.map((text) => (
+                            <AccordionItem key={text.id} value={text.id.toString()}>
+                              <AccordionTrigger>
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium">
+                                    {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
+                                  </span>
+                                  {text.date && (
+                                    <span className="text-xs text-gray-500">
+                                      {formatDate(text.date)}
+                                    </span>
+                                  )}
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="h-[400px] md:h-[600px] border rounded">
+                                  {text.pdf_file_path ? (
+                                    <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
+                                  ) : (
+                                    <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                      No PDF available for this version.
+                                    </CardDescription>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
               </TabsContent>
               <TabsContent value="sponsors">
                 {/* Sponsors/Cosponsors Cards */}

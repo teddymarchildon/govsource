@@ -36,8 +36,6 @@ export default function ExecutiveOrderDetailPage() {
   const executiveOrderId = params.id
   const [order, setOrder] = useState<ExecutiveOrder | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('text');
-  const [showMobileChat, setShowMobileChat] = useState(false);
     
 
   useEffect(() => {
@@ -99,7 +97,7 @@ export default function ExecutiveOrderDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 flex flex-col min-h-screen">
       {/* Breadcrumb and Top Section (Full Width) */}
       <Breadcrumbs
         steps={[
@@ -110,15 +108,18 @@ export default function ExecutiveOrderDetailPage() {
       />
 
       {/* Header Information */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="mb-2 flex justify-between items-center">
           <span className="text-gray-600">Executive Order</span>
           <SaveButton itemId={order.id} itemType="agencyDocument" />
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">{order.title}</h1>
-        <h2 className="text-lg md:text-xl mb-4">Document Number: {order.remote_document_number}</h2>
-        
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">{order.title}</h1>        
         <div className="mb-6">
+          {order.remote_document_number && (
+            <div className="text-sm mb-1">
+              <span className="font-medium">Document Number:</span> {order.remote_document_number}
+            </div>
+          )}
           {order.president && (
             <div className="text-sm mb-1">
               <span className="font-medium">President:</span> {order.president}
@@ -141,10 +142,10 @@ export default function ExecutiveOrderDetailPage() {
       </div>
 
       {/* Main Content: 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1">
         {/* Left: Tabs */}
-        <div className="h-[600px] md:h-[600px] overflow-hidden">
-          <Tabs defaultValue="text" className="w-full h-full flex flex-col">
+        <div className="h-full overflow-hidden flex flex-col">
+          <Tabs defaultValue="text" className="w-full h-full flex flex-col flex-1">
             <TabsList className="mb-4 justify-start bg-transparent">
               <TabsTrigger value="text" className="bg-transparent">Text</TabsTrigger>
             </TabsList>

@@ -148,7 +148,7 @@ export default function SupremeCourtCaseDetailPage() {
       {/* Main Content: 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
         {/* Left: Tabs for Opinions */}
-        <div className="h-[600px] md:h-[600px] overflow-hidden">
+        <div className="h-auto min-h-[400px] max-h-[75vh] overflow-hidden">
           <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full flex flex-col">
             <TabsList className="mb-4 justify-start bg-transparent">
               {sortedOpinions.map((opinion, idx) => (
