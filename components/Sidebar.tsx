@@ -188,7 +188,7 @@ export default function Sidebar() {
           </div>
 
           <div className="mb-6">
-            <h3 className="text-xs uppercase font-semibold text-gray-500 mb-3">FEDERAL LAWS</h3>
+            <h3 className="text-xs uppercase font-semibold text-gray-500 mb-3">LAWS</h3>
             <ul className="space-y-1">
               <li>
                 <Link
@@ -239,7 +239,7 @@ export default function Sidebar() {
           </div>
 
           <div className="mb-6">
-            <h3 className="text-xs uppercase font-semibold text-gray-500 mb-3">FEDERAL BODIES</h3>
+            <h3 className="text-xs uppercase font-semibold text-gray-500 mb-3">BODIES</h3>
             <ul className="space-y-1">
               <li>
                 <Link
@@ -256,7 +256,7 @@ export default function Sidebar() {
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/agencies')}`}
                 >
                   <Building className="h-5 w-5 mr-2" />
-                  Federal Agencies
+                  Agencies
                 </Link>
               </li>
               <li>
