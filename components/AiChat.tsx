@@ -293,14 +293,12 @@ export default function AiChat({
       {/* Info indicator if htmlFilePath is not defined */}
       {!htmlFilePath && (
         <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
-          <svg className="h-3 w-3 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
           <span className="text-xs">The assistant cannot process this document. It will search the web to find additional information.</span>
         </div>
       )}
       {/* Info indicator if htmlFilePath is defined */}
       {htmlFilePath && (
         <div className="flex items-center gap-2 px-3 py-1 bg-secondary text-secondary-foreground text-xs border-b border-primary/20">
-          <svg className="h-3 w-3 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
           <span className="text-xs">The assistant will objectively analyze the text and information here. No other sources are considered.</span>
         </div>
       )}
