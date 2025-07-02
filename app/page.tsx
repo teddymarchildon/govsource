@@ -22,6 +22,8 @@ import { getLoginUrl } from '@/utils/utils';
 import ExecutiveOrderCard from '../components/ExecutiveOrderCard';
 import AgencyRuleCard from '../components/AgencyRuleCard';
 import CourtCaseCard from '../components/CourtCaseCard';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 function HomeContent() {
   const router = useRouter();
@@ -640,10 +642,16 @@ function HomeContent() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Welcome Section */}
-      <div className="bg-primary rounded-lg shadow-md p-6 mb-8 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome to GovSource</h1>
-        <p className="mb-4">Use AI to discover, track, and understand US federal legislation, court cases, and more.</p>
-      </div>
+      <Card className="mb-8 bg-primary text-primary-foreground border-0">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-2xl">Welcome to GovSource</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-primary-foreground/90">
+            Use AI to discover, track, and understand US federal legislation, court cases, and more.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Popular Section (moved below Welcome) */}
       <div className="mb-10">
@@ -681,17 +689,32 @@ function HomeContent() {
       </div>
 
       {/* Why Sign Up Section */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8 border border-gray-200">
-        <h2 className="text-xl font-semibold mb-2 text-gray-900">Sign in to:</h2>
-        <ul className="list-disc pl-5 mb-4 text-gray-700">
-          <li>Save and track government information</li>
-          <li>Access advanced AI-powered analysis on laws, bills, executive orders, and more</li>
-          <li>Get personalized legislative updates (coming soon)</li>
-        </ul>
-        <div className="flex space-x-3">
-          <Link href={getLoginUrl(pathname)} className="inline-block px-4 py-2 bg-gray-100 text-primary rounded-md font-medium hover:bg-gray-200 transition-colors">Sign In</Link>
-        </div>
-      </div>
+      <Card className="mb-8">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl">Sign in to:</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-1 text-muted-foreground">
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Save and track government information</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Access advanced AI-powered analysis on laws, bills, executive orders, and more</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Get personalized legislative updates (coming soon)</span>
+            </li>
+          </ul>
+          <div className="mt-6">
+            <Link href={getLoginUrl(pathname)}>
+              <Button>Sign In</Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Executive Orders */}
       <div className="mb-8">
