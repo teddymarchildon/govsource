@@ -383,7 +383,16 @@ export default function AiChat({
                   }`}
                   style={{ borderRadius: '0.5rem' }}
                 >
-                  <div className="whitespace-pre-wrap text-sm markdown-content prose">
+                  <div className="prose prose-sm prose-gray max-w-none 
+                    prose-p:my-2 prose-p:leading-normal
+                    prose-ul:my-2 prose-ol:my-2
+                    prose-li:my-1 prose-li:leading-normal
+                    prose-headings:my-3 prose-headings:font-semibold
+                    prose-strong:font-semibold
+                    prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-gray-100
+                    prose-pre:bg-gray-100 prose-pre:text-xs
+                    prose-blockquote:border-gray-300 prose-blockquote:text-gray-700
+                    prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
                     <ReactMarkdown>
                       {message.content}
                     </ReactMarkdown>
