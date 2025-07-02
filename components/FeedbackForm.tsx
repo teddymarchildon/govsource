@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/utils/supabase/client';
 import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
+import { MessageSquare } from 'lucide-react';
 
 export default function FeedbackForm() {
   const { user } = useAuth();
@@ -67,9 +68,10 @@ export default function FeedbackForm() {
       {!isOpen && (
         <button
           onClick={toggleOpen}
-          className="bg-primary text-white rounded-full px-4 py-2 shadow-lg hover:bg-primary/90 transition-colors"
+          className="bg-primary text-white rounded-full px-4 py-2 shadow-lg hover:bg-primary/90 transition-colors text-sm flex items-center gap-2"
         >
-          Have feedback?
+          <MessageSquare className="h-5 w-5" />
+          <span>Have feedback?</span>
         </button>
       )}
 
