@@ -114,9 +114,9 @@ export default function SupremeCourtCaseDetailPage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <div className="container mx-auto px-4 py-8 flex flex-col flex-1 overflow-hidden">
+      <div className="container mx-auto px-4 py-4 flex flex-col flex-1 overflow-hidden">
         {/* Breadcrumbs */}
-        <div className="mb-2 flex-shrink-0">
+        <div className="mb-1 flex-shrink-0">
           <Breadcrumbs
             steps={[
               { label: 'Home', href: '/' },
@@ -126,46 +126,49 @@ export default function SupremeCourtCaseDetailPage() {
           />
         </div>
 
-        {/* Header Information */}
-        <div className="mb-6 flex-shrink-0">
-          <div className="mb-2 flex justify-between items-center">
-            <span className="text-gray-600">Supreme Court Case</span>
-            <SaveButton itemId={cluster.id} itemType="cluster" />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{cluster.case_name}</h1>
-          {cluster.case_name_short && cluster.case_name_short !== cluster.case_name && (
-            <h2 className="text-lg md:text-xl mb-4 text-gray-600">{cluster.case_name_short}</h2>
-          )}
-          
-          <div>
-            <div className="text-sm mb-1">
-              <span className="font-medium">Date Filed:</span> {cluster.date_filed || 'Not available'}
+        {/* Header Information - More compact */}
+        <div className="mb-4 flex-shrink-0">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+            <div className="flex-1">
+              <h1 className="text-xl md:text-2xl font-bold">{cluster.case_name}</h1>
+              {cluster.case_name_short && cluster.case_name_short !== cluster.case_name && (
+                <h2 className="text-base md:text-lg text-gray-600">{cluster.case_name_short}</h2>
+              )}
+              <div className="flex flex-wrap gap-3 text-sm text-gray-700 mt-1">
+                <div className="text-gray-600">Supreme Court Case</div>
+                <div>
+                  <span className="font-medium">Date Filed:</span> {cluster.date_filed || 'Not available'}
+                </div>
+                <div>
+                  <span className="font-medium">Opinions:</span> {cluster.opinions?.length || 0} opinion{(cluster.opinions?.length || 0) !== 1 ? 's' : ''}
+                </div>
+              </div>
             </div>
-            <div className="text-sm">
-              <span className="font-medium">Opinions:</span> {cluster.opinions?.length || 0} opinion{(cluster.opinions?.length || 0) !== 1 ? 's' : ''}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <SaveButton itemId={cluster.id} itemType="cluster" />
             </div>
           </div>
         </div>
 
-        {/* Main Content: Full width on mobile, 2-column on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
+        {/* Main Content: Responsive grid with more space for chat */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_500px] lg:grid-cols-[1fr_550px] xl:grid-cols-[1fr_600px] 2xl:grid-cols-[1fr_700px] gap-4 md:gap-6 flex-1 overflow-hidden">
           {/* Left: Tabs for Opinions - full width on mobile */}
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full flex flex-col">
-              <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
+              <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
                 {sortedOpinions.map((opinion, idx) => (
-                  <TabsTrigger key={opinion.id} value={opinion.id} className="bg-transparent">
+                  <TabsTrigger key={opinion.id} value={opinion.id} className="bg-transparent px-2 py-1 text-sm">
                     {mapOpinionType(opinion.type)}
                   </TabsTrigger>
                 ))}
               </TabsList>
               <div className="flex-1 overflow-y-auto">
                 {sortedOpinions.map((opinion, idx) => (
-                  <TabsContent key={opinion.id} value={opinion.id}>
+                  <TabsContent key={opinion.id} value={opinion.id} className="mt-0">
                     <Card className="overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="mb-4">
-                          <div className="mb-2">
+                      <CardContent className="p-4 md:p-5">
+                        <div className="mb-3">
+                          <div className="mb-1">
                             <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
                             {opinion.joined_by && opinion.joined_by.length > 0 && (
                               <span className="ml-2 text-gray-600 text-sm">(Joined by: {opinion.joined_by.length} others)</span>
@@ -178,7 +181,7 @@ export default function SupremeCourtCaseDetailPage() {
                           </div>
                         </div>
                         {opinion.pdf_file_path ? (
-                          <div className="h-[400px] md:h-[600px]">
+                          <div className="h-[400px] md:h-[500px]">
                             <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
                           </div>
                         ) : (

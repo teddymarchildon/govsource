@@ -22,9 +22,9 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <div className="container mx-auto px-4 py-8 flex flex-col flex-1 overflow-hidden">
+      <div className="container mx-auto px-4 py-4 flex flex-col flex-1 overflow-hidden">
         {/* Breadcrumbs */}
-        <div className="mb-2 flex-shrink-0">
+        <div className="mb-1 flex-shrink-0">
           <Breadcrumbs
             steps={[
               { label: 'Home', href: '/' },
@@ -34,52 +34,57 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           />
         </div>
 
-        {/* Header Information */}
-        <div className="mb-6 flex-shrink-0">
-          <div className="mb-2 flex justify-between items-center">
-            <span className="text-gray-600">{rule.type || 'Agency Document'}</span>
-            <SaveButton itemId={rule.id} itemType="agencyDocument" />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{rule.title}</h1>
-          
-          <div>
-            <div className="text-sm mb-1">
-              <span className="font-medium">Document Number:</span> {rule.remote_document_number}
-            </div>
-            <div className="text-sm mb-1">
-              <span className="font-medium">Published:</span> {rule.publication_date && formatDate(rule.publication_date)}
-            </div>
-            {rule.subtype && (
-              <div className="text-sm mb-1">
-                <span className="font-medium">Subtype:</span> {rule.subtype}
+        {/* Header Information - More compact */}
+        <div className="mb-4 flex-shrink-0">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex flex-col md:flex-row md:items-baseline md:gap-3">
+                <h1 className="text-xl md:text-2xl font-bold">{rule.title}</h1>
               </div>
-            )}
-            {rule.agency && (
-              <div className="text-sm">
-                <span className="font-medium">Agency:</span>{' '}
-                <Link href={`/agencies/${rule.agency.id}`} className="text-primary hover:underline">
-                  {rule.agency.name}
-                </Link>
+              <div className="flex flex-wrap gap-3 text-sm text-gray-700 mt-1">
+                <div className="text-gray-600">{rule.type || 'Agency Document'}</div>
+                <div>
+                  <span className="font-medium">Document Number:</span> {rule.remote_document_number}
+                </div>
+                <div>
+                  <span className="font-medium">Published:</span> {rule.publication_date && formatDate(rule.publication_date)}
+                </div>
+                {rule.subtype && (
+                  <div>
+                    <span className="font-medium">Subtype:</span> {rule.subtype}
+                  </div>
+                )}
+                {rule.agency && (
+                  <div>
+                    <span className="font-medium">Agency:</span>{' '}
+                    <Link href={`/agencies/${rule.agency.id}`} className="text-primary hover:underline">
+                      {rule.agency.name}
+                    </Link>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <SaveButton itemId={rule.id} itemType="agencyDocument" />
+            </div>
           </div>
         </div>
 
-        {/* Main Content: Full width on mobile, 2-column on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
+        {/* Main Content: Responsive grid with more space for chat */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_500px] lg:grid-cols-[1fr_550px] xl:grid-cols-[1fr_600px] 2xl:grid-cols-[1fr_700px] gap-4 md:gap-6 flex-1 overflow-hidden">
           {/* Left: Tabs - full width on mobile */}
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue="details" className="w-full h-full flex flex-col">
-              <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
-                <TabsTrigger value="details" className="bg-transparent">Summary</TabsTrigger>
-                <TabsTrigger value="text" className="bg-transparent">Text</TabsTrigger>
+              <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
+                <TabsTrigger value="details" className="bg-transparent px-2 py-1 text-sm">Summary</TabsTrigger>
+                <TabsTrigger value="text" className="bg-transparent px-2 py-1 text-sm">Text</TabsTrigger>
               </TabsList>
               <div className="flex-1 overflow-y-auto">
-                <TabsContent value="details">
+                <TabsContent value="details" className="mt-0">
                   <Card className="overflow-hidden">
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 md:p-5">
                       {rule.abstract ? (
-                        <div className="mb-6">
+                        <div className="mb-4">
                           <div dangerouslySetInnerHTML={{ __html: rule.abstract }} />
                         </div>
                       ) : (
@@ -88,11 +93,11 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="text">
+                <TabsContent value="text" className="mt-0">
                   <Card className="overflow-hidden">
-                    <CardContent className="p-6">
-                      <CardTitle className="mb-4">Agency Rule Text</CardTitle>
-                      <div className="h-[400px] md:h-[600px]">
+                    <CardContent className="p-4 md:p-5">
+                      <CardTitle className="mb-3 text-lg">Agency Rule Text</CardTitle>
+                      <div className="h-[400px] md:h-[500px]">
                         {rule.pdf_file_path ? (
                           <PdfViewer storagePath={rule.pdf_file_path} storageBucket="agency-docs" className="h-full" />
                         ) : rule.pdf_url ? (

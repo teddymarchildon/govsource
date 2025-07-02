@@ -90,9 +90,9 @@ export default function BillOrLawDetail({
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <div className="container mx-auto px-4 py-8 flex flex-col flex-1 overflow-hidden">
+      <div className="container mx-auto px-4 py-4 flex flex-col flex-1 overflow-hidden">
         {/* Breadcrumbs */}
-        <div className="mb-2 flex-shrink-0">
+        <div className="mb-1 flex-shrink-0">
           <Breadcrumbs
             steps={[
               { label: 'Home', href: '/' },
@@ -102,13 +102,15 @@ export default function BillOrLawDetail({
           />
         </div>
 
-        {/* Header Row: Title, Meta, Watch Button */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 flex-shrink-0">
-          <div>
-            <div className="text-gray-600 mb-1">{item.policy_area || 'Uncategorized'}</div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-1">{title}</h1>
-            <div className="text-lg md:text-xl mb-2">{number}</div>
-            <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+        {/* Header Row: Title, Meta, Watch Button - More compact */}
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4 flex-shrink-0">
+          <div className="flex-1">
+            <div className="flex flex-col md:flex-row md:items-baseline md:gap-3">
+              <h1 className="text-xl md:text-2xl font-bold">{title}</h1>
+              <div className="text-base md:text-lg text-gray-600">{number}</div>
+            </div>
+            <div className="flex flex-wrap gap-3 text-sm text-gray-700 mt-1">
+              <div className="text-gray-600">{item.policy_area || 'Uncategorized'}</div>
               <div>
                 <span className="font-medium">{dateLabel}:</span> {date && formatDate(date)}
               </div>
@@ -117,36 +119,36 @@ export default function BillOrLawDetail({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Watch/Save Button */}
             {!isLaw && <SaveButton itemId={item.id} itemType="bill" />}
           </div>
         </div>
 
-        {/* Main Content: Full width on mobile, 2-column on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
+        {/* Main Content: Responsive grid with more space for chat */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_500px] lg:grid-cols-[1fr_550px] xl:grid-cols-[1fr_600px] 2xl:grid-cols-[1fr_700px] gap-4 md:gap-6 flex-1 overflow-hidden">
           {/* Left: Tabs - full width on mobile */}
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue="summary" className="w-full h-full flex flex-col">
-              <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
-                <TabsTrigger value="summary" className="bg-transparent">Summary</TabsTrigger>
-                <TabsTrigger value="text" className="bg-transparent">
-                  Text <Badge variant="outline" className="ml-1">{texts?.length || 0}</Badge>
+              <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
+                <TabsTrigger value="summary" className="bg-transparent px-2 py-1 text-sm">Summary</TabsTrigger>
+                <TabsTrigger value="text" className="bg-transparent px-2 py-1 text-sm">
+                  Text <Badge variant="outline" className="ml-1 h-5 text-xs">{texts?.length || 0}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="sponsors" className="bg-transparent">
-                  Sponsors <Badge variant="outline" className="ml-1">{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
+                <TabsTrigger value="sponsors" className="bg-transparent px-2 py-1 text-sm">
+                  Sponsors <Badge variant="outline" className="ml-1 h-5 text-xs">{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="actions" className="bg-transparent">
-                  Actions <Badge variant="outline" className="ml-1">{actions?.length || 0}</Badge>
+                <TabsTrigger value="actions" className="bg-transparent px-2 py-1 text-sm">
+                  Actions <Badge variant="outline" className="ml-1 h-5 text-xs">{actions?.length || 0}</Badge>
                 </TabsTrigger>
               </TabsList>
               <div className="flex-1 overflow-y-auto">
-                <TabsContent value="summary">
+                <TabsContent value="summary" className="mt-0">
                   {/* Summary Card */}
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 md:p-5">
                       {summary?.text ? (
-                        <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
+                        <div className="bg-gray-50 p-3 md:p-4 rounded text-gray-900 whitespace-pre-line">
                           {getSummaryText()}
                           {needsTruncation && (
                             <Button
@@ -164,9 +166,9 @@ export default function BillOrLawDetail({
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="text">
+                <TabsContent value="text" className="mt-0">
                   <Card>
-                    <CardContent className="p-6 pt-3">
+                    <CardContent className="p-4 md:p-5 pt-3">
                       {(() => {
                         const sortedTexts = [...texts].sort((a, b) => {
                           const dateA = a.date ? new Date(a.date).getTime() : 0;
@@ -192,7 +194,7 @@ export default function BillOrLawDetail({
                                   </div>
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                  <div className="h-[400px] md:h-[600px] border rounded">
+                                  <div className="h-[400px] md:h-[500px] border rounded">
                                     {text.pdf_file_path ? (
                                       <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
                                     ) : (
@@ -210,18 +212,18 @@ export default function BillOrLawDetail({
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="sponsors">
+                <TabsContent value="sponsors" className="mt-0">
                   {/* Sponsors/Cosponsors Cards */}
-                  <div className="space-y-8">
+                  <div className="space-y-6">
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Sponsors ({sponsors?.length || 0})</CardTitle>
+                      <CardHeader className="py-4">
+                        <CardTitle className="text-lg">Sponsors ({sponsors?.length || 0})</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="pt-0">
                         {sponsors && sponsors.length > 0 ? (
-                          <div className="max-h-[600px] overflow-y-auto">
+                          <div className="max-h-[500px] overflow-y-auto">
                             {sponsors.map((sponsor) => (
-                              <div key={sponsor.id} className="mb-4 last:mb-0">
+                              <div key={sponsor.id} className="mb-3 last:mb-0">
                                 <Link
                                   href={`/congressmen/${sponsor.id}`}
                                   className="font-medium hover:underline"
@@ -240,12 +242,12 @@ export default function BillOrLawDetail({
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Cosponsors ({cosponsors?.length || 0})</CardTitle>
+                      <CardHeader className="py-4">
+                        <CardTitle className="text-lg">Cosponsors ({cosponsors?.length || 0})</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="pt-0">
                         {cosponsors && cosponsors.length > 0 ? (
-                          <div className="max-h-[600px] overflow-y-auto">
+                          <div className="max-h-[500px] overflow-y-auto">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                               {cosponsors.map((cosponsor) => (
                                 <div key={cosponsor.id} className="mb-2">
@@ -269,22 +271,22 @@ export default function BillOrLawDetail({
                     </Card>
                   </div>
                 </TabsContent>
-                <TabsContent value="actions">
+                <TabsContent value="actions" className="mt-0">
                   {/* Actions Card */}
                   <Card>
-                    <CardContent className="p-4 md:p-6">
-                      <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
+                    <CardContent className="p-4">
+                      <CardTitle className="mb-3 text-lg">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
                       {actions && actions.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           {actions.map((action) => (
-                            <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                            <div key={action.id} className="border-b border-gray-200 pb-3 last:border-b-0">
                               <div className="flex items-start">
                                 <div className="flex-shrink-0">
-                                  <Badge variant="secondary" className="h-8 w-8 flex items-center justify-center text-sm font-medium rounded-full">
+                                  <Badge variant="secondary" className="h-7 w-7 flex items-center justify-center text-xs font-medium rounded-full">
                                     {formatDate(action.date)?.split(' ')[0]}
                                   </Badge>
                                 </div>
-                                <div className="ml-4">
+                                <div className="ml-3">
                                   <p className="text-sm text-gray-900">{action.text}</p>
                                   <p className="text-xs text-gray-500 mt-1">
                                     {formatDate(action.date)} • {action.type}
