@@ -247,7 +247,7 @@ export default function Sidebar() {
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/congressmen')}`}
                 >
                   <Users className="h-5 w-5 mr-2" />
-                  Congress Members
+                  Congress
                 </Link>
               </li>
               <li>
@@ -265,7 +265,7 @@ export default function Sidebar() {
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/judges')}`}
                 >
                   <Briefcase className="h-5 w-5 mr-2" />
-                  Supreme Court Judges
+                  Supreme Court
                 </Link>
               </li>
             </ul>
