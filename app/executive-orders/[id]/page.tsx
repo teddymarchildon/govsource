@@ -6,7 +6,7 @@ import { supabase } from '@/utils/supabase/client';
 import PdfViewer from '@/components/PdfViewer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import SaveButton from '@/components/SaveButton';
-import AiChat from '@/components/AiChat';
+import AiChatWrapper from '@/components/AiChatWrapper';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -143,10 +143,10 @@ export default function ExecutiveOrderDetailPage() {
           </div>
         </div>
 
-        {/* Main Content: 2-column grid with fixed height */}
+        {/* Main Content: Full width on mobile, 2-column on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
-          {/* Left: Tabs */}
-          <div className="h-full overflow-hidden flex flex-col">
+          {/* Left: Tabs - full width on mobile */}
+          <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue="text" className="w-full h-full flex flex-col">
               <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
                 <TabsTrigger value="text" className="bg-transparent">Text</TabsTrigger>
@@ -169,9 +169,10 @@ export default function ExecutiveOrderDetailPage() {
               </div>
             </Tabs>
           </div>
-          {/* Right: AiChat Panel */}
-          <div className="h-full flex flex-col min-h-0">
-            <AiChat
+          
+          {/* Right: AiChatWrapper - hidden on mobile, shown on desktop */}
+          <div className="hidden md:flex h-full flex-col min-h-0">
+            <AiChatWrapper
               documentType="executiveOrder"
               documentId={order.id}
               documentTitle={order.title}
@@ -180,6 +181,16 @@ export default function ExecutiveOrderDetailPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* AiChatWrapper for mobile - renders floating button */}
+      <div className="md:hidden">
+        <AiChatWrapper
+          documentType="executiveOrder"
+          documentId={order.id}
+          documentTitle={order.title}
+          htmlFilePath={order.html_file_path}
+        />
       </div>
     </div>
   );

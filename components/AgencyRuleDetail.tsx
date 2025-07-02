@@ -7,7 +7,7 @@ import PdfViewer from '@/components/PdfViewer';
 import Breadcrumbs from './Breadcrumbs';
 import { AgencyDocument } from '@/types/types';
 import Link from 'next/link';
-import AiChat from './AiChat';
+import AiChatWrapper from './AiChatWrapper';
 import { Card, CardContent, CardTitle, CardDescription } from './ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
@@ -65,10 +65,10 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           </div>
         </div>
 
-        {/* Main Content: 2-column grid with fixed height */}
+        {/* Main Content: Full width on mobile, 2-column on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
-          {/* Left: Tabs */}
-          <div className="h-full overflow-hidden flex flex-col">
+          {/* Left: Tabs - full width on mobile */}
+          <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue="details" className="w-full h-full flex flex-col">
               <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
                 <TabsTrigger value="details" className="bg-transparent">Summary</TabsTrigger>
@@ -107,9 +107,10 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
               </div>
             </Tabs>
           </div>
-          {/* Right: AiChat Panel */}
-          <div className="h-full flex flex-col min-h-0">
-            <AiChat
+          
+          {/* Right: AiChatWrapper - hidden on mobile, shown on desktop */}
+          <div className="hidden md:flex h-full flex-col min-h-0">
+            <AiChatWrapper
               documentType="agencyDocument"
               documentId={rule.id}
               documentTitle={rule.title}
@@ -118,6 +119,16 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
             />
           </div>
         </div>
+      </div>
+
+      {/* AiChatWrapper for mobile - renders floating button */}
+      <div className="md:hidden">
+        <AiChatWrapper
+          documentType="agencyDocument"
+          documentId={rule.id}
+          documentTitle={rule.title}
+          htmlFilePath={rule.html_file_path}
+        />
       </div>
     </div>
   );

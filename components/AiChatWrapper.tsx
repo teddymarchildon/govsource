@@ -1,0 +1,85 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { BrainCog, X } from 'lucide-react';
+import AiChat from './AiChat';
+import { Button } from './ui/button';
+
+interface AiChatWrapperProps {
+  documentType: 'bill' | 'law' | 'agencyDocument' | 'opinion' | 'executiveOrder';
+  documentId: string;
+  documentTitle: string;
+  htmlFilePath?: string;
+  pdfFilePath?: string;
+  diffHtmlFilePaths?: (string | undefined)[];
+  height?: string;
+  className?: string;
+}
+
+export default function AiChatWrapper(props: AiChatWrapperProps) {
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Desktop view - render AiChat directly
+  if (!isMobile) {
+    return <AiChat {...props} />;
+  }
+
+  // Mobile view - floating button + modal
+  return (
+    <>
+      {/* Floating button */}
+      <Button
+        onClick={() => setShowMobileChat(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-40 p-0"
+        variant="default"
+      >
+        <BrainCog className="h-6 w-6" />
+      </Button>
+
+      {/* Mobile chat modal */}
+      {showMobileChat && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowMobileChat(false)}
+          />
+          
+          {/* Chat panel */}
+          <div className="fixed inset-x-0 bottom-0 z-50 animate-in slide-in-from-bottom duration-300">
+            <div className="bg-white rounded-t-xl shadow-2xl max-h-[85vh] flex flex-col">
+              {/* Mobile header with close button */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="font-semibold">GovSource Assistant</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMobileChat(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              {/* Chat content */}
+              <div className="flex-1 overflow-hidden">
+                <AiChat {...props} height="calc(85vh - 60px)" />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+} 

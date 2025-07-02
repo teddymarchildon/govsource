@@ -6,7 +6,7 @@ import { formatDate } from '@/utils/utils';
 import SaveButton from './SaveButton';
 import PdfViewer from './PdfViewer';
 import Breadcrumbs from './Breadcrumbs';
-import AiChat from './AiChat';
+import AiChatWrapper from './AiChatWrapper';
 import { BillText, Congressman, BillSummary } from '@/types/types';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Button } from './ui/button';
@@ -65,7 +65,6 @@ export default function BillOrLawDetail({
 }: BillOrLawDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showFullSummary, setShowFullSummary] = useState(false);
-  const [showMobileChat, setShowMobileChat] = useState(false);
   const latestText = texts.length > 0 ? texts[0] : null;
 
   const itemType = isLaw ? 'law' : 'bill';
@@ -124,10 +123,10 @@ export default function BillOrLawDetail({
           </div>
         </div>
 
-        {/* Main Content: 2-column grid with fixed height */}
+        {/* Main Content: Full width on mobile, 2-column on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
-          {/* Left: Tabs */}
-          <div className="h-full overflow-hidden flex flex-col">
+          {/* Left: Tabs - full width on mobile */}
+          <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue="summary" className="w-full h-full flex flex-col">
               <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
                 <TabsTrigger value="summary" className="bg-transparent">Summary</TabsTrigger>
@@ -305,9 +304,9 @@ export default function BillOrLawDetail({
             </Tabs>
           </div>
 
-          {/* Right: AiChat Panel */}
-          <div className="h-full flex flex-col min-h-0">
-            <AiChat
+          {/* Right: AiChatWrapper - hidden on mobile, shown on desktop */}
+          <div className="hidden md:flex h-full flex-col min-h-0">
+            <AiChatWrapper
               documentType={itemType}
               documentId={item.id}
               documentTitle={title}
@@ -330,6 +329,30 @@ export default function BillOrLawDetail({
             />
           </div>
         </div>
+      </div>
+
+      {/* AiChatWrapper for mobile - renders floating button */}
+      <div className="md:hidden">
+        <AiChatWrapper
+          documentType={itemType}
+          documentId={item.id}
+          documentTitle={title}
+          htmlFilePath={latestText?.html_file_path}
+          diffHtmlFilePaths={
+            texts.length > 1
+              ? [...texts]
+                  .sort((a, b) => {
+                    const dateA = a.date ? new Date(a.date).getTime() : 0;
+                    const dateB = b.date ? new Date(b.date).getTime() : 0;
+                    if (!a.date) return 1;
+                    if (!b.date) return -1;
+                    return dateB - dateA;
+                  })
+                  .slice(0, 2)
+                  .map((t) => t.html_file_path)
+              : undefined
+          }
+        />
       </div>
     </div>
   );
