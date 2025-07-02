@@ -101,6 +101,8 @@ export default function AiChat({
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   // Auth state
   const { user, loading: authLoading, isPaidSubscriber } = useAuth();
@@ -108,10 +110,34 @@ export default function AiChat({
   // Get tailored presets for the current documentType
   const PRESETS = getPresets(documentType, diffHtmlFilePaths);
 
+  // Function to check if the scroll is at the bottom
+  const isScrollAtBottom = () => {
+    if (!scrollContainerRef.current) return true;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    // Consider it "at bottom" if within 50px of the bottom
+    return scrollHeight - scrollTop - clientHeight < 50;
+  };
+
   // Scroll to bottom of messages when new messages are added
+  // Only if user hasn't manually scrolled or is already at the bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!isUserScrolling || isScrollAtBottom()) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isUserScrolling]);
+
+  // Handle scroll events to detect user scrolling
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    
+    // If user scrolls and they're not at the bottom, they're manually scrolling
+    if (!isScrollAtBottom()) {
+      setIsUserScrolling(true);
+    } else {
+      // If they've scrolled back to the bottom, reset the flag
+      setIsUserScrolling(false);
+    }
+  };
 
   const [subscribing, setSubscribing] = useState(false);
 
@@ -208,6 +234,9 @@ export default function AiChat({
 
     // Update the messages state with the user message
     setMessages(prev => [...prev, userMessage]);
+    
+    // Reset user scrolling flag for new conversation
+    setIsUserScrolling(false);
 
     // Send the message to the API with the preset type
     sendMessageToApi([userMessage], preset.type);
@@ -220,6 +249,9 @@ export default function AiChat({
     const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    
+    // Reset user scrolling flag for new message
+    setIsUserScrolling(false);
 
     // For regular user input, we just send the user message and previous messages
     await sendMessageToApi([...messages, userMessage]);
@@ -315,7 +347,7 @@ export default function AiChat({
       </div>
 
       {/* Messages (scrollable area) */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 bg-gray-50">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 bg-gray-50" ref={scrollContainerRef} onScroll={handleScroll}>
         {(!user && !authLoading) ? (
           <div className="p-4">
             <div className="text-center">
