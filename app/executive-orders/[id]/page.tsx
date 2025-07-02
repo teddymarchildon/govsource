@@ -116,7 +116,7 @@ export default function ExecutiveOrderDetailPage() {
             <SaveButton itemId={order.id} itemType="agencyDocument" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold mb-2">{order.title}</h1>        
-          <div className="mb-6">
+          <div>
             {order.remote_document_number && (
               <div className="text-sm mb-1">
                 <span className="font-medium">Document Number:</span> {order.remote_document_number}

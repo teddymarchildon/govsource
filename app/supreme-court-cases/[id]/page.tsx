@@ -137,7 +137,7 @@ export default function SupremeCourtCaseDetailPage() {
             <h2 className="text-lg md:text-xl mb-4 text-gray-600">{cluster.case_name_short}</h2>
           )}
           
-          <div className="mb-6">
+          <div>
             <div className="text-sm mb-1">
               <span className="font-medium">Date Filed:</span> {cluster.date_filed || 'Not available'}
             </div>
@@ -164,9 +164,6 @@ export default function SupremeCourtCaseDetailPage() {
                   <TabsContent key={opinion.id} value={opinion.id}>
                     <Card className="overflow-hidden">
                       <CardContent className="p-6">
-                        <h2 className="text-xl font-semibold mb-4">
-                          {mapOpinionType(opinion.type)}
-                        </h2>
                         <div className="mb-4">
                           <div className="mb-2">
                             <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
