@@ -63,7 +63,6 @@ export default function BillOrLawDetail({
   summary,
   isLaw = false
 }: BillOrLawDetailProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showFullSummary, setShowFullSummary] = useState(false);
   const latestText = texts.length > 0 ? texts[0] : null;
 
@@ -286,7 +285,6 @@ export default function BillOrLawDetail({
                   {/* Actions Card */}
                   <Card className="h-full flex flex-col">
                     <CardContent className="p-4 flex-1 overflow-y-auto">
-                      <CardTitle className="mb-3 text-lg">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
                       {actions && actions.length > 0 ? (
                         <div className="space-y-3">
                           {actions.map((action) => (
