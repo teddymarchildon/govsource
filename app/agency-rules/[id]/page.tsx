@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase/client';
 import AgencyRuleDetail from '@/components/AgencyRuleDetail';
 import { AgencyDocument } from '@/types/types';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 export default function AgencyRuleDetailPage() {
   const { id } = useParams();
@@ -59,10 +60,7 @@ export default function AgencyRuleDetailPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading rule details...</p>
-        </div>
+        <LoadingIndicator size="large" />
       </div>
     );
   }

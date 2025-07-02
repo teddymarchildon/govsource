@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { formatDate } from '@/utils/utils';
 import SaveButton from '@/components/SaveButton';
 import PdfViewer from '@/components/PdfViewer';
@@ -8,18 +7,14 @@ import Breadcrumbs from './Breadcrumbs';
 import { AgencyDocument } from '@/types/types';
 import Link from 'next/link';
 import AiChatWrapper from './AiChatWrapper';
-import { Card, CardContent, CardTitle, CardDescription } from './ui/card';
+import { Card, CardContent, CardDescription } from './ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-
-type TabType = 'details' | 'text';
 
 interface AgencyRuleDetailProps {
   rule: AgencyDocument;
 }
 
 export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('details');
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <div className="container mx-auto px-4 py-4 flex flex-col flex-1 overflow-hidden">

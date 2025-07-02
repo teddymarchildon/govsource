@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getStoragePublicUrl } from '@/services/api';
+import LoadingIndicator from './ui/LoadingIndicator';
 
 interface PdfViewerProps {
   pdfUrl?: string;
@@ -74,7 +75,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ storagePath, storageBucket, class
     <div className={`h-full ${className || ''} relative`}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <LoadingIndicator size="large" />
         </div>
       )}
       <iframe

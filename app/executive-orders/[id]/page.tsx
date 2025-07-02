@@ -28,8 +28,6 @@ interface ExecutiveOrder {
   } | null;
 }
 
-type TabType = 'text';
-
 export default function ExecutiveOrderDetailPage() {
   const params = useParams()
   const executiveOrderId = params.id
