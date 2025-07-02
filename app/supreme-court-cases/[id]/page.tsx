@@ -114,98 +114,100 @@ export default function SupremeCourtCaseDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb and Top Section (Full Width) */}
-      <Breadcrumbs
-        steps={[
-          { label: 'Home', href: '/' },
-          { label: 'Supreme Court Cases', href: '/supreme-court-cases' },
-          { label: cluster.case_name }
-        ]}
-      />
-
-      {/* Header Information */}
-      <div className="mb-8">
-        <div className="mb-2 flex justify-between items-center">
-          <span className="text-gray-600">Supreme Court Case</span>
-          <SaveButton itemId={cluster.id} itemType="cluster" />
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="container mx-auto px-4 py-8 flex flex-col flex-1 overflow-hidden">
+        {/* Breadcrumbs */}
+        <div className="mb-2 flex-shrink-0">
+          <Breadcrumbs
+            steps={[
+              { label: 'Home', href: '/' },
+              { label: 'Supreme Court Cases', href: '/supreme-court-cases' },
+              { label: cluster.case_name }
+            ]}
+          />
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">{cluster.case_name}</h1>
-        {cluster.case_name_short && cluster.case_name_short !== cluster.case_name && (
-          <h2 className="text-lg md:text-xl mb-4 text-gray-600">{cluster.case_name_short}</h2>
-        )}
-        
-        <div className="mb-6">
-          <div className="text-sm mb-1">
-            <span className="font-medium">Date Filed:</span> {cluster.date_filed || 'Not available'}
-          </div>
-          <div className="text-sm">
-            <span className="font-medium">Opinions:</span> {cluster.opinions?.length || 0} opinion{(cluster.opinions?.length || 0) !== 1 ? 's' : ''}
-          </div>
-        </div>
-      </div>
 
-      {/* Main Content: 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 min-h-[600px] max-h-[75vh]">
-        {/* Left: Tabs for Opinions */}
-        <div className="h-auto min-h-[400px] max-h-[75vh] overflow-hidden">
-          <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full flex flex-col">
-            <TabsList className="mb-4 justify-start bg-transparent">
-              {sortedOpinions.map((opinion, idx) => (
-                <TabsTrigger key={opinion.id} value={opinion.id} className="bg-transparent">
-                  {mapOpinionType(opinion.type)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <div className="flex-1 overflow-y-auto">
-              {sortedOpinions.map((opinion, idx) => (
-                <TabsContent key={opinion.id} value={opinion.id}>
-                  <Card className="overflow-hidden">
-                    <CardContent className="p-6">
-                      <h2 className="text-xl font-semibold mb-4">
-                        {mapOpinionType(opinion.type)}
-                      </h2>
-                      <div className="mb-4">
-                        <div className="mb-2">
-                          <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
-                          {opinion.joined_by && opinion.joined_by.length > 0 && (
-                            <span className="ml-2 text-gray-600 text-sm">(Joined by: {opinion.joined_by.length} others)</span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {opinion.date && (
-                            <span>Date: {new Date(opinion.date).toLocaleDateString()}</span>
-                          )}
-                        </div>
-                      </div>
-                      {opinion.pdf_file_path ? (
-                        <div className="h-[400px] md:h-[600px]">
-                          <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center h-32 text-gray-500 bg-gray-50 rounded-lg">
-                          No PDF available for this opinion.
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              ))}
-              {sortedOpinions.length === 0 && (
-                <TabsContent value="no-opinions">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                    <p className="text-yellow-700">
-                      No opinions available for this case.
-                    </p>
-                  </div>
-                </TabsContent>
-              )}
+        {/* Header Information */}
+        <div className="mb-6 flex-shrink-0">
+          <div className="mb-2 flex justify-between items-center">
+            <span className="text-gray-600">Supreme Court Case</span>
+            <SaveButton itemId={cluster.id} itemType="cluster" />
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">{cluster.case_name}</h1>
+          {cluster.case_name_short && cluster.case_name_short !== cluster.case_name && (
+            <h2 className="text-lg md:text-xl mb-4 text-gray-600">{cluster.case_name_short}</h2>
+          )}
+          
+          <div className="mb-6">
+            <div className="text-sm mb-1">
+              <span className="font-medium">Date Filed:</span> {cluster.date_filed || 'Not available'}
             </div>
-          </Tabs>
+            <div className="text-sm">
+              <span className="font-medium">Opinions:</span> {cluster.opinions?.length || 0} opinion{(cluster.opinions?.length || 0) !== 1 ? 's' : ''}
+            </div>
+          </div>
         </div>
-        {/* Right: Sticky AiChat Panel */}
-        <div className="relative h-full">
-          <div className="md:sticky md:top-28 h-full">
+
+        {/* Main Content: 2-column grid with fixed height */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
+          {/* Left: Tabs for Opinions */}
+          <div className="h-full overflow-hidden flex flex-col">
+            <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full flex flex-col">
+              <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
+                {sortedOpinions.map((opinion, idx) => (
+                  <TabsTrigger key={opinion.id} value={opinion.id} className="bg-transparent">
+                    {mapOpinionType(opinion.type)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <div className="flex-1 overflow-y-auto">
+                {sortedOpinions.map((opinion, idx) => (
+                  <TabsContent key={opinion.id} value={opinion.id}>
+                    <Card className="overflow-hidden">
+                      <CardContent className="p-6">
+                        <h2 className="text-xl font-semibold mb-4">
+                          {mapOpinionType(opinion.type)}
+                        </h2>
+                        <div className="mb-4">
+                          <div className="mb-2">
+                            <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
+                            {opinion.joined_by && opinion.joined_by.length > 0 && (
+                              <span className="ml-2 text-gray-600 text-sm">(Joined by: {opinion.joined_by.length} others)</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {opinion.date && (
+                              <span>Date: {new Date(opinion.date).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
+                        {opinion.pdf_file_path ? (
+                          <div className="h-[400px] md:h-[600px]">
+                            <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-32 text-gray-500 bg-gray-50 rounded-lg">
+                            No PDF available for this opinion.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                ))}
+                {sortedOpinions.length === 0 && (
+                  <TabsContent value="no-opinions">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                      <p className="text-yellow-700">
+                        No opinions available for this case.
+                      </p>
+                    </div>
+                  </TabsContent>
+                )}
+              </div>
+            </Tabs>
+          </div>
+          {/* Right: AiChat Panel */}
+          <div className="relative h-full">
             <div className="h-full overflow-y-auto">
               <AuthProvider>
                 <AiChat

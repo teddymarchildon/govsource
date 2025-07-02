@@ -90,244 +90,246 @@ export default function BillOrLawDetail({
   const needsTruncation = summary?.text && summary.text.length > 1000;
 
   return (
-    <div className="container mx-auto px-4 py-8 flex flex-col min-h-screen">
-      {/* Breadcrumbs */}
-      <div className="mb-2">
-        <Breadcrumbs
-          steps={[
-            { label: 'Home', href: '/' },
-            { label: isLaw ? 'Laws' : 'Bills', href: isLaw ? '/laws' : '/bills' },
-            { label: number }
-          ]}
-        />
-      </div>
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="container mx-auto px-4 py-8 flex flex-col flex-1 overflow-hidden">
+        {/* Breadcrumbs */}
+        <div className="mb-2 flex-shrink-0">
+          <Breadcrumbs
+            steps={[
+              { label: 'Home', href: '/' },
+              { label: isLaw ? 'Laws' : 'Bills', href: isLaw ? '/laws' : '/bills' },
+              { label: number }
+            ]}
+          />
+        </div>
 
-      {/* Header Row: Title, Meta, Watch Button */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <div className="text-gray-600 mb-1">{item.policy_area || 'Uncategorized'}</div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-1">{title}</h1>
-          <div className="text-lg md:text-xl mb-2">{number}</div>
-          <div className="flex flex-wrap gap-4 text-sm text-gray-700">
-            <div>
-              <span className="font-medium">{dateLabel}:</span> {date && formatDate(date)}
-            </div>
-            <div>
-              <span className="font-medium">Congress:</span> {item.congress}
+        {/* Header Row: Title, Meta, Watch Button */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 flex-shrink-0">
+          <div>
+            <div className="text-gray-600 mb-1">{item.policy_area || 'Uncategorized'}</div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-1">{title}</h1>
+            <div className="text-lg md:text-xl mb-2">{number}</div>
+            <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+              <div>
+                <span className="font-medium">{dateLabel}:</span> {date && formatDate(date)}
+              </div>
+              <div>
+                <span className="font-medium">Congress:</span> {item.congress}
+              </div>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            {/* Watch/Save Button */}
+            {!isLaw && <SaveButton itemId={item.id} itemType="bill" />}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Watch/Save Button */}
-          {!isLaw && <SaveButton itemId={item.id} itemType="bill" />}
-        </div>
-      </div>
 
-      {/* Main Content: 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1">
-        {/* Left: Tabs */}
-        <div className="h-full overflow-hidden flex flex-col">
-          <Tabs defaultValue="summary" className="w-full h-full flex flex-col flex-1">
-            <TabsList className="mb-4 justify-start bg-transparent">
-              <TabsTrigger value="summary" className="bg-transparent">Summary</TabsTrigger>
-              <TabsTrigger value="text" className="bg-transparent">
-                Text <Badge variant="outline" className="ml-1">{texts?.length || 0}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="sponsors" className="bg-transparent">
-                Sponsors <Badge variant="outline" className="ml-1">{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="actions" className="bg-transparent">
-                Actions <Badge variant="outline" className="ml-1">{actions?.length || 0}</Badge>
-              </TabsTrigger>
-            </TabsList>
-            <div className="flex-1 overflow-y-auto">
-              <TabsContent value="summary">
-                {/* Summary Card */}
-                <Card>
-                  <CardContent className="p-6">
-                    {summary?.text ? (
-                      <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
-                        {getSummaryText()}
-                        {needsTruncation && (
-                          <Button
-                            variant="link"
-                            onClick={() => setShowFullSummary(!showFullSummary)}
-                            className="text-primary text-sm font-medium mt-2 px-0"
-                          >
-                            {showFullSummary ? 'See less' : 'See more'}
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <CardDescription>No summary available for this bill.</CardDescription>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="text">
-                <Card>
-                  <CardContent className="p-6 pt-3">
-                    {(() => {
-                      const sortedTexts = [...texts].sort((a, b) => {
-                        const dateA = a.date ? new Date(a.date).getTime() : 0;
-                        const dateB = b.date ? new Date(b.date).getTime() : 0;
-                        if (!a.date) return 1;
-                        if (!b.date) return -1;
-                        return dateB - dateA;
-                      });
-                      return (
-                        <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
-                          {sortedTexts.map((text) => (
-                            <AccordionItem key={text.id} value={text.id.toString()}>
-                              <AccordionTrigger>
-                                <div className="flex flex-col items-start">
-                                  <span className="font-medium">
-                                    {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
-                                  </span>
-                                  {text.date && (
-                                    <span className="text-xs text-gray-500">
-                                      {formatDate(text.date)}
-                                    </span>
-                                  )}
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className="h-[400px] md:h-[600px] border rounded">
-                                  {text.pdf_file_path ? (
-                                    <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
-                                  ) : (
-                                    <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
-                                      No PDF available for this version.
-                                    </CardDescription>
-                                  )}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="sponsors">
-                {/* Sponsors/Cosponsors Cards */}
-                <div className="space-y-8">
+        {/* Main Content: 2-column grid with fixed height */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-8 flex-1 overflow-hidden">
+          {/* Left: Tabs */}
+          <div className="h-full overflow-hidden flex flex-col">
+            <Tabs defaultValue="summary" className="w-full h-full flex flex-col">
+              <TabsList className="mb-4 justify-start bg-transparent flex-shrink-0">
+                <TabsTrigger value="summary" className="bg-transparent">Summary</TabsTrigger>
+                <TabsTrigger value="text" className="bg-transparent">
+                  Text <Badge variant="outline" className="ml-1">{texts?.length || 0}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="sponsors" className="bg-transparent">
+                  Sponsors <Badge variant="outline" className="ml-1">{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="actions" className="bg-transparent">
+                  Actions <Badge variant="outline" className="ml-1">{actions?.length || 0}</Badge>
+                </TabsTrigger>
+              </TabsList>
+              <div className="flex-1 overflow-y-auto">
+                <TabsContent value="summary">
+                  {/* Summary Card */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Sponsors ({sponsors?.length || 0})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {sponsors && sponsors.length > 0 ? (
-                        <div className="max-h-[600px] overflow-y-auto">
-                          {sponsors.map((sponsor) => (
-                            <div key={sponsor.id} className="mb-4 last:mb-0">
-                              <Link
-                                href={`/congressmen/${sponsor.id}`}
-                                className="font-medium hover:underline"
-                              >
-                                {sponsor.full_name}
-                              </Link>
-                              <div className="text-sm text-gray-600">
-                                {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
-                              </div>
-                            </div>
-                          ))}
+                    <CardContent className="p-6">
+                      {summary?.text ? (
+                        <div className="bg-gray-50 p-4 rounded text-gray-900 whitespace-pre-line">
+                          {getSummaryText()}
+                          {needsTruncation && (
+                            <Button
+                              variant="link"
+                              onClick={() => setShowFullSummary(!showFullSummary)}
+                              className="text-primary text-sm font-medium mt-2 px-0"
+                            >
+                              {showFullSummary ? 'See less' : 'See more'}
+                            </Button>
+                          )}
                         </div>
                       ) : (
-                        <CardDescription>No sponsors found</CardDescription>
+                        <CardDescription>No summary available for this bill.</CardDescription>
                       )}
                     </CardContent>
                   </Card>
+                </TabsContent>
+                <TabsContent value="text">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Cosponsors ({cosponsors?.length || 0})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {cosponsors && cosponsors.length > 0 ? (
-                        <div className="max-h-[600px] overflow-y-auto">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {cosponsors.map((cosponsor) => (
-                              <div key={cosponsor.id} className="mb-2">
-                                <Link
-                                  href={`/congressmen/${cosponsor.id}`}
-                                  className="font-medium hover:underline text-sm"
-                                >
-                                  {cosponsor.full_name}
-                                </Link>
-                                <div className="text-xs text-gray-600">
-                                  {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <CardDescription>No cosponsors found</CardDescription>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-              <TabsContent value="actions">
-                {/* Actions Card */}
-                <Card>
-                  <CardContent className="p-4 md:p-6">
-                    <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
-                    {actions && actions.length > 0 ? (
-                      <div className="space-y-4">
-                        {actions.map((action) => (
-                          <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-                            <div className="flex items-start">
-                              <div className="flex-shrink-0">
-                                <Badge variant="secondary" className="h-8 w-8 flex items-center justify-center text-sm font-medium rounded-full">
-                                  {formatDate(action.date)?.split(' ')[0]}
-                                </Badge>
-                              </div>
-                              <div className="ml-4">
-                                <p className="text-sm text-gray-900">{action.text}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {formatDate(action.date)} • {action.type}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <CardDescription>No actions found</CardDescription>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
-
-        {/* Right: Sticky AiChat Panel */}
-        <div className="relative h-full">
-          <div className="md:sticky md:top-28 h-full">
-            <div className="h-full overflow-y-auto">
-              <AiChat
-                documentType={itemType}
-                documentId={item.id}
-                documentTitle={title}
-                htmlFilePath={latestText?.html_file_path}
-                diffHtmlFilePaths={
-                  texts.length > 1
-                    ? [...texts]
-                        .sort((a, b) => {
+                    <CardContent className="p-6 pt-3">
+                      {(() => {
+                        const sortedTexts = [...texts].sort((a, b) => {
                           const dateA = a.date ? new Date(a.date).getTime() : 0;
                           const dateB = b.date ? new Date(b.date).getTime() : 0;
                           if (!a.date) return 1;
                           if (!b.date) return -1;
                           return dateB - dateA;
-                        })
-                        .slice(0, 2)
-                        .map((t) => t.html_file_path)
-                    : undefined
-                }
-              />
+                        });
+                        return (
+                          <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
+                            {sortedTexts.map((text) => (
+                              <AccordionItem key={text.id} value={text.id.toString()}>
+                                <AccordionTrigger>
+                                  <div className="flex flex-col items-start">
+                                    <span className="font-medium">
+                                      {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
+                                    </span>
+                                    {text.date && (
+                                      <span className="text-xs text-gray-500">
+                                        {formatDate(text.date)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="h-[400px] md:h-[600px] border rounded">
+                                    {text.pdf_file_path ? (
+                                      <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
+                                    ) : (
+                                      <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                        No PDF available for this version.
+                                      </CardDescription>
+                                    )}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="sponsors">
+                  {/* Sponsors/Cosponsors Cards */}
+                  <div className="space-y-8">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Sponsors ({sponsors?.length || 0})</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {sponsors && sponsors.length > 0 ? (
+                          <div className="max-h-[600px] overflow-y-auto">
+                            {sponsors.map((sponsor) => (
+                              <div key={sponsor.id} className="mb-4 last:mb-0">
+                                <Link
+                                  href={`/congressmen/${sponsor.id}`}
+                                  className="font-medium hover:underline"
+                                >
+                                  {sponsor.full_name}
+                                </Link>
+                                <div className="text-sm text-gray-600">
+                                  {sponsor.party}-{sponsor.state}{sponsor.chamber === 'House' ? `, District ${sponsor.district || 'N/A'}` : ''}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <CardDescription>No sponsors found</CardDescription>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Cosponsors ({cosponsors?.length || 0})</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {cosponsors && cosponsors.length > 0 ? (
+                          <div className="max-h-[600px] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {cosponsors.map((cosponsor) => (
+                                <div key={cosponsor.id} className="mb-2">
+                                  <Link
+                                    href={`/congressmen/${cosponsor.id}`}
+                                    className="font-medium hover:underline text-sm"
+                                  >
+                                    {cosponsor.full_name}
+                                  </Link>
+                                  <div className="text-xs text-gray-600">
+                                    {cosponsor.party}-{cosponsor.state}{cosponsor.chamber === 'House' ? `, ${cosponsor.district || ''}` : ''}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <CardDescription>No cosponsors found</CardDescription>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+                <TabsContent value="actions">
+                  {/* Actions Card */}
+                  <Card>
+                    <CardContent className="p-4 md:p-6">
+                      <CardTitle className="mb-4">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
+                      {actions && actions.length > 0 ? (
+                        <div className="space-y-4">
+                          {actions.map((action) => (
+                            <div key={action.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                              <div className="flex items-start">
+                                <div className="flex-shrink-0">
+                                  <Badge variant="secondary" className="h-8 w-8 flex items-center justify-center text-sm font-medium rounded-full">
+                                    {formatDate(action.date)?.split(' ')[0]}
+                                  </Badge>
+                                </div>
+                                <div className="ml-4">
+                                  <p className="text-sm text-gray-900">{action.text}</p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {formatDate(action.date)} • {action.type}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <CardDescription>No actions found</CardDescription>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+
+          {/* Right: Sticky AiChat Panel */}
+          <div className="relative h-full">
+            <div className="md:sticky md:top-28 h-full">
+              <div className="h-full overflow-y-auto">
+                <AiChat
+                  documentType={itemType}
+                  documentId={item.id}
+                  documentTitle={title}
+                  htmlFilePath={latestText?.html_file_path}
+                  diffHtmlFilePaths={
+                    texts.length > 1
+                      ? [...texts]
+                          .sort((a, b) => {
+                            const dateA = a.date ? new Date(a.date).getTime() : 0;
+                            const dateB = b.date ? new Date(b.date).getTime() : 0;
+                            if (!a.date) return 1;
+                            if (!b.date) return -1;
+                            return dateB - dateA;
+                          })
+                          .slice(0, 2)
+                          .map((t) => t.html_file_path)
+                      : undefined
+                  }
+                />
+              </div>
             </div>
           </div>
         </div>
