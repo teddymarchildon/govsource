@@ -188,7 +188,7 @@ export default function Sidebar() {
           </div>
 
           <div className="mb-6">
-            <h3 className="text-xs uppercase font-semibold text-gray-500 mb-3">LAWS</h3>
+            <h3 className="text-xs uppercase font-semibold text-gray-500 mb-3">LEGISLATION</h3>
             <ul className="space-y-1">
               <li>
                 <Link
