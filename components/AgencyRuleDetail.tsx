@@ -42,7 +42,7 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           </div>
           <h1 className="text-2xl md:text-3xl font-bold mb-2">{rule.title}</h1>
           
-          <div className="mb-6">
+          <div>
             <div className="text-sm mb-1">
               <span className="font-medium">Document Number:</span> {rule.remote_document_number}
             </div>
