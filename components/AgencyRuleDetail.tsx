@@ -84,8 +84,18 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                   <Card className="overflow-hidden">
                     <CardContent className="p-4 md:p-5">
                       {rule.abstract ? (
-                        <div className="mb-4">
-                          <div dangerouslySetInnerHTML={{ __html: rule.abstract }} />
+                        <div className="bg-gray-50 p-3 md:p-4 rounded">
+                          <div className="prose prose-sm prose-gray max-w-none 
+                            prose-p:my-2 prose-p:leading-normal
+                            prose-ul:my-2 prose-ol:my-2
+                            prose-li:my-1 prose-li:leading-normal
+                            prose-headings:my-3 prose-headings:font-semibold
+                            prose-strong:font-semibold
+                            prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-gray-100
+                            prose-pre:bg-gray-100 prose-pre:text-xs
+                            prose-blockquote:border-gray-300 prose-blockquote:text-gray-700
+                            prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
+                            dangerouslySetInnerHTML={{ __html: rule.abstract }} />
                         </div>
                       ) : (
                         <CardDescription>No summary available for this rule.</CardDescription>

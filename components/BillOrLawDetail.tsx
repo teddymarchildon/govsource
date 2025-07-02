@@ -148,8 +148,19 @@ export default function BillOrLawDetail({
                   <Card>
                     <CardContent className="p-4 md:p-5">
                       {summary?.text ? (
-                        <div className="bg-gray-50 p-3 md:p-4 rounded text-gray-900 whitespace-pre-line">
-                          {getSummaryText()}
+                        <div className="bg-gray-50 p-3 md:p-4 rounded">
+                          <div className="prose prose-sm prose-gray max-w-none whitespace-pre-line
+                            prose-p:my-2 prose-p:leading-normal
+                            prose-ul:my-2 prose-ol:my-2
+                            prose-li:my-1 prose-li:leading-normal
+                            prose-headings:my-3 prose-headings:font-semibold
+                            prose-strong:font-semibold
+                            prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-gray-100
+                            prose-pre:bg-gray-100 prose-pre:text-xs
+                            prose-blockquote:border-gray-300 prose-blockquote:text-gray-700
+                            prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
+                            {getSummaryText()}
+                          </div>
                           {needsTruncation && (
                             <Button
                               variant="link"
