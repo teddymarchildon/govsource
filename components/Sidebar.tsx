@@ -205,16 +205,7 @@ export default function Sidebar() {
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/bills')}`}
                 >
                   <FileText className="h-5 w-5 mr-2" />
-                  Proposed Bills
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/agency-rules"
-                  className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/agency-rules')}`}
-                >
-                  <ClipboardList className="h-5 w-5 mr-2" />
-                  Agency Rules
+                  Bills
                 </Link>
               </li>
               <li>
@@ -225,7 +216,7 @@ export default function Sidebar() {
                   <PenSquare className="h-5 w-5 mr-2" />
                   Executive Orders
                 </Link>
-              </li>
+              </li>      
               <li>
                 <Link
                   href="/supreme-court-cases"
@@ -233,6 +224,15 @@ export default function Sidebar() {
                 >
                   <Scale className="h-5 w-5 mr-2" />
                   Supreme Court Cases
+                </Link>
+              </li>                      
+              <li>
+                <Link
+                  href="/agency-rules"
+                  className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/agency-rules')}`}
+                >
+                  <ClipboardList className="h-5 w-5 mr-2" />
+                  Agency Rules
                 </Link>
               </li>
             </ul>

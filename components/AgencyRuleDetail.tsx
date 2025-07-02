@@ -79,9 +79,9 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                 <TabsTrigger value="details" className="bg-transparent px-2 py-1 text-sm">Summary</TabsTrigger>
                 <TabsTrigger value="text" className="bg-transparent px-2 py-1 text-sm">Text</TabsTrigger>
               </TabsList>
-              <div className="flex-1 overflow-y-auto">
-                <TabsContent value="details" className="mt-0">
-                  <Card className="overflow-hidden">
+              <div className="flex-1 overflow-hidden">
+                <TabsContent value="details" className="mt-0 h-full">
+                  <Card className="h-full overflow-y-auto">
                     <CardContent className="p-4 md:p-5">
                       {rule.abstract ? (
                         <div className="bg-gray-50 p-3 md:p-4 rounded">
@@ -103,11 +103,10 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="text" className="mt-0">
-                  <Card className="overflow-hidden">
-                    <CardContent className="p-4 md:p-5">
-                      <CardTitle className="mb-3 text-lg">Agency Rule Text</CardTitle>
-                      <div className="h-[400px] md:h-[500px]">
+                <TabsContent value="text" className="mt-0 h-full">
+                  <Card className="h-full flex flex-col">
+                    <CardContent className="p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
+                      <div className="flex-1 min-h-0">
                         {rule.pdf_file_path ? (
                           <PdfViewer storagePath={rule.pdf_file_path} storageBucket="agency-docs" className="h-full" />
                         ) : rule.pdf_url ? (

@@ -162,12 +162,12 @@ export default function SupremeCourtCaseDetailPage() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-hidden">
                 {sortedOpinions.map((opinion, idx) => (
-                  <TabsContent key={opinion.id} value={opinion.id} className="mt-0">
-                    <Card className="overflow-hidden">
-                      <CardContent className="p-4 md:p-5">
-                        <div className="mb-3">
+                  <TabsContent key={opinion.id} value={opinion.id} className="mt-0 h-full">
+                    <Card className="h-full flex flex-col">
+                      <CardContent className="p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
+                        <div className="mb-3 flex-shrink-0">
                           <div className="mb-1">
                             <span className="font-medium">Opinion by:</span> {opinion.author?.full_name || 'Unknown'}
                             {opinion.joined_by && opinion.joined_by.length > 0 && (
@@ -181,7 +181,7 @@ export default function SupremeCourtCaseDetailPage() {
                           </div>
                         </div>
                         {opinion.pdf_file_path ? (
-                          <div className="h-[400px] md:h-[500px]">
+                          <div className="flex-1 min-h-0">
                             <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
                           </div>
                         ) : (
@@ -194,7 +194,7 @@ export default function SupremeCourtCaseDetailPage() {
                   </TabsContent>
                 ))}
                 {sortedOpinions.length === 0 && (
-                  <TabsContent value="no-opinions">
+                  <TabsContent value="no-opinions" className="h-full">
                     <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
                       <p className="text-yellow-700">
                         No opinions available for this case.
