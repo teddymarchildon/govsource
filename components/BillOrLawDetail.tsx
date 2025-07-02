@@ -282,10 +282,10 @@ export default function BillOrLawDetail({
                     </Card>
                   </div>
                 </TabsContent>
-                <TabsContent value="actions" className="mt-0">
+                <TabsContent value="actions" className="mt-0 h-full">
                   {/* Actions Card */}
-                  <Card>
-                    <CardContent className="p-4">
+                  <Card className="h-full flex flex-col">
+                    <CardContent className="p-4 flex-1 overflow-y-auto">
                       <CardTitle className="mb-3 text-lg">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} Actions</CardTitle>
                       {actions && actions.length > 0 ? (
                         <div className="space-y-3">
