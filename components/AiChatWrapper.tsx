@@ -61,7 +61,6 @@ export default function AiChatWrapper(props: AiChatWrapperProps) {
             <div className="bg-white rounded-t-xl shadow-2xl max-h-[85vh] flex flex-col">
               {/* Mobile header with close button */}
               <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="font-semibold">GovSource Assistant</h3>
                 <Button
                   variant="ghost"
                   size="sm"
