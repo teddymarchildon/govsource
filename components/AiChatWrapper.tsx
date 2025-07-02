@@ -60,13 +60,15 @@ export default function AiChatWrapper(props: AiChatWrapperProps) {
           <div className="fixed inset-x-0 bottom-0 z-[70] animate-in slide-in-from-bottom duration-300">
             <div className="bg-white rounded-t-xl shadow-2xl max-h-[85vh] flex flex-col">
               {/* Mobile header with close button */}
-              <div className="flex items-center justify-between p-2 border-b">
-                <h3 className="text-sm font-semibold text-gray-700">GovSource Assistant</h3>
+              <div className="flex items-center justify-between p-2 border-b gap-2">
+                <h3 className="text-sm font-semibold text-gray-700 truncate flex-1">
+                  {props.documentTitle}
+                </h3>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowMobileChat(false)}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 flex-shrink-0"
                 >
                   <X className="h-5 w-5" />
                 </Button>
