@@ -155,12 +155,11 @@ export default function ExecutiveOrderDetailPage() {
               <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
                 <TabsTrigger value="text" className="bg-transparent px-2 py-1 text-sm">Text</TabsTrigger>
               </TabsList>
-              <div className="flex-1 overflow-y-auto">
-                <TabsContent value="text" className="mt-0">
-                  <Card className="overflow-hidden">
-                    <CardContent className="p-4 md:p-5">
-                      <CardTitle className="mb-3 text-lg">Executive Order Text</CardTitle>
-                      <div className="h-[400px] md:h-[500px]">
+              <div className="flex-1 overflow-hidden">
+                <TabsContent value="text" className="mt-0 h-full">
+                  <Card className="h-full flex flex-col">
+                    <CardContent className="p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
+                      <div className="flex-1 min-h-0">
                         {order.pdf_file_path ? (
                           <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" />
                         ) : (
