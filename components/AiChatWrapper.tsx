@@ -39,28 +39,29 @@ export default function AiChatWrapper(props: AiChatWrapperProps) {
   return (
     <>
       {/* Floating button */}
-      <Button
+      <button
         onClick={() => setShowMobileChat(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-40 p-0"
-        variant="default"
+        className="fixed bottom-4 right-4 bg-primary text-white rounded-full px-4 py-2 shadow-lg hover:bg-primary/90 transition-colors z-40 flex items-center gap-2"
       >
-        <BrainCog className="h-6 w-6" />
-      </Button>
+        <BrainCog className="h-5 w-5" />
+        <span className="text-sm">AI Assistant</span>
+      </button>
 
       {/* Mobile chat modal */}
       {showMobileChat && (
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/50 z-40"
+            className="fixed inset-0 bg-black/50 z-[60]"
             onClick={() => setShowMobileChat(false)}
           />
           
           {/* Chat panel */}
-          <div className="fixed inset-x-0 bottom-0 z-50 animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-x-0 bottom-0 z-[70] animate-in slide-in-from-bottom duration-300">
             <div className="bg-white rounded-t-xl shadow-2xl max-h-[85vh] flex flex-col">
               {/* Mobile header with close button */}
-              <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center justify-between p-2 border-b">
+                <h3 className="text-sm font-semibold text-gray-700">GovSource Assistant</h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -73,7 +74,7 @@ export default function AiChatWrapper(props: AiChatWrapperProps) {
               
               {/* Chat content */}
               <div className="flex-1 overflow-hidden">
-                <AiChat {...props} height="calc(85vh - 60px)" />
+                <AiChat {...props} height="calc(85vh - 48px)" />
               </div>
             </div>
           </div>
