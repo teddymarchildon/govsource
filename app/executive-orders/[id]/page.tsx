@@ -7,7 +7,6 @@ import PdfViewer from '@/components/PdfViewer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import SaveButton from '@/components/SaveButton';
 import AiChat from '@/components/AiChat';
-import { AuthProvider } from '@/contexts/AuthContext';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -171,17 +170,14 @@ export default function ExecutiveOrderDetailPage() {
             </Tabs>
           </div>
           {/* Right: AiChat Panel */}
-          <div className="relative h-full">
-            <div className="h-full overflow-y-auto">
-              <AuthProvider>
-                <AiChat
-                  documentType="executiveOrder"
-                  documentId={order.id}
-                  documentTitle={order.title}
-                  htmlFilePath={order.html_file_path}
-                />
-              </AuthProvider>
-            </div>
+          <div className="h-full flex flex-col min-h-0">
+            <AiChat
+              documentType="executiveOrder"
+              documentId={order.id}
+              documentTitle={order.title}
+              htmlFilePath={order.html_file_path}
+              height="100%"
+            />
           </div>
         </div>
       </div>

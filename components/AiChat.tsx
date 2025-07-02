@@ -84,6 +84,7 @@ interface AiChatProps {
   htmlFilePath?: string;
   pdfFilePath?: string;
   diffHtmlFilePaths?: (string | undefined)[];
+  height?: string;
 }
 
 export default function AiChat({
@@ -91,7 +92,8 @@ export default function AiChat({
   documentId,
   documentTitle,
   htmlFilePath,
-  diffHtmlFilePaths
+  diffHtmlFilePaths,
+  height = '600px'
 }: AiChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('');
@@ -247,7 +249,10 @@ export default function AiChat({
 
   // Panel layout (always open, not floating)
   return (
-    <div className="w-full h-full flex flex-col bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+    <div 
+      className={`w-full flex flex-col bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden ${!height ? 'flex-1' : ''}`}
+      style={height ? { height } : {}}
+    >
       {/* Header */}
       <div className="p-2 bg-primary text-white flex justify-between items-center rounded-t-xl">
         <h2 className="text-base font-semibold">GovSource Assistant</h2>

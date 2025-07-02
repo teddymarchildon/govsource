@@ -9,7 +9,6 @@ import SaveButton from '../../../components/SaveButton';
 import Breadcrumbs from '../../../components/Breadcrumbs';
 import PdfViewer from '../../../components/PdfViewer';
 import AiChat from '../../../components/AiChat';
-import { AuthProvider } from '@/contexts/AuthContext';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -207,16 +206,13 @@ export default function SupremeCourtCaseDetailPage() {
             </Tabs>
           </div>
           {/* Right: AiChat Panel */}
-          <div className="relative h-full">
-            <div className="h-full overflow-y-auto">
-              <AuthProvider>
-                <AiChat
-                  documentType="opinion"
-                  documentId={String(cluster.id)}
-                  documentTitle={cluster.case_name}
-                />
-              </AuthProvider>
-            </div>
+          <div className="h-full flex flex-col min-h-0">
+            <AiChat
+              documentType="opinion"
+              documentId={String(cluster.id)}
+              documentTitle={cluster.case_name}
+              height="100%"
+            />
           </div>
         </div>
       </div>

@@ -8,7 +8,6 @@ import Breadcrumbs from './Breadcrumbs';
 import { AgencyDocument } from '@/types/types';
 import Link from 'next/link';
 import AiChat from './AiChat';
-import { AuthProvider } from '../contexts/AuthContext';
 import { Card, CardContent, CardTitle, CardDescription } from './ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
@@ -109,17 +108,14 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
             </Tabs>
           </div>
           {/* Right: AiChat Panel */}
-          <div className="relative h-full">
-            <div className="h-full overflow-y-auto">
-              <AuthProvider>
-                <AiChat
-                  documentType="agencyDocument"
-                  documentId={rule.id}
-                  documentTitle={rule.title}
-                  htmlFilePath={rule.html_file_path}
-                />
-              </AuthProvider>
-            </div>
+          <div className="h-full flex flex-col min-h-0">
+            <AiChat
+              documentType="agencyDocument"
+              documentId={rule.id}
+              documentTitle={rule.title}
+              htmlFilePath={rule.html_file_path}
+              height="100%"
+            />
           </div>
         </div>
       </div>

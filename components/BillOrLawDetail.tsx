@@ -305,32 +305,29 @@ export default function BillOrLawDetail({
             </Tabs>
           </div>
 
-          {/* Right: Sticky AiChat Panel */}
-          <div className="relative h-full">
-            <div className="md:sticky md:top-28 h-full">
-              <div className="h-full overflow-y-auto">
-                <AiChat
-                  documentType={itemType}
-                  documentId={item.id}
-                  documentTitle={title}
-                  htmlFilePath={latestText?.html_file_path}
-                  diffHtmlFilePaths={
-                    texts.length > 1
-                      ? [...texts]
-                          .sort((a, b) => {
-                            const dateA = a.date ? new Date(a.date).getTime() : 0;
-                            const dateB = b.date ? new Date(b.date).getTime() : 0;
-                            if (!a.date) return 1;
-                            if (!b.date) return -1;
-                            return dateB - dateA;
-                          })
-                          .slice(0, 2)
-                          .map((t) => t.html_file_path)
-                      : undefined
-                  }
-                />
-              </div>
-            </div>
+          {/* Right: AiChat Panel */}
+          <div className="h-full flex flex-col min-h-0">
+            <AiChat
+              documentType={itemType}
+              documentId={item.id}
+              documentTitle={title}
+              htmlFilePath={latestText?.html_file_path}
+              diffHtmlFilePaths={
+                texts.length > 1
+                  ? [...texts]
+                      .sort((a, b) => {
+                        const dateA = a.date ? new Date(a.date).getTime() : 0;
+                        const dateB = b.date ? new Date(b.date).getTime() : 0;
+                        if (!a.date) return 1;
+                        if (!b.date) return -1;
+                        return dateB - dateA;
+                      })
+                      .slice(0, 2)
+                      .map((t) => t.html_file_path)
+                  : undefined
+              }
+              height="100%"
+            />
           </div>
         </div>
       </div>
