@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime
@@ -748,20 +749,38 @@ def sync_bills_to_supabase(
                     existing_keys = set()
                     if existing_text_versions.data:
                         for item in existing_text_versions.data:
-                            # Use date if present, else fallback_key
-                            if item.get("date"):
-                                existing_keys.add(f"date:{item['date']}")
+                            # Normalize type field - handle None, strip whitespace, lowercase
+                            type_str = (item.get("type") or "").strip().lower()
+                            date_str = item.get("date")
+                            
+                            # Create normalized key
+                            if date_str:
+                                key = f"{date_str}|{type_str}"
+                                existing_keys.add(key)
+                                logger.debug(f"Existing bill_text key: {key}")
                             elif item.get("fallback_key"):
-                                existing_keys.add(f"fallback:{item['fallback_key']}")
+                                key = f"fallback:{item['fallback_key']}|{type_str}"
+                                existing_keys.add(key)
 
                     logger.info(f"Found {len(existing_keys)} existing text versions for bill: {bill_db_id}")
 
                     for idx, text_data in enumerate(text_versions):
-                        # Use date if present, else fallback_key
-                        key = f"date:{text_data['date']}" if text_data.get("date") else f"fallback:{text_data.get('fallback_key', f'unknown_{idx}') }"
+                        # Normalize the incoming type field
+                        incoming_type = (text_data.get("type") or "").strip().lower()
+                        incoming_date = text_data.get("date")
+                        
+                        # Create normalized key for comparison
+                        if incoming_date:
+                            key = f"{incoming_date}|{incoming_type}"
+                        else:
+                            fallback = text_data.get("fallback_key", f"unknown_{idx}")
+                            key = f"fallback:{fallback}|{incoming_type}"
+                        
+                        logger.debug(f"Checking bill_text key: {key}")
+                        
                         if key in existing_keys:
                             logger.info(
-                                f"Skipping existing text version for key {key} for bill: {bill_db_id}"
+                                f"Skipping duplicate text version - Date: {incoming_date}, Type: {text_data.get('type')} for bill: {bill_db_id}"
                             )
                             continue
 
@@ -811,6 +830,22 @@ def sync_bills_to_supabase(
                             "html_file_path": html_path,
                             "xml_file_path": xml_path,
                         }
+
+                        # Final duplicate check right before insertion
+                        if bill_text_data["date"]:
+                            duplicate_check = supabase.table("bill_text").select("id").eq("bill_id", bill_db_id).eq("date", bill_text_data["date"])
+                            if bill_text_data["type"]:
+                                duplicate_check = duplicate_check.eq("type", bill_text_data["type"])
+                            else:
+                                duplicate_check = duplicate_check.is_("type", "null")
+                            
+                            existing = duplicate_check.execute()
+                            if existing.data:
+                                logger.warning(
+                                    f"Found duplicate during final check - Date: {bill_text_data['date']}, "
+                                    f"Type: {bill_text_data['type']} for bill: {bill_db_id}. Skipping insertion."
+                                )
+                                continue
 
                         # Insert text version
                         supabase.table("bill_text").insert(bill_text_data).execute()
@@ -892,6 +927,385 @@ def sync_bills_to_supabase(
         return []
 
 
+def sync_single_bill_by_id(supabase: Client, bill_id: str) -> bool:
+    """
+    Sync a single bill from the Congress API to Supabase using its Supabase ID.
+
+    Args:
+        supabase: Supabase client
+        bill_id: Supabase bill ID
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Fetch bill from Supabase
+        result = supabase.table("bill").select("*").eq("id", bill_id).execute()
+        if not result.data:
+            logger.error(f"Bill with ID {bill_id} not found in Supabase")
+            return False
+
+        bill_record = result.data[0]
+        bill_unique_id = bill_record.get("bill_unique_id")
+        
+        if not bill_unique_id:
+            logger.error(f"Bill {bill_id} has no bill_unique_id")
+            return False
+
+        # Parse bill_unique_id to extract congress, type, and number
+        # Format is like "hr1234-117" or "s456-118"
+        match = re.match(r'^([a-z]+)(\d+)-(\d+)$', bill_unique_id)
+        if not match:
+            logger.error(f"Invalid bill_unique_id format: {bill_unique_id}")
+            return False
+
+        bill_type = match.group(1)
+        bill_number = int(match.group(2))
+        congress = int(match.group(3))
+
+        logger.info(f"Syncing bill {bill_unique_id} (Congress {congress}, Type {bill_type}, Number {bill_number})")
+
+        # Construct the API URL for this specific bill
+        bill_url = f"{BASE_URL}/bill/{congress}/{bill_type}/{bill_number}?format=json"
+        
+        # Fetch the bill details
+        bill_data = fetch_bill_detail(bill_url)
+        if not bill_data:
+            logger.error(f"Failed to fetch bill data from Congress API for {bill_unique_id}")
+            return False
+
+        # Parse bill data
+        parsed_bill = parse_bill_data(bill_data)
+        
+        # Update the existing bill
+        logger.info(f"Updating bill: {bill_id}")
+        
+        # Update bill data
+        bill_update_data = {
+            "title": parsed_bill["title"],
+            "introduced_date": parsed_bill["introduced_date"],
+            "policy_area": parsed_bill["policy_areas"][0]
+            if len(parsed_bill["policy_areas"]) > 0
+            else None,
+            # Add law information
+            "law_enacted_date": parsed_bill["law_enacted_date"],
+            "law_number": parsed_bill["law_number"],
+            "law_type": parsed_bill["law_type"],
+            "law_unique_id": parsed_bill["law_unique_id"],
+            "law_title": parsed_bill["law_title"],
+        }
+        supabase.table("bill").update(bill_update_data).eq("id", bill_id).execute()
+
+        # The rest of the sync logic is the same as in sync_bills_to_supabase
+        # Get existing sponsors and cosponsors to avoid duplicates
+        existing_sponsors = supabase.table("sponsored_bills").select("congressman_id").eq("bill_id", bill_id).execute()
+        existing_sponsor_ids = set()
+        if existing_sponsors.data:
+            existing_sponsor_ids = {item["congressman_id"] for item in existing_sponsors.data}
+
+        existing_cosponsors = supabase.table("cosponsored_bills").select("congressman_id").eq("bill_id", bill_id).execute()
+        existing_cosponsor_ids = set()
+        if existing_cosponsors.data:
+            existing_cosponsor_ids = {item["congressman_id"] for item in existing_cosponsors.data}
+
+        logger.info(f"Found {len(existing_sponsor_ids)} existing sponsors and {len(existing_cosponsor_ids)} existing cosponsors for bill: {bill_id}")
+
+        # Add sponsors
+        if "sponsors" in parsed_bill and parsed_bill["sponsors"]:
+            for sponsor_data in parsed_bill["sponsors"]:
+                bioguide_id = sponsor_data.get("bioguide_id")
+                if not bioguide_id:
+                    logger.warning(f"No bioguide ID found for sponsor: {sponsor_data}")
+                    continue
+
+                # Check if congressman exists
+                congressman_result = (
+                    supabase.table("congressman")
+                    .select("id")
+                    .eq("bioguide_id", bioguide_id)
+                    .execute()
+                )
+                congressman = (
+                    congressman_result.data[0] if congressman_result.data else None
+                )
+
+                if not congressman:
+                    # Create basic congressman record
+                    congressman_data = {
+                        "bioguide_id": bioguide_id,
+                        "first_name": sponsor_data.get("first_name", ""),
+                        "last_name": sponsor_data.get("last_name", ""),
+                        "middle_name": sponsor_data.get("middle_name", ""),
+                        "full_name": sponsor_data.get("full_name", ""),
+                        "party": sponsor_data.get("party", ""),
+                        "state": sponsor_data.get("state", ""),
+                        "district": sponsor_data.get("district", ""),
+                        "chamber": "house",  # Default value
+                    }
+
+                    # Insert congressman
+                    congressman_result = (
+                        supabase.table("congressman").insert(congressman_data).execute()
+                    )
+                    if not congressman_result.data:
+                        logger.error(f"Failed to create congressman: {bioguide_id}")
+                        continue
+
+                    congressman_id = congressman_result.data[0]["id"]
+                else:
+                    congressman_id = congressman["id"]
+
+                # Skip if this sponsor relationship already exists
+                if congressman_id in existing_sponsor_ids:
+                    logger.info(f"Skipping existing sponsor relationship for congressman: {bioguide_id}")
+                    continue
+
+                # Add sponsor relationship
+                sponsor_relation = {"bill_id": bill_id, "congressman_id": congressman_id}
+                supabase.table("sponsored_bills").insert(sponsor_relation).execute()
+                logger.info(f"Added sponsor relationship for congressman: {bioguide_id}")
+
+        # Fetch and add cosponsors if available
+        if "cosponsor_url" in parsed_bill and parsed_bill["cosponsor_url"]:
+            cosponsors = fetch_bill_cosponsors(parsed_bill["cosponsor_url"])
+
+            for cosponsor_data in cosponsors:
+                bioguide_id = cosponsor_data.get("bioguide_id")
+                if not bioguide_id:
+                    logger.warning(f"No bioguide ID found for cosponsor: {cosponsor_data}")
+                    continue
+
+                # Check if congressman exists
+                congressman_result = (
+                    supabase.table("congressman")
+                    .select("id")
+                    .eq("bioguide_id", bioguide_id)
+                    .execute()
+                )
+                congressman = (
+                    congressman_result.data[0] if congressman_result.data else None
+                )
+
+                if not congressman:
+                    # Create basic congressman record
+                    congressman_data = {
+                        "bioguide_id": bioguide_id,
+                        "first_name": cosponsor_data.get("first_name", ""),
+                        "last_name": cosponsor_data.get("last_name", ""),
+                        "middle_name": cosponsor_data.get("middle_name", ""),
+                        "full_name": cosponsor_data.get("full_name", ""),
+                        "party": cosponsor_data.get("party", ""),
+                        "state": cosponsor_data.get("state", ""),
+                        "district": cosponsor_data.get("district", ""),
+                        "chamber": "house",  # Default value
+                    }
+
+                    # Insert congressman
+                    congressman_result = (
+                        supabase.table("congressman").insert(congressman_data).execute()
+                    )
+                    if not congressman_result.data:
+                        logger.error(f"Failed to create congressman: {bioguide_id}")
+                        continue
+
+                    congressman_id = congressman_result.data[0]["id"]
+                else:
+                    congressman_id = congressman["id"]
+
+                # Skip if this cosponsor relationship already exists
+                if congressman_id in existing_cosponsor_ids:
+                    logger.info(f"Skipping existing cosponsor relationship for congressman: {bioguide_id}")
+                    continue
+
+                # Add cosponsor relationship
+                cosponsor_relation = {
+                    "bill_id": bill_id,
+                    "congressman_id": congressman_id,
+                }
+                supabase.table("cosponsored_bills").insert(cosponsor_relation).execute()
+                logger.info(f"Added cosponsor relationship for congressman: {bioguide_id}")
+
+        # Fetch and add text versions if available
+        if "text_versions_url" in parsed_bill and parsed_bill["text_versions_url"]:
+            text_versions = fetch_bill_texts(parsed_bill["text_versions_url"])
+
+            # Get existing text versions for this bill to avoid duplicates
+            existing_text_versions = supabase.table("bill_text").select("date, type, fallback_key").eq("bill_id", bill_id).execute()
+            existing_keys = set()
+            if existing_text_versions.data:
+                for item in existing_text_versions.data:
+                    # Normalize type field - handle None, strip whitespace, lowercase
+                    type_str = (item.get("type") or "").strip().lower()
+                    date_str = item.get("date")
+                    
+                    # Create normalized key
+                    if date_str:
+                        key = f"{date_str}|{type_str}"
+                        existing_keys.add(key)
+                        logger.debug(f"Existing bill_text key: {key}")
+                    elif item.get("fallback_key"):
+                        key = f"fallback:{item['fallback_key']}|{type_str}"
+                        existing_keys.add(key)
+
+            logger.info(f"Found {len(existing_keys)} existing text versions for bill: {bill_id}")
+
+            for idx, text_data in enumerate(text_versions):
+                # Normalize the incoming type field
+                incoming_type = (text_data.get("type") or "").strip().lower()
+                incoming_date = text_data.get("date")
+                
+                # Create normalized key for comparison
+                if incoming_date:
+                    key = f"{incoming_date}|{incoming_type}"
+                else:
+                    fallback = text_data.get("fallback_key", f"unknown_{idx}")
+                    key = f"fallback:{fallback}|{incoming_type}"
+                
+                logger.debug(f"Checking bill_text key: {key}")
+                
+                if key in existing_keys:
+                    logger.info(
+                        f"Skipping duplicate text version - Date: {incoming_date}, Type: {text_data.get('type')} for bill: {bill_id}"
+                    )
+                    continue
+
+                # Generate unique file paths for storage
+                bill_identifier = f"{parsed_bill['congress']}_{parsed_bill['type']}_{parsed_bill['number']}"
+                # Use date or fallback_key for path
+                date_str = text_data.get("date", text_data.get("fallback_key", f"unknown_{idx}")).replace("-", "").replace(":", "").replace("T", "")
+                # Download and upload PDF, HTML, and XML files to Supabase storage
+                pdf_storage_url = None
+                html_storage_url = None
+                xml_storage_url = None
+
+                if text_data.get("pdf_url"):
+                    pdf_path = f"{bill_identifier}/{date_str}/bill.pdf"
+                    pdf_storage_url = download_and_upload_document(
+                        supabase, str(text_data.get("pdf_url") or ""), "bill-pdfs", pdf_path
+                    )
+                else:
+                    pdf_path = None
+
+                if text_data.get("formatted_text_url"):
+                    html_path = f"{bill_identifier}/{date_str}/bill.html"
+                    html_storage_url = download_and_upload_document(
+                        supabase, str(text_data.get("formatted_text_url") or ""), "bill-htmls", html_path
+                    )
+                else:
+                    html_path = None
+
+                if text_data.get("xml_url"):
+                    xml_path = f"{bill_identifier}/{date_str}/bill.xml"
+                    xml_storage_url = download_and_upload_document(
+                        supabase, str(text_data.get("xml_url") or ""), "bill-xmls", xml_path
+                    )
+                else:
+                    xml_path = None
+
+                # Create text version record
+                bill_text_data = {
+                    "bill_id": bill_id,
+                    "date": text_data.get("date"),
+                    "type": text_data.get("type"),
+                    "fallback_key": text_data.get("fallback_key"),
+                    "pdf_url": text_data.get("pdf_url"),
+                    "xml_url": text_data.get("xml_url"),
+                    "html_url": text_data.get("formatted_text_url"),
+                    "pdf_file_path": pdf_path,
+                    "html_file_path": html_path,
+                    "xml_file_path": xml_path,
+                }
+
+                # Final duplicate check right before insertion
+                if bill_text_data["date"]:
+                    duplicate_check = supabase.table("bill_text").select("id").eq("bill_id", bill_id).eq("date", bill_text_data["date"])
+                    if bill_text_data["type"]:
+                        duplicate_check = duplicate_check.eq("type", bill_text_data["type"])
+                    else:
+                        duplicate_check = duplicate_check.is_("type", "null")
+                    
+                    existing = duplicate_check.execute()
+                    if existing.data:
+                        logger.warning(
+                            f"Found duplicate during final check - Date: {bill_text_data['date']}, "
+                            f"Type: {bill_text_data['type']} for bill: {bill_id}. Skipping insertion."
+                        )
+                        continue
+
+                # Insert text version
+                supabase.table("bill_text").insert(bill_text_data).execute()
+                logger.info(
+                    f"Added text version for key {key} for bill: {bill_id}"
+                )
+
+                if pdf_storage_url or html_storage_url or xml_storage_url:
+                    logger.info(
+                        f"Stored bill documents for {bill_identifier} key {date_str}: "
+                        f"PDF: {'✓' if pdf_storage_url else '✗'}, "
+                        f"HTML: {'✓' if html_storage_url else '✗'}, "
+                        f"XML: {'✓' if xml_storage_url else '✗'}"
+                    )
+
+        # Fetch and add bill actions
+        bill_actions = fetch_bill_actions(
+            congress, parsed_bill["type"], parsed_bill["number"]
+        )
+
+        # Delete all existing actions for this bill before inserting new ones
+        logger.info(f"Deleting all existing actions for bill_id {bill_id}")
+        supabase.table("bill_action").delete().eq("bill_id", bill_id).execute()
+
+        for action_data in bill_actions:
+            # Skip if date or text is None
+            if not action_data.get("date") or not action_data.get("text"):
+                logger.warning(
+                    f"Skipping action with missing date or text for bill: {bill_id}"
+                )
+                continue
+            bill_action_data = {
+                "bill_id": bill_id,
+                "date": action_data.get("date"),
+                "text": action_data.get("text"),
+                "type": action_data.get("type"),
+            }
+            supabase.table("bill_action").insert(bill_action_data).execute()
+            logger.info(
+                f"Added action for date {action_data.get('date')} for bill: {bill_id}"
+            )
+
+        # Fetch and add bill summaries if available
+        if "summaries_url" in parsed_bill and parsed_bill["summaries_url"]:
+            summaries = fetch_bill_summaries(parsed_bill["summaries_url"])
+            # Get existing summaries for this bill to avoid duplicates
+            existing_summaries = supabase.table("bill_summary").select("date, text").eq("bill", bill_id).execute()
+            existing_summary_keys = set()
+            if existing_summaries.data:
+                existing_summary_keys = {f"{item['date']}_{item['text']}" for item in existing_summaries.data if item.get("date") and item.get("text")}
+            logger.info(f"Found {len(existing_summary_keys)} existing summaries for bill: {bill_id}")
+            for summary in summaries:
+                if not summary.get("date") or not summary.get("text"):
+                    logger.warning(f"Skipping summary with missing date or text for bill: {bill_id}")
+                    continue
+                summary_key = f"{summary['date']}_{summary['text']}"
+                if summary_key in existing_summary_keys:
+                    logger.info(f"Skipping existing summary for date {summary.get('date')} for bill: {bill_id}")
+                    continue
+                bill_summary_data = {
+                    "bill": bill_id,
+                    "date": summary.get("date"),
+                    "text": summary.get("text"),
+                }
+                supabase.table("bill_summary").insert(bill_summary_data).execute()
+                logger.info(f"Added summary for date {summary.get('date')} for bill: {bill_id}")
+
+        logger.info(f"Successfully synced bill {bill_unique_id} (ID: {bill_id})")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error syncing single bill: {e}", exc_info=True)
+        return False
+
+
 def main():
     """Main function to run the bill sync process."""
     parser = argparse.ArgumentParser(description="Sync bills from the Congress API to Supabase")
@@ -911,6 +1325,11 @@ def main():
         default=100,
         help="Maximum number of batches to sync when using limit=-1 (default: 100)",
     )
+    parser.add_argument(
+        "--bill-id",
+        type=str,
+        help="Supabase bill ID to sync a single specific bill",
+    )
     args = parser.parse_args()
 
     # Initialize Supabase client
@@ -923,6 +1342,18 @@ def main():
         sys.exit(1)
 
     try:
+        # If bill-id is provided, sync only that specific bill
+        if args.bill_id:
+            logger.info(f"Syncing single bill with ID: {args.bill_id}")
+            success = sync_single_bill_by_id(supabase, args.bill_id)
+            if success:
+                logger.info(f"Successfully synced bill {args.bill_id}")
+            else:
+                logger.error(f"Failed to sync bill {args.bill_id}")
+                sys.exit(1)
+            return
+
+        # Otherwise, do the batch sync
         total_bills = 0
         current_offset = args.offset
 
