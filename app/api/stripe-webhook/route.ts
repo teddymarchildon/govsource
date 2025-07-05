@@ -53,6 +53,24 @@ export async function POST(req: NextRequest) {
         }
         break;
       }
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice;
+        if (invoice.customer) {
+          if (invoice.amount_paid === 0) {
+            // Free trial invoice, do nothing
+            break;
+          }
+          await supabase
+            .from('subscription')
+            .update({
+              tier: 'paid',
+              status: 'active',
+              trial_ends_at: null,
+            })
+            .eq('stripe_customer_id', invoice.customer);
+        }
+        break;
+      }
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         if (invoice.customer) {
