@@ -165,6 +165,7 @@ export default function AiChat({
         documentTitle,
         htmlFilePath,
         presetType,
+        userId: user?.id,
       };
       if (presetType === 'diff' && diffHtmlFilePaths && diffHtmlFilePaths.length === 2 && diffHtmlFilePaths[0] && diffHtmlFilePaths[1]) {
         body.diffHtmlFilePaths = diffHtmlFilePaths;

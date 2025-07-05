@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { fetchHtmlContent, processDocumentContent, truncateContent } from '@/utils/documentUtils';
+import { createClient } from '@/utils/supabase/server';
 
 // Define preset types and their corresponding system prompts
 type PresetType = 'default' | 'summarize' | 'keyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
@@ -23,7 +24,7 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { messages, documentTitle, htmlFilePath, documentType, presetType = 'default', diffHtmlFilePaths } = await request.json();
+    const { messages, documentTitle, htmlFilePath, documentType, presetType = 'default', diffHtmlFilePaths, userId } = await request.json();
 
     // 'messages' should only contain user and assistant messages from the frontend
     // System message will be added here in the backend
@@ -32,6 +33,43 @@ export async function POST(request: Request) {
         { error: 'Messages are required' },
         { status: 400 }
       );
+    }
+
+    // --- AI USAGE VALIDATION ---
+    if (userId) {
+      const supabase = await createClient();
+      // Get subscription
+      const { data: subscription, error: subError } = await supabase
+        .from('subscription')
+        .select('tier')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (subError) {
+        return NextResponse.json({ error: 'Failed to check subscription.' }, { status: 500 });
+      }
+      const isPaid = subscription && subscription.tier === 'paid';
+    // Get user usage
+      const { data: usage, error: usageError } = await supabase
+        .from('user_usage')
+        .select('ai_interactions')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (usageError) {
+        return NextResponse.json({ error: 'Failed to check AI usage.' }, { status: 500 });
+      }
+      const aiInteractions = usage?.ai_interactions ?? 0;
+      if (!isPaid && aiInteractions >= 5) {
+        return NextResponse.json({ error: 'AI usage limit reached. Please upgrade to continue.' }, { status: 403 });
+      }
+
+      // Increment ai_interactions for all users
+      const { error: updateError } = await supabase
+        .from('user_usage')
+        .update({ ai_interactions: aiInteractions + 1 })
+        .eq('user_id', userId);
+      if (updateError) {
+        return NextResponse.json({ error: 'Failed to increment AI usage.' }, { status: 500 });
+      }
     }
 
     // Get the appropriate system prompt based on the preset type
