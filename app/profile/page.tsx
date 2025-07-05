@@ -28,7 +28,7 @@ import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { getLoginUrl } from '@/utils/utils';
 
 export default function ProfilePage() {
-  const { user, loading, isPaidSubscriber, subscription } = useAuth();
+  const { user, loading, isPaidSubscriber, subscription, aiInteractions } = useAuth();
   const [savedBills, setSavedBills] = useState<SavedBill[]>([]);
   const [savedCongressmen, setSavedCongressmen] = useState<SavedCongressman[]>([]);
   const [savedAgencies, setSavedAgencies] = useState<SavedAgency[]>([]);
@@ -210,6 +210,9 @@ export default function ProfilePage() {
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
                 5 free GovSource Assistant uses
+                {!isPaidSubscriber && user && (
+                  <span className="text-xs text-gray-500 ml-1">({aiInteractions}/5 used)</span>
+                )}
               </li>
             </ul>
           </div>
