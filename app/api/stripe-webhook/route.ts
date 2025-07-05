@@ -93,6 +93,19 @@ export async function POST(req: NextRequest) {
           .eq('stripe_customer_id', subscription.customer);
         break;
       }
+      case 'customer.subscription.created': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const priceId = subscription.items.data[0]?.price.id;
+        await supabase
+          .from('subscription')
+          .update({
+            tier: 'paid',
+            stripe_price_id: priceId,
+            stripe_subscription_id: subscription.id,
+          })
+          .eq('stripe_customer_id', subscription.customer)
+        break;
+      }
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
