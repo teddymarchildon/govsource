@@ -277,6 +277,10 @@ export default function AiChat({
       {/* Header */}
       <div className="p-2 bg-primary text-white flex justify-between items-center rounded-t-xl">
         <h2 className="text-base font-semibold">GovSource Assistant</h2>
+        {/* Show usage counter for free users in header */}
+        {!isPaidSubscriber && user && (
+          <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{aiInteractions}/5 free uses</span>
+        )}
       </div>
 
       {/* Info indicator if htmlFilePath is not defined */}
@@ -332,10 +336,6 @@ export default function AiChat({
             </Button>
           );
         })}
-        {/* Show usage counter for free users */}
-        {!isPaidSubscriber && user && (
-          <span className="ml-2 text-xs text-gray-500 self-center">{aiInteractions}/5 free uses</span>
-        )}
       </div>
 
       {/* Messages (scrollable area) */}
