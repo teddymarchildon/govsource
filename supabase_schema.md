@@ -395,8 +395,9 @@ A table for tracking user engagement and onboarding progress.
 - `id` bigint (PK, identity)
 - `created_at` timestamptz (default: now())
 - `updated_at` timestamp (default: now())
-- `user_id` uuid (FK)
-- `saw_onboarding_flow_at` timestamptz
+- `user_id` uuid (FK, unique, default: gen_random_uuid())
+- `saw_onboarding_flow_at` timestamptz (nullable)
+- `ai_interactions` bigint (not null, default: 0) — Integer count of documents processed using AI
 
 **Relationships:**
 - References `auth.users.id` via `user_id`

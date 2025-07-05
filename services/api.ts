@@ -1402,3 +1402,30 @@ export const createCheckoutSession = async (userId: string, redirectUrl: string)
   const session = await response.json();
   return session.url;
 };
+
+// Upsert a user_usage row - creates if doesn't exist, does nothing if it exists
+export const upsertUserUsage = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_usage')
+    .upsert({ user_id: userId }, { onConflict: 'user_id' });
+  if (error) throw error;
+  return data;
+};
+
+// Get user_usage row for a user
+export const getUserUsage = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_usage')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+};
+
+// Increment ai_interactions by 1 for a user
+export const incrementAiInteractions = async (userId: string) => {
+  const { data, error } = await supabase.rpc('increment_ai_interactions', { user_id_input: userId });
+  if (error) throw error;
+  return data;
+};

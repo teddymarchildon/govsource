@@ -8,6 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
+import { incrementAiInteractions } from '../services/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -105,7 +106,9 @@ export default function AiChat({
   const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   // Auth state
-  const { user, loading: authLoading, isPaidSubscriber } = useAuth();
+  const { user, loading: authLoading, isPaidSubscriber, aiInteractions, aiLimitReached } = useAuth();
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Get tailored presets for the current documentType
   const PRESETS = getPresets(documentType, diffHtmlFilePaths);
@@ -226,34 +229,48 @@ export default function AiChat({
   };
 
   // Handle preset button click
-  const handlePresetClick = (preset: Preset) => {
-    if (isLoading) return;
-
+  const handlePresetClick = async (preset: Preset) => {
+    if (isLoading || aiLoading || aiLimitReached) return;
+    setAiError(null);
+    // For free users, increment aiInteractions and check limit
+    if (user && !isPaidSubscriber) {
+      setAiLoading(true);
+      try {
+        await incrementAiInteractions(user.id);
+      } catch (err) {
+        setAiError('Error tracking AI usage. Please try again.');
+        setAiLoading(false);
+        return;
+      }
+      setAiLoading(false);
+    }
     // Create a user message with the preset's user message
     const userMessage: Message = { role: 'user', content: preset.userMessage };
-
-    // Update the messages state with the user message
     setMessages(prev => [...prev, userMessage]);
-    
-    // Reset user scrolling flag for new conversation
     setIsUserScrolling(false);
-
-    // Send the message to the API with the preset type
     sendMessageToApi([userMessage], preset.type);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
+    if (!input.trim() || isLoading || aiLoading || aiLimitReached) return;
+    setAiError(null);
+    // For free users, increment aiInteractions and check limit
+    if (user && !isPaidSubscriber) {
+      setAiLoading(true);
+      try {
+        await incrementAiInteractions(user.id);
+      } catch (err) {
+        setAiError('Error tracking AI usage. Please try again.');
+        setAiLoading(false);
+        return;
+      }
+      setAiLoading(false);
+    }
     const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    
-    // Reset user scrolling flag for new message
     setIsUserScrolling(false);
-
-    // For regular user input, we just send the user message and previous messages
     await sendMessageToApi([...messages, userMessage]);
   };
 
@@ -326,22 +343,26 @@ export default function AiChat({
             default:
               IconComponent = FileText;
           }
-          const isLocked = !isPaidSubscriber;
+          const isLocked = !isPaidSubscriber || aiLimitReached;
           return (
             <Button
               key={preset.label}
               onClick={() => !isLocked && handlePresetClick(preset)}
-              disabled={isLoading || isLocked}
+              disabled={isLoading || aiLoading || isLocked}
               variant="outline"
               className={`px-2 py-1 text-xs flex items-center gap-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ borderRadius: '0.5rem' }}
-              title={isLocked ? 'Subscribe to unlock this feature' : undefined}
+              title={aiLimitReached ? 'Upgrade to continue using AI' : isLocked ? 'Subscribe to unlock this feature' : undefined}
             >
               <IconComponent className="h-3.5 w-3.5" />
               {preset.label}
             </Button>
           );
         })}
+        {/* Show usage counter for free users */}
+        {!isPaidSubscriber && user && (
+          <span className="ml-2 text-xs text-gray-500 self-center">{aiInteractions}/5 free uses</span>
+        )}
       </div>
 
       {/* Messages (scrollable area) */}
@@ -362,37 +383,76 @@ export default function AiChat({
         ) : !isPaidSubscriber ? (
           <div className="p-4">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">Subscribe to use the AI Assistant</p>
-              <Button
-                className="text-sm"
-                style={{ borderRadius: '0.5rem' }}
-                variant="default"
-                disabled={subscribing || !user}
-                onClick={async () => {
-                  if (!user) return;
-                  setSubscribing(true);
-                  try {
-                    const redirectUrl = window.location.href;
-                    const res = await fetch('/api/create-checkout-session', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ userId: user.id, redirectUrl }),
-                    });
-                    const data = await res.json();
-                    if (data.url) {
-                      window.location.href = data.url;
-                    } else {
-                      alert('Failed to create checkout session.');
-                    }
-                  } catch (err) {
-                    alert('Failed to create checkout session.');
-                  } finally {
-                    setSubscribing(false);
-                  }
-                }}
-              >
-                {subscribing ? 'Redirecting...' : 'Subscribe'}
-              </Button>
+              {aiLimitReached ? (
+                <>
+                  <p className="text-sm text-gray-600 mb-2">You have reached your free AI usage limit.</p>
+                  <Button
+                    className="text-sm"
+                    style={{ borderRadius: '0.5rem' }}
+                    variant="default"
+                    disabled={subscribing || !user}
+                    onClick={async () => {
+                      if (!user) return;
+                      setSubscribing(true);
+                      try {
+                        const redirectUrl = window.location.href;
+                        const res = await fetch('/api/create-checkout-session', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: user.id, redirectUrl }),
+                        });
+                        const data = await res.json();
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else {
+                          alert('Failed to create checkout session.');
+                        }
+                      } catch (err) {
+                        alert('Failed to create checkout session.');
+                      } finally {
+                        setSubscribing(false);
+                      }
+                    }}
+                  >
+                    {subscribing ? 'Redirecting...' : 'Upgrade to Pro'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-600 mb-2">Subscribe to use the AI Assistant</p>
+                  <Button
+                    className="text-sm"
+                    style={{ borderRadius: '0.5rem' }}
+                    variant="default"
+                    disabled={subscribing || !user}
+                    onClick={async () => {
+                      if (!user) return;
+                      setSubscribing(true);
+                      try {
+                        const redirectUrl = window.location.href;
+                        const res = await fetch('/api/create-checkout-session', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: user.id, redirectUrl }),
+                        });
+                        const data = await res.json();
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else {
+                          alert('Failed to create checkout session.');
+                        }
+                      } catch (err) {
+                        alert('Failed to create checkout session.');
+                      } finally {
+                        setSubscribing(false);
+                      }
+                    }}
+                  >
+                    {subscribing ? 'Redirecting...' : 'Subscribe'}
+                  </Button>
+                </>
+              )}
+              {aiError && <div className="text-xs text-red-600 mt-2">{aiError}</div>}
             </div>
           </div>
         ) : (
@@ -459,7 +519,7 @@ export default function AiChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Ask about ${documentTitle || 'this document'}...`}
-            disabled={isLoading || (!user && !authLoading) || !isPaidSubscriber}
+            disabled={isLoading || aiLoading || (!user && !authLoading) || !isPaidSubscriber || aiLimitReached}
             style={{ borderRadius: '0.5rem' }}
             className="h-9"
           />
@@ -467,11 +527,12 @@ export default function AiChat({
             type="submit"
             className="px-3 py-1.5 text-white text-sm h-9"
             style={{ borderRadius: '0.5rem' }}
-            disabled={isLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber}
+            disabled={isLoading || aiLoading || !input.trim() || (!user && !authLoading) || !isPaidSubscriber || aiLimitReached}
           >
             Send
           </Button>
         </div>
+        {aiError && <div className="text-xs text-red-600 mt-2">{aiError}</div>}
       </form>
     </div>
   );

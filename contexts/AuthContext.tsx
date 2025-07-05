@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '../utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import type { User as AppUser } from '../types/types';
+import { upsertSubscription, upsertUserUsage, getUserUsage } from '../services/api';
 
 type AuthContextType = {
   user: AppUser | null;
@@ -13,6 +14,8 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   isPaidSubscriber: boolean;
   subscription: any | null;
+  aiInteractions: number;
+  aiLimitReached: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,9 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isPaidSubscriber, setIsPaidSubscriber] = useState(false);
   const [subscription, setSubscription] = useState<any | null>(null);
+  const [aiInteractions, setAiInteractions] = useState<number>(0);
+  const [aiLimitReached, setAiLimitReached] = useState<boolean>(false);
 
   // Check if the user is a paid subscriber
-  const checkSubscriptionStatus = async (userId: string) => {
+  const handlePostLogin = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('subscription')
@@ -33,15 +38,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       setSubscription(data || null);
+      let isPaid = false;
       if (data) {
         const tier = data.tier;
-        setIsPaidSubscriber(tier === 'paid');
+        isPaid = tier === 'paid';
+        setIsPaidSubscriber(isPaid);
       } else {
+        await upsertSubscription(userId);
         setIsPaidSubscriber(false);
       }
+      // Fetch aiInteractions from user_usage
+      const usage = await getUserUsage(userId);
+      const count = usage?.ai_interactions || 0;
+      setAiInteractions(count);
+      setAiLimitReached(!isPaid && count >= 5);
     } catch (err) {
       setIsPaidSubscriber(false);
       setSubscription(null);
+      setAiInteractions(0);
+      setAiLimitReached(false);
     }
   };
 
@@ -58,8 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
               confirmed_at: (supaUser as any).confirmed_at ?? null,
             });
-            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-              await checkSubscriptionStatus(supaUser.id);
+            if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && supaUser.id) {
+              try {
+                await upsertUserUsage(supaUser.id);
+              } catch (err) {
+                console.error('Error upserting user_usage or subscription:', err);
+              }
+              await handlePostLogin(supaUser.id);
             }
           } else {
             setUser(null);
@@ -113,7 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithGoogle,
       signOut,
       isPaidSubscriber,
-      subscription
+      subscription,
+      aiInteractions,
+      aiLimitReached
     }}>
       {children}
     </AuthContext.Provider>
