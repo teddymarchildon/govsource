@@ -96,14 +96,26 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
         const priceId = subscription.items.data[0]?.price.id;
+        let trialEndsAt: string | null = null;
+        let status = 'active';
+        if (subscription.trial_settings && (subscription.trial_settings as any).trial_will_end) {
+          // trial_will_end is a timestamp (seconds since epoch)
+          const trialWillEnd = (subscription.trial_settings as any).trial_will_end;
+          if (trialWillEnd) {
+            trialEndsAt = new Date(trialWillEnd * 1000).toISOString();
+            status = 'trialing';
+          }
+        }
         await supabase
           .from('subscription')
           .update({
             tier: 'paid',
             stripe_price_id: priceId,
             stripe_subscription_id: subscription.id,
+            trial_ends_at: trialEndsAt,
+            status,
           })
-          .eq('stripe_customer_id', subscription.customer)
+          .eq('stripe_customer_id', subscription.customer);
         break;
       }
       default:
