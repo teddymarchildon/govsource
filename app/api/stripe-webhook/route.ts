@@ -31,12 +31,21 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as any;
         const userId = session.client_reference_id;
         const stripeCustomerId = session.customer;
+        const stripeSubscriptionId = session.subscription;
+
+        let priceId: string | undefined = undefined;
+        if (stripeSubscriptionId) {
+          const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+          priceId = stripeSub.items.data[0]?.price.id;
+        }
+
         if (userId && stripeCustomerId) {
           await supabase
             .from('subscription')
             .update({
               stripe_customer_id: stripeCustomerId,
-              stripe_subscription_id: session.subscription,
+              stripe_subscription_id: stripeSubscriptionId,
+              stripe_price_id: priceId,
               status: 'active',
               tier: 'paid',
             })

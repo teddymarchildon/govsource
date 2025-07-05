@@ -406,16 +406,17 @@ A table for tracking Stripe subscriptions for each user.
 
 **Columns:**
 - `id` uuid (PK, default: gen_random_uuid())
-- `user_id` uuid (FK, references auth.users.id, nullable)
-- `stripe_customer_id` varchar (required)
-- `stripe_subscription_id` varchar (required)
-- `stripe_price_id` varchar (nullable)
-- `status` varchar (required)
+- `user_id` uuid (FK, references auth.users.id, not null, unique)
+- `stripe_customer_id` text (nullable)
+- `stripe_subscription_id` text (nullable)
+- `stripe_price_id` text (nullable)
+- `status` text (not null)
 - `current_period_end` timestamptz (nullable)
-- `cancel_at_period_end` boolean (default: false, nullable)
-- `created_at` timestamptz (default: now(), nullable)
-- `updated_at` timestamptz (default: now(), nullable)
-- `tier` text (nullable)
+- `created_at` timestamptz (default: now(), not null)
+- `updated_at` timestamptz (default: now(), not null)
+- `tier` text (not null, default: 'free')
+- `canceled_at` timestamptz (nullable)
+- `trial_ends_at` date (nullable)
 
 **Relationships:**
 - References `auth.users.id` via `user_id`
