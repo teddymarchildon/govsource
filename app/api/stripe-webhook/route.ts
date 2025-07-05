@@ -97,6 +97,7 @@ export async function POST(req: NextRequest) {
             stripe_subscription_id: subscription.id,
             trial_ends_at: trialEndsAt,
             status,
+            has_used_trial: status === 'trialing' ? true : false,
           })
           .eq('stripe_customer_id', subscription.customer);
         break;
