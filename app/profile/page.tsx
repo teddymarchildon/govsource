@@ -207,6 +207,10 @@ export default function ProfilePage() {
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
                 See GovSource information
               </li>
+              <li className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                5 free GovSource Assistant uses
+              </li>
             </ul>
           </div>
           {/* Pro Tier */}
@@ -217,7 +221,7 @@ export default function ProfilePage() {
                 <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">Current Plan</span>
               )}
             </div>
-            <p className="text-gray-500 mt-2">Unlimited access and powerful AI tools.</p>
+            <p className="text-gray-500 mt-2">Unlimited GovSource Assistant, personalized alerts, and more.</p>
             <ul className="mt-4 space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
@@ -225,7 +229,7 @@ export default function ProfilePage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                Unlimited AI chat
+                Unlimited GovSource Assistant usage
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
