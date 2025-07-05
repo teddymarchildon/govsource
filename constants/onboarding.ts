@@ -59,3 +59,6 @@ export const US_STATES = [
   { code: 'AS', name: 'American Samoa' },
   { code: 'MP', name: 'Northern Mariana Islands' }
 ];
+
+// Global constant for free AI usage limit
+export const AI_FREE_USAGE_LIMIT = 10;

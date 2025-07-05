@@ -5,6 +5,7 @@ import { supabase } from '../utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import type { User as AppUser } from '../types/types';
 import { upsertSubscription, upsertUserUsage, getUserUsage } from '../services/api';
+import { AI_FREE_USAGE_LIMIT } from '../constants/onboarding';
 
 type AuthContextType = {
   user: AppUser | null;
@@ -51,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const usage = await getUserUsage(userId);
       const count = usage?.ai_interactions || 0;
       setAiInteractions(count);
-      setAiLimitReached(!isPaid && count >= 5);
+      setAiLimitReached(!isPaid && count >= AI_FREE_USAGE_LIMIT);
     } catch (err) {
       setIsPaidSubscriber(false);
       setSubscription(null);

@@ -8,6 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
+import { AI_FREE_USAGE_LIMIT } from '@/constants/onboarding';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -279,7 +280,7 @@ export default function AiChat({
         <h2 className="text-base font-semibold">GovSource Assistant</h2>
         {/* Show usage counter for free users in header */}
         {!isPaidSubscriber && user && (
-          <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{aiInteractions}/5 free uses</span>
+          <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{aiInteractions}/{AI_FREE_USAGE_LIMIT} free uses</span>
         )}
       </div>
 
