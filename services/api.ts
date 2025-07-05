@@ -1402,3 +1402,12 @@ export const createCheckoutSession = async (userId: string, redirectUrl: string)
   const session = await response.json();
   return session.url;
 };
+
+// Upsert a user_usage row - creates if doesn't exist, does nothing if it exists
+export const upsertUserUsage = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_usage')
+    .upsert({ user_id: userId }, { onConflict: 'user_id' });
+  if (error) throw error;
+  return data;
+};

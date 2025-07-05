@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '../utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import type { User as AppUser } from '../types/types';
+import { upsertSubscription, upsertUserUsage } from '../services/api';
 
 type AuthContextType = {
   user: AppUser | null;
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const tier = data.tier;
         setIsPaidSubscriber(tier === 'paid');
       } else {
+        await upsertSubscription(userId);
         setIsPaidSubscriber(false);
       }
     } catch (err) {
@@ -58,7 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
               confirmed_at: (supaUser as any).confirmed_at ?? null,
             });
-            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+            if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && supaUser.id) {
+              try {
+                await upsertUserUsage(supaUser.id);
+              } catch (err) {
+                console.error('Error upserting user_usage or subscription:', err);
+              }
               await checkSubscriptionStatus(supaUser.id);
             }
           } else {
