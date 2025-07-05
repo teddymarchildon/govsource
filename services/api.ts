@@ -1422,10 +1422,3 @@ export const getUserUsage = async (userId: string) => {
   if (error) throw error;
   return data;
 };
-
-// Increment ai_interactions by 1 for a user
-export const incrementAiInteractions = async (userId: string) => {
-  const { data, error } = await supabase.rpc('increment_ai_interactions', { user_id_input: userId });
-  if (error) throw error;
-  return data;
-};

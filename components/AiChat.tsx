@@ -8,7 +8,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
-import { incrementAiInteractions } from '../services/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -107,8 +106,6 @@ export default function AiChat({
 
   // Auth state
   const { user, loading: authLoading, isPaidSubscriber, aiInteractions, aiLimitReached } = useAuth();
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
 
   // Get tailored presets for the current documentType
   const PRESETS = getPresets(documentType, diffHtmlFilePaths);
@@ -231,20 +228,7 @@ export default function AiChat({
 
   // Handle preset button click
   const handlePresetClick = async (preset: Preset) => {
-    if (isLoading || aiLoading || aiLimitReached) return;
-    setAiError(null);
-    // For free users, increment aiInteractions and check limit
-    if (user && !isPaidSubscriber) {
-      setAiLoading(true);
-      try {
-        await incrementAiInteractions(user.id);
-      } catch (err) {
-        setAiError('Error tracking AI usage. Please try again.');
-        setAiLoading(false);
-        return;
-      }
-      setAiLoading(false);
-    }
+    if (isLoading || aiLimitReached) return;
     // Create a user message with the preset's user message
     const userMessage: Message = { role: 'user', content: preset.userMessage };
     setMessages(prev => [...prev, userMessage]);
@@ -254,20 +238,7 @@ export default function AiChat({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || aiLoading || aiLimitReached) return;
-    setAiError(null);
-    // For free users, increment aiInteractions and check limit
-    if (user && !isPaidSubscriber) {
-      setAiLoading(true);
-      try {
-        await incrementAiInteractions(user.id);
-      } catch (err) {
-        setAiError('Error tracking AI usage. Please try again.');
-        setAiLoading(false);
-        return;
-      }
-      setAiLoading(false);
-    }
+    if (!input.trim() || isLoading || aiLimitReached) return;
     const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -350,7 +321,7 @@ export default function AiChat({
             <Button
               key={preset.label}
               onClick={() => !isLocked && handlePresetClick(preset)}
-              disabled={isLoading || aiLoading || isLocked}
+              disabled={isLoading || isLocked}
               variant="outline"
               className={`px-2 py-1 text-xs flex items-center gap-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ borderRadius: '0.5rem' }}
@@ -416,7 +387,6 @@ export default function AiChat({
               >
                 {subscribing ? 'Redirecting...' : 'Upgrade to Pro'}
               </Button>
-              {aiError && <div className="text-xs text-red-600 mt-2">{aiError}</div>}
             </div>
           </div>
         ) : (
@@ -483,7 +453,7 @@ export default function AiChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Ask about ${documentTitle || 'this document'}...`}
-            disabled={isLoading || aiLoading || (!user && !authLoading) || aiLimitReached}
+            disabled={isLoading || aiLimitReached}
             style={{ borderRadius: '0.5rem' }}
             className="h-9"
           />
@@ -491,12 +461,11 @@ export default function AiChat({
             type="submit"
             className="px-3 py-1.5 text-white text-sm h-9"
             style={{ borderRadius: '0.5rem' }}
-            disabled={isLoading || aiLoading || !input.trim() || (!user && !authLoading) || aiLimitReached}
+            disabled={isLoading || !input.trim() || (!user && !authLoading) || aiLimitReached}
           >
             Send
           </Button>
         </div>
-        {aiError && <div className="text-xs text-red-600 mt-2">{aiError}</div>}
       </form>
     </div>
   );

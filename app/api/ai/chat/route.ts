@@ -35,6 +35,7 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('userId', userId);
     // --- AI USAGE VALIDATION ---
     if (userId) {
       const supabase = await createClient();
