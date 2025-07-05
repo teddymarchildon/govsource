@@ -53,19 +53,6 @@ export async function POST(req: NextRequest) {
         }
         break;
       }
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
-        if (invoice.customer) {
-          await supabase
-            .from('subscription')
-            .update({
-              status: 'active',
-              tier: 'paid',
-            })
-            .eq('stripe_customer_id', invoice.customer);
-        }
-        break;
-      }
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         if (invoice.customer) {
@@ -98,13 +85,9 @@ export async function POST(req: NextRequest) {
         const priceId = subscription.items.data[0]?.price.id;
         let trialEndsAt: string | null = null;
         let status = 'active';
-        if (subscription.trial_settings && (subscription.trial_settings as any).trial_will_end) {
-          // trial_will_end is a timestamp (seconds since epoch)
-          const trialWillEnd = (subscription.trial_settings as any).trial_will_end;
-          if (trialWillEnd) {
-            trialEndsAt = new Date(trialWillEnd * 1000).toISOString();
-            status = 'trialing';
-          }
+        if (subscription.trial_end) {
+          trialEndsAt = new Date(subscription.trial_end * 1000).toISOString();
+          status = 'trialing';
         }
         await supabase
           .from('subscription')
