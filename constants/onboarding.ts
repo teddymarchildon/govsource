@@ -62,3 +62,6 @@ export const US_STATES = [
 
 // Global constant for free AI usage limit
 export const AI_FREE_USAGE_LIMIT = 10;
+
+// Global constant for anonymous AI usage limit
+export const ANON_LIMIT = 3;

@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
-import { AI_FREE_USAGE_LIMIT } from '@/constants/onboarding';
+import { AI_FREE_USAGE_LIMIT, ANON_LIMIT } from '@/constants/onboarding';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -111,7 +111,7 @@ export default function AiChat({
   // --- ANONYMOUS AI USAGE LOGIC ---
   const [anonAiUsage, setAnonAiUsage] = useState<number>(0);
   const [anonLimitReached, setAnonLimitReached] = useState(false);
-  const ANON_LIMIT = 3;
+  
 
   // Helper to read cookie value
   function getCookie(name: string): string | null {
@@ -330,7 +330,7 @@ export default function AiChat({
         )}
         {/* Show usage counter for anonymous users */}
         {!user && !authLoading && (
-          <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{anonAiUsage}/{ANON_LIMIT} free uses</span>
+          <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{anonAiUsage}/{ANON_LIMIT} uses before sign up</span>
         )}
       </div>
 
