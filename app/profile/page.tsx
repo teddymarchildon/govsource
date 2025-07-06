@@ -210,7 +210,7 @@ export default function ProfilePage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                {AI_FREE_USAGE_LIMIT} free GovSource Assistant uses
+                {AI_FREE_USAGE_LIMIT} free GovSource Assistant uses per month
                 {!isPaidSubscriber && user && (
                   <span className="text-xs text-gray-500 ml-1">({aiInteractions}/{AI_FREE_USAGE_LIMIT} used)</span>
                 )}
