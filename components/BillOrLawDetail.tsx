@@ -128,12 +128,12 @@ export default function BillOrLawDetail({
         <div className="grid grid-cols-1 md:grid-cols-[1fr_500px] lg:grid-cols-[1fr_550px] xl:grid-cols-[1fr_600px] 2xl:grid-cols-[1fr_700px] gap-4 md:gap-6 flex-1 overflow-hidden">
           {/* Left: Tabs - full width on mobile */}
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
-            <Tabs defaultValue="summary" className="w-full h-full flex flex-col">
+            <Tabs defaultValue="text" className="w-full h-full flex flex-col">
               <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
-                <TabsTrigger value="summary" className="bg-transparent px-2 py-1 text-sm">Summary</TabsTrigger>
                 <TabsTrigger value="text" className="bg-transparent px-2 py-1 text-sm">
                   Text <Badge variant="outline" className="ml-1 h-5 text-xs">{texts?.length || 0}</Badge>
                 </TabsTrigger>
+                <TabsTrigger value="summary" className="bg-transparent px-2 py-1 text-sm">Summary</TabsTrigger>
                 <TabsTrigger value="sponsors" className="bg-transparent px-2 py-1 text-sm">
                   Sponsors <Badge variant="outline" className="ml-1 h-5 text-xs">{(sponsors?.length || 0) + (cosponsors?.length || 0)}</Badge>
                 </TabsTrigger>
