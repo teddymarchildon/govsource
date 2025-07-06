@@ -149,16 +149,14 @@ export async function POST(request: Request) {
             }
           },
         });
-        let response = new Response(stream, {
+        let response = new NextResponse(stream, {
           headers: {
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'no-cache',
           },
         });
         if (isAnonymous && typeof aiUsage === 'number') {
-          const cookieStore = await cookies();
-          cookieStore.set('ai_usage', aiUsage.toString(), {
-            httpOnly: true,
+          response.cookies.set('ai_usage', aiUsage.toString(), {
             path: '/',
             maxAge: 60 * 60 * 24 * 30, // 30 days
           });
@@ -208,16 +206,14 @@ export async function POST(request: Request) {
           }
         },
       });
-      let response = new Response(stream, {
+      let response = new NextResponse(stream, {
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': 'no-cache',
         },
       });
       if (isAnonymous && typeof aiUsage === 'number') {
-        const cookieStore = await cookies();
-        cookieStore.set('ai_usage', aiUsage.toString(), {
-          httpOnly: true,
+        response.cookies.set('ai_usage', aiUsage.toString(), {
           path: '/',
           maxAge: 60 * 60 * 24 * 30, // 30 days
         });
@@ -241,9 +237,7 @@ export async function POST(request: Request) {
       const responseMessage = completion.output_text;
       let jsonResponse = NextResponse.json({ message: responseMessage });
       if (isAnonymous && typeof aiUsage === 'number') {
-        const cookieStore = await cookies();
-        cookieStore.set('ai_usage', aiUsage.toString(), {
-          httpOnly: true,
+        jsonResponse.cookies.set('ai_usage', aiUsage.toString(), {
           path: '/',
           maxAge: 60 * 60 * 24 * 30, // 30 days
         });
