@@ -108,6 +108,38 @@ export default function AiChat({
   // Auth state
   const { user, loading: authLoading, isPaidSubscriber, aiInteractions, aiLimitReached } = useAuth();
 
+  // --- ANONYMOUS AI USAGE LOGIC ---
+  const [anonAiUsage, setAnonAiUsage] = useState<number>(0);
+  const [anonLimitReached, setAnonLimitReached] = useState(false);
+  const ANON_LIMIT = 3;
+
+  // Helper to read cookie value
+  function getCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()!.split(';').shift() || null;
+    return null;
+  }
+
+  // On mount, read the ai_usage cookie if not logged in
+  useEffect(() => {
+    if (!user && !authLoading) {
+      const usage = parseInt(getCookie('ai_usage') || '0', 10);
+      setAnonAiUsage(isNaN(usage) ? 0 : usage);
+      setAnonLimitReached((isNaN(usage) ? 0 : usage) >= ANON_LIMIT);
+    }
+  }, [user, authLoading]);
+
+  // When a successful AI request is made as anon, increment local usage
+  const incrementAnonUsage = () => {
+    setAnonAiUsage((prev) => {
+      const next = prev + 1;
+      setAnonLimitReached(next >= ANON_LIMIT);
+      return next;
+    });
+  };
+
   // Get tailored presets for the current documentType
   const PRESETS = getPresets(documentType, diffHtmlFilePaths);
 
@@ -179,7 +211,16 @@ export default function AiChat({
       });
 
       if (!response.ok) {
+        // If anonymous and hit limit, update local state
+        if (!user && response.status === 403) {
+          setAnonLimitReached(true);
+        }
         throw new Error(`Error: ${response.status}`);
+      }
+
+      // If anonymous and successful, increment local usage
+      if (!user) {
+        incrementAnonUsage();
       }
 
       // Check if the response is a stream (text/plain) or JSON (web search fallback)
@@ -269,6 +310,11 @@ export default function AiChat({
       buttonText = 'Learn about this document';
   }
 
+  // Determine if AI should be locked for this user (either logged in and at limit, or anon and at limit)
+  const aiLocked = user
+    ? aiLimitReached
+    : anonLimitReached;
+
   // Panel layout (always open, not floating)
   return (
     <div 
@@ -281,6 +327,10 @@ export default function AiChat({
         {/* Show usage counter for free users in header */}
         {!isPaidSubscriber && user && (
           <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{aiInteractions}/{AI_FREE_USAGE_LIMIT} free uses</span>
+        )}
+        {/* Show usage counter for anonymous users */}
+        {!user && !authLoading && (
+          <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{anonAiUsage}/{ANON_LIMIT} free uses</span>
         )}
       </div>
 
@@ -320,8 +370,8 @@ export default function AiChat({
             default:
               IconComponent = FileText;
           }
-          // Only lock if aiLimitReached or not signed in
-          const isLocked = aiLimitReached || !user || authLoading;
+          // Only lock if aiLocked or not signed in and at limit
+          const isLocked = aiLocked || (!user && !authLoading && anonLimitReached);
           return (
             <Button
               key={preset.label}
@@ -332,7 +382,7 @@ export default function AiChat({
               variant="outline"
               className={`px-2 py-1 text-xs flex items-center gap-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ borderRadius: '0.5rem' }}
-              title={(!user || authLoading) ? 'Sign in to use AI' : (aiLimitReached ? 'Upgrade to continue using AI' : undefined)}
+              title={(!user || authLoading) ? 'Sign in to use AI' : (aiLocked ? 'Upgrade to continue using AI' : undefined)}
             >
               <IconComponent className="h-3.5 w-3.5" />
               {preset.label}
@@ -343,10 +393,11 @@ export default function AiChat({
 
       {/* Messages (scrollable area) */}
       <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 bg-gray-50" ref={scrollContainerRef} onScroll={handleScroll}>
-        {(!user && !authLoading) ? (
+        {/* Show sign in prompt if anon and at limit */}
+        {(!user && !authLoading && anonLimitReached) ? (
           <div className="p-4">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">Sign in to use the AI Assistant</p>
+              <p className="text-sm text-gray-600 mb-2">Sign in to continue using the AI Assistant</p>
               <a
                 href={getLoginUrl(pathname)}
                 className="inline-block px-3 py-1.5 bg-primary text-white font-medium hover:bg-primary/90 transition text-sm"
@@ -356,7 +407,7 @@ export default function AiChat({
               </a>
             </div>
           </div>
-        ) : aiLimitReached ? (
+        ) : aiLocked ? (
           <div className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-2">You have reached your free AI usage limit.</p>
@@ -456,7 +507,7 @@ export default function AiChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Ask about ${documentTitle || 'this document'}...`}
-            disabled={isLoading || aiLimitReached || !user || authLoading}
+            disabled={isLoading || aiLocked || (!user && !authLoading && anonLimitReached) || authLoading}
             style={{ borderRadius: '0.5rem' }}
             className="h-9"
           />
@@ -464,7 +515,7 @@ export default function AiChat({
             type="submit"
             className="px-3 py-1.5 text-white text-sm h-9"
             style={{ borderRadius: '0.5rem' }}
-            disabled={isLoading || !input.trim() || (!user && !authLoading) || aiLimitReached || !user || authLoading}
+            disabled={isLoading || !input.trim() || aiLocked || (!user && !authLoading && anonLimitReached) || authLoading}
           >
             Send
           </Button>

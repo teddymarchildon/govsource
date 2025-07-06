@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { fetchHtmlContent, processDocumentContent, truncateContent } from '@/utils/documentUtils';
 import { createClient } from '@/utils/supabase/server';
@@ -36,10 +37,23 @@ export async function POST(request: Request) {
     }
 
     // --- AI USAGE VALIDATION ---
+    let aiUsage: number | undefined = undefined;
+    let isAnonymous = false;
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required.' }, { status: 400 });
+      // Anonymous user: check cookie
+      const cookieStore = await cookies();
+      aiUsage = parseInt(cookieStore.get('ai_usage')?.value || '0', 10);
+      if (isNaN(aiUsage)) aiUsage = 0;
+      if (aiUsage >= 3) {
+        return NextResponse.json({ error: 'AI usage limit reached for anonymous users. Please log in to continue.' }, { status: 403 });
+      }
+      aiUsage += 1;
+      isAnonymous = true;
+      // We'll set the cookie before returning the response below
     }
 
+    // --- LOGGED-IN USER LOGIC ---
+    if (userId) {
       const supabase = await createClient();
       // Get subscription
       const { data: subscription, error: subError } = await supabase
@@ -51,7 +65,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to check subscription.' }, { status: 500 });
       }
       const isPaid = subscription && subscription.tier === 'paid';
-    // Get user usage
+      // Get user usage
       const { data: usage, error: usageError } = await supabase
         .from('user_usage')
         .select('ai_interactions')
@@ -64,14 +78,14 @@ export async function POST(request: Request) {
       if (!isPaid && aiInteractions >= 5) {
         return NextResponse.json({ error: 'AI usage limit reached. Please upgrade to continue.' }, { status: 403 });
       }
-
       // Increment ai_interactions for all users
       const { error: updateError } = await supabase
         .from('user_usage')
         .update({ ai_interactions: aiInteractions + 1 })
         .eq('user_id', userId);
       if (updateError) {
-      return NextResponse.json({ error: 'Failed to increment AI usage.' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to increment AI usage.' }, { status: 500 });
+      }
     }
 
     // Get the appropriate system prompt based on the preset type
@@ -135,12 +149,21 @@ export async function POST(request: Request) {
             }
           },
         });
-        return new Response(stream, {
+        let response = new Response(stream, {
           headers: {
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'no-cache',
           },
         });
+        if (isAnonymous && typeof aiUsage === 'number') {
+          const cookieStore = await cookies();
+          cookieStore.set('ai_usage', aiUsage.toString(), {
+            httpOnly: true,
+            path: '/',
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+          });
+        }
+        return response;
       }
       // If we can't fetch both, fallback to default below
     }
@@ -185,12 +208,21 @@ export async function POST(request: Request) {
           }
         },
       });
-      return new Response(stream, {
+      let response = new Response(stream, {
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': 'no-cache',
         },
       });
+      if (isAnonymous && typeof aiUsage === 'number') {
+        const cookieStore = await cookies();
+        cookieStore.set('ai_usage', aiUsage.toString(), {
+          httpOnly: true,
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+        });
+      }
+      return response;
     } else {
       // If no content is available, use web search tool
       systemMessage.content += `\n\nNo document content is available. Please use web search to find relevant information about this document.`;
@@ -207,7 +239,16 @@ export async function POST(request: Request) {
 
       // Extract the response
       const responseMessage = completion.output_text;
-      return NextResponse.json({ message: responseMessage });
+      let jsonResponse = NextResponse.json({ message: responseMessage });
+      if (isAnonymous && typeof aiUsage === 'number') {
+        const cookieStore = await cookies();
+        cookieStore.set('ai_usage', aiUsage.toString(), {
+          httpOnly: true,
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+        });
+      }
+      return jsonResponse;
     }
   } catch (error) {
     console.error('Error processing AI chat request:', error);
