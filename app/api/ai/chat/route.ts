@@ -35,9 +35,11 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('userId', userId);
     // --- AI USAGE VALIDATION ---
-    if (userId) {
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required.' }, { status: 400 });
+    }
+
       const supabase = await createClient();
       // Get subscription
       const { data: subscription, error: subError } = await supabase
@@ -69,8 +71,7 @@ export async function POST(request: Request) {
         .update({ ai_interactions: aiInteractions + 1 })
         .eq('user_id', userId);
       if (updateError) {
-        return NextResponse.json({ error: 'Failed to increment AI usage.' }, { status: 500 });
-      }
+      return NextResponse.json({ error: 'Failed to increment AI usage.' }, { status: 500 });
     }
 
     // Get the appropriate system prompt based on the preset type
