@@ -320,17 +320,19 @@ export default function AiChat({
             default:
               IconComponent = FileText;
           }
-          // Only lock if aiLimitReached
-          const isLocked = aiLimitReached;
+          // Only lock if aiLimitReached or not signed in
+          const isLocked = aiLimitReached || !user || authLoading;
           return (
             <Button
               key={preset.label}
-              onClick={() => !isLocked && handlePresetClick(preset)}
+              onClick={() => {
+                if (!isLocked) handlePresetClick(preset);
+              }}
               disabled={isLoading || isLocked}
               variant="outline"
               className={`px-2 py-1 text-xs flex items-center gap-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ borderRadius: '0.5rem' }}
-              title={aiLimitReached ? 'Upgrade to continue using AI' : undefined}
+              title={(!user || authLoading) ? 'Sign in to use AI' : (aiLimitReached ? 'Upgrade to continue using AI' : undefined)}
             >
               <IconComponent className="h-3.5 w-3.5" />
               {preset.label}
@@ -454,7 +456,7 @@ export default function AiChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Ask about ${documentTitle || 'this document'}...`}
-            disabled={isLoading || aiLimitReached}
+            disabled={isLoading || aiLimitReached || !user || authLoading}
             style={{ borderRadius: '0.5rem' }}
             className="h-9"
           />
@@ -462,7 +464,7 @@ export default function AiChat({
             type="submit"
             className="px-3 py-1.5 text-white text-sm h-9"
             style={{ borderRadius: '0.5rem' }}
-            disabled={isLoading || !input.trim() || (!user && !authLoading) || aiLimitReached}
+            disabled={isLoading || !input.trim() || (!user && !authLoading) || aiLimitReached || !user || authLoading}
           >
             Send
           </Button>
