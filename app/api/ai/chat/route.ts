@@ -5,12 +5,11 @@ import { fetchHtmlContent, processDocumentContent, truncateContent } from '@/uti
 import { createClient } from '@/utils/supabase/server';
 
 // Define preset types and their corresponding system prompts
-type PresetType = 'default' | 'summarize' | 'keyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
+type PresetType = 'default' | 'summarizeKeyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
 
 const PRESET_PROMPTS: Record<PresetType, string> = {
   default: 'You are an AI assistant helping a user understand information about US Federal Government documents, legislation, and executive actions. Answer questions based on the document content. Be objective and factual about the contents of the document.',
-  summarize: 'You are an AI assistant helping a user understand information about US Federal Government documents, legislation, and executive actions. Provide a concise summary of the document, highlighting its main purpose and potential impact. Keep your summary clear and objective. Be objective and factual about the contents of the government action.',
-  keyPoints: 'You are an AI assistant helping a user understand information about US Federal Government documents, legislation, and executive actions. Extract and explain the most important points from this document. Focus on the provisions that have the most significant impact or introduce notable changes. Be objective and factual about the contents of the document.',
+  summarizeKeyPoints: 'You are an AI assistant helping a user understand information about US Federal Government documents, legislation, and executive actions. Provide a concise summary of the document, highlighting its main purpose, key points, and potential impact. Extract and explain the most important requirements and provisions. Be objective and factual about the contents of the document.',
   historicalContext: 'You are an AI assistant helping a user understand information about US Federal Government documents, legislation, and executive actions. Provide historical context for this document. Explain how it relates to previous legislation, what problems it aims to solve, and how it fits into the broader legislative history on this topic. Be objective and factual about the contents of the document.',
   prosAndCons: 'You are an AI assistant helping a user understand information about US Federal Government documents, legislation, and executive actions. Analyze the potential benefits and drawbacks of this document. Present a balanced view of arguments for and against its provisions, considering different stakeholder perspectives. Be objective and factual about the contents of the document.',
   diff: 'You are an AI assistant helping a user understand the differences between two versions of a US Federal Government document. Compare the two versions and explain the differences in content, structure, and meaning. Be specific about what changed.'
@@ -19,8 +18,10 @@ const PRESET_PROMPTS: Record<PresetType, string> = {
 // Preset-specific keywords for relevance scoring
 const PRESET_KEYWORDS: Record<PresetType, string[]> = {
   default: [],
-  summarize: ['purpose', 'establishes', 'provides', 'creates', 'amends', 'act', 'section', 'title'],
-  keyPoints: ['shall', 'must', 'requires', 'requirement', 'section', 'provision', 'prohibits', 'authorizes'],
+  summarizeKeyPoints: [
+    'purpose', 'establishes', 'provides', 'creates', 'amends', 'act', 'section', 'title',
+    'shall', 'must', 'requires', 'requirement', 'provision', 'prohibits', 'authorizes'
+  ],
   historicalContext: ['whereas', 'background', 'previously', 'history', 'amended', 'prior', 'existing', 'finds that'],
   prosAndCons: ['benefit', 'impact', 'effect', 'cost', 'concern', 'advantage', 'disadvantage', 'improve', 'risk'],
   diff: ['change', 'modification', 'addition', 'deletion', 'revision', 'amend', 'strike', 'insert']
@@ -29,8 +30,7 @@ const PRESET_KEYWORDS: Record<PresetType, string[]> = {
 // Additional instructions for each preset type
 const PRESET_INSTRUCTIONS: Record<PresetType, string> = {
   default: 'Answer the user\'s question based on the provided sections.',
-  summarize: 'Based on these key sections, provide a comprehensive summary of the document\'s main purpose and implications.',
-  keyPoints: 'Extract and explain the most important requirements and provisions from these sections.',
+  summarizeKeyPoints: 'Based on these key sections, provide a comprehensive summary of the document\'s main purpose and implications. Extract and explain the most important requirements and provisions from these sections.',
   historicalContext: 'Using these sections, explain the historical background and what led to this document.',
   prosAndCons: 'Analyze these sections to present balanced arguments for and against the document\'s provisions.',
   diff: 'Compare the provided sections to identify and explain the key differences.'
@@ -232,10 +232,8 @@ function assembleContext(chunks: DocumentChunk[], documentTitle: string, preset:
   context += '\n[Note: This response is based on the most relevant sections of the document. The full document may contain additional content not shown here.]';
   
   // Add preset-specific context
-  if (preset === 'summarize') {
-    context += '\n\nThese sections were selected as most representative of the document\'s overall content and purpose.';
-  } else if (preset === 'keyPoints') {
-    context += '\n\nThese sections contain the most important provisions and requirements.';
+  if (preset === 'summarizeKeyPoints') {
+    context += '\n\nThese sections were selected as most representative of the document\'s overall content, purpose, and key points.';
   } else if (preset === 'historicalContext') {
     context += '\n\nThese sections provide background and historical context.';
   }

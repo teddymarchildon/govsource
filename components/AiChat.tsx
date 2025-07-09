@@ -16,7 +16,7 @@ interface Message {
 }
 
 // Define preset types that match the backend types
-type PresetType = 'default' | 'summarize' | 'keyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
+type PresetType = 'default' | 'summarizeKeyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
 
 interface Preset {
   type: PresetType;
@@ -47,14 +47,9 @@ function getPresets(documentType: AiChatProps['documentType'], diffHtmlFilePaths
   const noun = getDocumentNoun(documentType);
   const presets: Preset[] = [
     {
-      type: 'summarize',
-      label: 'Summarize',
-      userMessage: `Please summarize this ${noun} for me.`
-    },
-    {
-      type: 'keyPoints',
-      label: 'Key Points',
-      userMessage: `What are the key points of this ${noun}?`
+      type: 'summarizeKeyPoints',
+      label: 'Summarize key points',
+      userMessage: `Please summarize the key points of this ${noun}.`
     },
     {
       type: 'historicalContext',
@@ -352,10 +347,7 @@ export default function AiChat({
         {PRESETS.map((preset) => {
           let IconComponent = null;
           switch (preset.type) {
-            case 'summarize':
-              IconComponent = FileText;
-              break;
-            case 'keyPoints':
+            case 'summarizeKeyPoints':
               IconComponent = Sparkles;
               break;
             case 'historicalContext':
