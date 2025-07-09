@@ -17,13 +17,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'GovSource - See for yourself',
+  title: 'GovSource - AI-Powered Legislative Insights',
   description: 'Track legislative activities and congressman',
   icons: {
     icon: '/favicon.png',
   },
   openGraph: {
-    title: 'GovSource - See for yourself',
+    title: 'GovSource - AI-Powered Legislative Insights',
     description: 'Track legislative activities, executive orders, agencies, and congressman',
     url: 'https://www.govsrc.com',
     siteName: 'GovSource',
