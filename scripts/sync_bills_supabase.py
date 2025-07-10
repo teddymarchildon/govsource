@@ -787,7 +787,8 @@ def sync_bills_to_supabase(
                         # Generate unique file paths for storage
                         bill_identifier = f"{parsed_bill['congress']}_{parsed_bill['type']}_{parsed_bill['number']}"
                         # Use date or fallback_key for path
-                        date_str = text_data.get("date", text_data.get("fallback_key", f"unknown_{idx}")).replace("-", "").replace(":", "").replace("T", "")
+                        date_or_fallback = text_data.get("date") or text_data.get("fallback_key") or f"unknown_{idx}"
+                        date_str = str(date_or_fallback).replace("-", "").replace(":", "").replace("T", "")
                         # Download and upload PDF, HTML, and XML files to Supabase storage
                         pdf_storage_url = None
                         html_storage_url = None
@@ -1172,7 +1173,8 @@ def sync_single_bill_by_id(supabase: Client, bill_id: str) -> bool:
                 # Generate unique file paths for storage
                 bill_identifier = f"{parsed_bill['congress']}_{parsed_bill['type']}_{parsed_bill['number']}"
                 # Use date or fallback_key for path
-                date_str = text_data.get("date", text_data.get("fallback_key", f"unknown_{idx}")).replace("-", "").replace(":", "").replace("T", "")
+                date_or_fallback = text_data.get("date") or text_data.get("fallback_key") or f"unknown_{idx}"
+                date_str = str(date_or_fallback).replace("-", "").replace(":", "").replace("T", "")
                 # Download and upload PDF, HTML, and XML files to Supabase storage
                 pdf_storage_url = None
                 html_storage_url = None
