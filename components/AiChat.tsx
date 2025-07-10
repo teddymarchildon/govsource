@@ -48,7 +48,7 @@ function getPresets(documentType: AiChatProps['documentType'], diffHtmlFilePaths
   const presets: Preset[] = [
     {
       type: 'summarizeKeyPoints',
-      label: 'Summarize key points',
+      label: 'Key points',
       userMessage: `Please summarize the key points of this ${noun}.`
     },
     {
