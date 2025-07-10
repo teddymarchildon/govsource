@@ -250,6 +250,10 @@ def fetch_bill_texts(url: str) -> List[Dict[str, Any]]:
 
                 # Extract format URLs
                 if "formats" in item:
+                    # Skip if formats is an empty list
+                    if isinstance(item["formats"], list) and len(item["formats"]) == 0:
+                        logger.info(f"Skipping text version at index {idx} due to empty formats list.")
+                        continue
                     for format_item in item["formats"]:
                         format_type = format_item.get("type", "")
                         if format_type == "PDF":
