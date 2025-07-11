@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase/client';
 import { getBillActions } from '@/services/api';
+import { getBillSummary } from '@/services/api';
 import BillOrLawDetail from '@/components/BillOrLawDetail';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
@@ -17,6 +18,7 @@ export default function LawDetailPage() {
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [cosponsors, setCosponsors] = useState<any[]>([]);
   const [actions, setActions] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
     
   useEffect(() => {
@@ -68,6 +70,10 @@ export default function LawDetailPage() {
         const actionsData = await getBillActions(lawId);
         setActions(actionsData);
 
+        // Fetch summary for this law (bill)
+        const summaryData = await getBillSummary(lawId);
+        setSummary(summaryData);
+
       } catch (error) {
         console.error('Error fetching law details:', error);
         // If law not found, redirect to 404 page
@@ -107,6 +113,7 @@ export default function LawDetailPage() {
       sponsors={sponsors}
       cosponsors={cosponsors}
       actions={actions}
+      summary={summary}
       isLaw={true}
     />
   );
