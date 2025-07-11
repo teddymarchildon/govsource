@@ -80,6 +80,12 @@ export default function SupremeCourtCaseDetailPage() {
     ? new Date(Math.max(...cluster.opinions.map(o => new Date(o.date || '').getTime())))
     : null;
 
+  // Get the most recent opinion (by date)
+  const mostRecentOpinion = cluster?.opinions && cluster.opinions.length > 0
+    ? [...cluster.opinions].sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime())[0]
+    : null;
+  const mostRecentHtmlFilePath = mostRecentOpinion?.html_file_path;
+
   // Helper to map opinion type for display
   function mapOpinionType(type?: string) {
     if (!type) return 'Opinion';
@@ -213,6 +219,7 @@ export default function SupremeCourtCaseDetailPage() {
               documentId={String(cluster.id)}
               documentTitle={cluster.case_name}
               height="100%"
+              htmlFilePath={mostRecentHtmlFilePath}
             />
           </div>
         </div>
@@ -224,6 +231,7 @@ export default function SupremeCourtCaseDetailPage() {
           documentType="opinion"
           documentId={String(cluster.id)}
           documentTitle={cluster.case_name}
+          htmlFilePath={mostRecentHtmlFilePath}
         />
       </div>
     </div>
