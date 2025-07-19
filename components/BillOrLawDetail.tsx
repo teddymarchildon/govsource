@@ -181,6 +181,14 @@ export default function BillOrLawDetail({
                     <CardContent className="p-4 md:p-5 pt-3 flex-1 overflow-y-auto">
                       {(() => {
                         const sortedTexts = [...texts].sort((a, b) => {
+                          // Always show 'Enrolled Bill' at the top
+                          const aIsEnrolled = a.type?.toLowerCase() === 'enrolled bill';
+                          const bIsEnrolled = b.type?.toLowerCase() === 'enrolled bill';
+                          
+                          if (aIsEnrolled && !bIsEnrolled) return -1;
+                          if (!aIsEnrolled && bIsEnrolled) return 1;
+                          
+                          // For non-enrolled bills or when both are enrolled, sort by date descending
                           const dateA = a.date ? new Date(a.date).getTime() : 0;
                           const dateB = b.date ? new Date(b.date).getTime() : 0;
                           if (!a.date) return 1;
