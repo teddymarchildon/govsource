@@ -359,7 +359,7 @@
           "object": "line_item",
           "amount": 499,
           "currency": "usd",
-          "description": "1 × GovSource Monthly Subscription (at $4.99 / month)",
+          "description": "1 × GovSource Monthly Subscription (at $1.99 / month)",
           "discount_amounts": [],
           "discountable": true,
           "discounts": [],

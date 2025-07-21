@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: 'price_1RXqViFHp5a6uQihQFgBJKBH', quantity: 1 }],
+      line_items: [{ price: 'price_1RnJM4FHp5a6uQihntepfOIg', quantity: 1 }],
       success_url: redirectUrl || 'https://govsrc.com/profile',
       cancel_url: redirectUrl || 'https://govsrc.com/profile',
       client_reference_id: userId,
