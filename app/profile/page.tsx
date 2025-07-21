@@ -219,11 +219,16 @@ export default function ProfilePage() {
           </div>
           {/* Pro Tier */}
           <div className={`rounded-lg border p-6 ${isPaidSubscriber ? 'border-primary' : 'border-gray-300'}`}>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start">
               <h3 className="text-lg font-bold">Pro</h3>
-              {isPaidSubscriber && (
-                <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">Current Plan</span>
-              )}
+              <div className="text-right">
+                {!isPaidSubscriber && (
+                  <p className="text-2xl font-bold text-primary">$1.99<span className="text-sm font-normal text-gray-500">/month</span></p>
+                )}
+                {isPaidSubscriber && (
+                  <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">Current Plan</span>
+                )}
+              </div>
             </div>
             <p className="text-gray-500 mt-2">Unlimited GovSource Assistant, personalized alerts, and more.</p>
             <ul className="mt-4 space-y-2 text-sm">
