@@ -343,9 +343,9 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <p className="text-lg text-gray-600 mb-4">You haven&apos;t saved any congressmembers yet.</p>
+            <p className="text-lg text-gray-600 mb-4">You haven&apos;t saved any congress members yet.</p>
             <Link href="/congressmen" className="text-blue-600 hover:underline">
-              Browse congressmen
+              Browse members of congress
             </Link>
           </div>
         )}

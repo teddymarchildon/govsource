@@ -353,6 +353,33 @@ function HomeContent() {
           )}
         </div>
 
+        {/* SEO Content Section for Logged-in Users */}
+        <div className="mb-8 bg-gray-50 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Track Congress Members and Legislative Activities</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
+            <div>
+              <h3 className="font-medium mb-2">Members of Congress</h3>
+              <p className="mb-3">
+                Discover and track congress members from all states. 
+                Monitor their voting records, sponsored bills, and legislative activities.
+              </p>
+              <Link href="/congressmen" className="text-primary hover:underline font-medium">
+                Browse all Congress members →
+              </Link>
+            </div>
+            <div>
+              <h3 className="font-medium mb-2">Legislative Tracking</h3>
+              <p className="mb-3">
+                Stay informed about the latest bills, laws, and government activities. 
+                Track how congress members vote and influence policy decisions.
+              </p>
+              <Link href="/bills" className="text-primary hover:underline font-medium">
+                View recent legislation →
+              </Link>
+            </div>
+          </div>
+        </div>
+
         {/* Recent Legislation in Your Policy Areas */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
@@ -433,7 +460,7 @@ function HomeContent() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                Congressmembers ({savedCongressmen.length})
+                Congress members ({savedCongressmen.length})
               </button>
               <button
                 onClick={() => setActiveTab('judges')}
@@ -509,9 +536,9 @@ function HomeContent() {
                   </div>
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                    <p className="text-gray-700">You haven&apos;t saved any congressmen yet.</p>
+                    <p className="text-gray-700">You haven&apos;t saved any congress members or congressman yet.</p>
                     <Link href="/congressmen" className="text-primary hover:underline mt-2 inline-block">
-                      Browse congressmen
+                      Browse members of Congress
                     </Link>
                   </div>
                 )}
@@ -648,7 +675,7 @@ function HomeContent() {
         </CardHeader>
         <CardContent>
           <p className="text-primary-foreground/90">
-            Use AI to discover, track, and understand US federal legislation, court cases, and more.
+            Use AI to discover, track, and understand US federal legislation, court cases, and more. Track members of Congress, congressman activities, and legislative developments.
           </p>
         </CardContent>
       </Card>
@@ -697,11 +724,15 @@ function HomeContent() {
           <ul className="space-y-1 text-muted-foreground">
             <li className="flex items-start">
               <span className="mr-2">•</span>
-              <span>Save and track government information</span>
+              <span>Save and track government information including congress members and their activities</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2">•</span>
               <span>Access advanced AI-powered analysis on laws, bills, executive orders, and more</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Track congress members voting records and legislative history</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2">•</span>
@@ -759,6 +790,33 @@ function HomeContent() {
             <p className="text-gray-700">No recent executive orders found.</p>
           </div>
         )}
+      </div>
+
+      {/* SEO Content Section */}
+      <div className="mb-8 bg-gray-50 rounded-lg p-6">
+        <h2 className="text-xl font-semibold mb-4">Track congress members and legislative activities</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
+          <div>
+            <h3 className="font-medium mb-2">Members of Congress</h3>
+            <p className="mb-3">
+              Discover and track congress members from all states. 
+              Monitor their voting records, sponsored bills, and legislative activities.
+            </p>
+            <Link href="/congressmen" className="text-primary hover:underline font-medium">
+              Browse all Congress members →
+            </Link>
+          </div>
+          <div>
+            <h3 className="font-medium mb-2">Legislative Tracking</h3>
+            <p className="mb-3">
+              Stay informed about the latest bills, laws, and government activities. 
+              Track how congress members vote and influence policy decisions.
+            </p>
+            <Link href="/bills" className="text-primary hover:underline font-medium">
+              View recent legislation →
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Bills Filter/Search and Grid */}

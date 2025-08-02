@@ -17,14 +17,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'GovSource - AI-Powered Legislative Insights',
-  description: 'Track legislative activities and congressman',
+  title: 'GovSource - AI-Powered Legislative Insights | Track Members of Congress',
+  description: 'Track US Congress members, congressman, and legislative activities with AI-powered insights. Discover bills, laws, and government information.',
+  keywords: 'congressman, members of congress, congress members, us congressman, legislative tracking, government data, bills, laws',
   icons: {
     icon: '/favicon.png',
   },
   openGraph: {
-    title: 'GovSource - AI-Powered Legislative Insights',
-    description: 'Track legislative activities, executive orders, agencies, and congressman',
+    title: 'GovSource - AI-Powered Legislative Insights | Track Members of Congress',
+    description: 'Track US Congress members, congressman, and legislative activities with AI-powered insights. Discover bills, laws, and government information.',
     url: 'https://www.govsrc.com',
     siteName: 'GovSource',
     type: 'website',

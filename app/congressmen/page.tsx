@@ -76,7 +76,10 @@ export default function CongressmenPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Members of Congress</h1>
+      <h1 className="text-3xl font-bold mb-4">Members of Congress</h1>
+      <p className="text-gray-600 mb-8">
+        Discover and track congress members. Search by name, party, state, or chamber to find specific members of congress and their legislative activities.
+      </p>
 
       {/* Redesigned Search & Filters */}
       <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
