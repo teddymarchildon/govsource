@@ -380,10 +380,9 @@ export async function POST(request: Request) {
           async start(controller) {
             try {
               const completion = await openai.chat.completions.create({
-                model: 'gpt-4o',
+                model: 'gpt-5-mini-2025-08-07',
                 messages: apiMessages,
-                temperature: 0.7,
-                max_tokens: 1000,
+                max_completion_tokens: 1000,
                 stream: true,
               });
               for await (const chunk of completion) {
@@ -452,10 +451,9 @@ export async function POST(request: Request) {
         async start(controller) {
           try {
             const completion = await openai.chat.completions.create({
-              model: 'gpt-4o',
+              model: 'gpt-5-mini-2025-08-07',
               messages: apiMessages,
-              temperature: 0.7,
-              max_tokens: 1000,
+              max_completion_tokens: 1000,
               stream: true,
             });
             for await (const chunk of completion) {
@@ -492,7 +490,7 @@ export async function POST(request: Request) {
 
       // Call OpenAI API with web search tool enabled
       const completion = await openai.responses.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-mini-2025-08-07',
         input: apiMessages,
         tools: [{ type: "web_search_preview" }],
       });
