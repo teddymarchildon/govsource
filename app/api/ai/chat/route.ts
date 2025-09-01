@@ -241,7 +241,7 @@ function assembleContext(chunks: DocumentChunk[], documentTitle: string, preset:
   return context;
 }
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -380,7 +380,7 @@ export async function POST(request: Request) {
           async start(controller) {
             try {
               const completion = await openai.chat.completions.create({
-                model: 'gpt-5-mini-2025-08-07',
+                model: 'gpt-5-nano-2025-08-07',
                 messages: apiMessages,
                 max_completion_tokens: 1000,
                 stream: true,
