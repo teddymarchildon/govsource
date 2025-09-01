@@ -241,7 +241,7 @@ function assembleContext(chunks: DocumentChunk[], documentTitle: string, preset:
   return context;
 }
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 // Initialize OpenAI client
 const openai = new OpenAI({
