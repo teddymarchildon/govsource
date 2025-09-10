@@ -18,7 +18,7 @@ export default function SupremeCourtCaseDetailPage() {
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [_activeTab, setActiveTab] = useState(0);
     
   useEffect(() => {
     const fetchCluster = async () => {
@@ -76,7 +76,7 @@ export default function SupremeCourtCaseDetailPage() {
   }, [JSON.stringify(sortedOpinions)]);
 
   // Get the most recent opinion date
-  const mostRecentDate = cluster?.opinions?.length && cluster.opinions.length > 0
+  const _mostRecentDate = cluster?.opinions?.length && cluster.opinions.length > 0
     ? new Date(Math.max(...cluster.opinions.map(o => new Date(o.date || '').getTime())))
     : null;
 
@@ -162,14 +162,14 @@ export default function SupremeCourtCaseDetailPage() {
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full flex flex-col">
               <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
-                {sortedOpinions.map((opinion, idx) => (
+                {sortedOpinions.map((opinion, _idx) => (
                   <TabsTrigger key={opinion.id} value={opinion.id} className="bg-transparent px-2 py-1 text-sm">
                     {mapOpinionType(opinion.type)}
                   </TabsTrigger>
                 ))}
               </TabsList>
               <div className="flex-1 overflow-hidden">
-                {sortedOpinions.map((opinion, idx) => (
+                {sortedOpinions.map((opinion, _idx) => (
                   <TabsContent key={opinion.id} value={opinion.id} className="mt-0 h-full">
                     <Card className="h-full flex flex-col">
                       <CardContent className="p-4 md:p-5 flex-1 flex flex-col overflow-hidden">

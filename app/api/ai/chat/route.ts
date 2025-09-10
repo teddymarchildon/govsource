@@ -16,7 +16,7 @@ const PRESET_PROMPTS: Record<PresetType, string> = {
   diff: 'You are an AI assistant helping a user understand the differences between two versions of a US Federal Government document. Compare the two versions and explain the differences in content, structure, and meaning. Be specific about what changed.'
 };
 
-const PRESET_KEYWORDS: Record<PresetType, string[]> = {
+const _PRESET_KEYWORDS: Record<PresetType, string[]> = {
   default: [],
   summarizeKeyPoints: [
     'purpose', 'establishes', 'provides', 'creates', 'amends', 'act', 'section', 'title',
@@ -27,7 +27,7 @@ const PRESET_KEYWORDS: Record<PresetType, string[]> = {
   diff: ['change', 'modification', 'addition', 'deletion', 'revision', 'amend', 'strike', 'insert']
 };
 
-const PRESET_INSTRUCTIONS: Record<PresetType, string> = {
+const _PRESET_INSTRUCTIONS: Record<PresetType, string> = {
   default: 'Answer the user\'s question based on the provided sections.',
   summarizeKeyPoints: 'Based on these key sections, provide a comprehensive summary of the document\'s main purpose and implications. Extract and explain the most important requirements and provisions from these sections.',
   historicalContext: 'Using these sections, explain the historical background and what led to this document.',
@@ -320,7 +320,7 @@ export async function POST(request: Request) {
     const result = await run(agent, userQuery);
     const finalText = extractFinalText(result);
 
-    let response = new NextResponse(finalText, {
+    const response = new NextResponse(finalText, {
       headers: {
         'Content-Type': 'text/markdown; charset=utf-8',
         'Cache-Control': 'no-cache',

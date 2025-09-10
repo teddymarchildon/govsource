@@ -187,7 +187,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ storagePath, storageBucket, class
                     Download PDF
                   </a>
                   <p className="text-xs text-gray-500 mt-2">
-                    Use your device's PDF viewer for the best experience
+                    Use your device&#39;s PDF viewer for the best experience
                   </p>
                 </div>
               </div>

@@ -16,7 +16,6 @@ import {
   Users,
   Building,
   Briefcase,
-  Menu,
 } from 'lucide-react';
 import LoadingIndicator from './ui/LoadingIndicator';
 
@@ -134,7 +133,7 @@ export default function Sidebar() {
   // Close sidebar when route changes on mobile
   useEffect(() => {
     setIsMobileOpen(false);
-  }, [pathname]);
+  }, [pathname, setIsMobileOpen]);
 
   // Handle clicks outside the sidebar on mobile
   useEffect(() => {
@@ -157,7 +156,7 @@ export default function Sidebar() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isMobileOpen]);
+  }, [isMobileOpen, setIsMobileOpen]);
 
   const isActive = (path: string) => {
     return pathname === path ? 'bg-gray-100 text-primary font-medium' : '';

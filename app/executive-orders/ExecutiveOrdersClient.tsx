@@ -40,7 +40,7 @@ export default function ExecutiveOrdersClient({
     currentEndDate ? new Date(currentEndDate) : undefined,
   );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
-  const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
+  const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
   const [presidents] = useState<string[]>(initialPresidents);
   const [selectedPresident, setSelectedPresident] = useState(currentPresident);
 

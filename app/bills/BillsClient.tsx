@@ -38,7 +38,7 @@ export default function BillsClient({
 
   const [bills, setBills] = useState<Bill[]>(initialBills);
   const [loading, setLoading] = useState(false);
-  const [selectedPolicyArea, setSelectedPolicyArea] = useState<
+  const [selectedPolicyArea, _setSelectedPolicyArea] = useState<
     PolicyArea | ""
   >(currentPolicyArea as PolicyArea | "");
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery);
@@ -51,7 +51,7 @@ export default function BillsClient({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
     currentSortOrder === "asc" ? "asc" : "desc",
   );
-  const [initialLoadComplete, setInitialLoadComplete] = useState(true); // Already loaded from server
+  const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
 
   const fetchBills = async (page: number) => {
     if (page === 1) {

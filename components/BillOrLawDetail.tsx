@@ -52,7 +52,7 @@ interface BillOrLawDetailProps {
   isLaw?: boolean;
 }
 
-type TabType = 'details' | 'sponsors' | 'actions' | 'text';
+type _TabType = 'details' | 'sponsors' | 'actions' | 'text';
 
 export default function BillOrLawDetail({
   item,

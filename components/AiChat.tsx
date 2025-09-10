@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, FileText, Sparkles, Clock, Scale, Loader } from 'lucide-react';
+import { FileText, Sparkles, Clock, Scale, Loader } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
@@ -101,7 +101,7 @@ export default function AiChat({
   const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   // Auth state
-  const { user, loading: authLoading, isPaidSubscriber, aiInteractions, aiLimitReached } = useAuth();
+  const { user, loading: _authLoading, isPaidSubscriber, aiInteractions, aiLimitReached } = useAuth();
 
   // --- ANONYMOUS AI USAGE LOGIC ---
   const [anonAiUsage, setAnonAiUsage] = useState<number>(0);
@@ -119,12 +119,12 @@ export default function AiChat({
 
   // On mount, read the ai_usage cookie if not logged in
   useEffect(() => {
-    if (!user && !authLoading) {
+    if (!user && !_authLoading) {
       const usage = parseInt(getCookie('ai_usage') || '0', 10);
       setAnonAiUsage(isNaN(usage) ? 0 : usage);
       setAnonLimitReached((isNaN(usage) ? 0 : usage) >= ANON_LIMIT);
     }
-  }, [user, authLoading]);
+  }, [user, _authLoading]);
 
   // When a successful AI request is made as anon, increment local usage
   const incrementAnonUsage = () => {
@@ -284,25 +284,25 @@ export default function AiChat({
   };
 
   // Determine button text based on documentType
-  let buttonText = 'Learn about this document';
+  let _buttonText = 'Learn about this document';
   switch (documentType) {
     case 'bill':
-      buttonText = 'Learn about this bill';
+      _buttonText = 'Learn about this bill';
       break;
     case 'law':
-      buttonText = 'Learn about this law';
+      _buttonText = 'Learn about this law';
       break;
     case 'agencyDocument':
-      buttonText = 'Learn about this agency document';
+      _buttonText = 'Learn about this agency document';
       break;
     case 'opinion':
-      buttonText = 'Learn about this opinion';
+      _buttonText = 'Learn about this opinion';
       break;
     case 'executiveOrder':
-      buttonText = 'Learn about this executive order';
+      _buttonText = 'Learn about this executive order';
       break;
     default:
-      buttonText = 'Learn about this document';
+      _buttonText = 'Learn about this document';
   }
 
   // Determine if AI should be locked for this user (either logged in and at limit, or anon and at limit)
@@ -324,7 +324,7 @@ export default function AiChat({
           <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{aiInteractions}/{AI_FREE_USAGE_LIMIT} free uses</span>
         )}
         {/* Show usage counter for anonymous users */}
-        {!user && !authLoading && (
+        {!user && !_authLoading && (
           <span className="ml-2 text-xs text-gray-200 bg-primary/30 px-2 py-0.5 rounded self-center">{anonAiUsage}/{ANON_LIMIT} uses before sign up</span>
         )}
       </div>
@@ -363,7 +363,7 @@ export default function AiChat({
               IconComponent = FileText;
           }
           // Only lock if aiLocked or not signed in and at limit
-          const isLocked = aiLocked || (!user && !authLoading && anonLimitReached);
+          const isLocked = aiLocked || (!user && !_authLoading && anonLimitReached);
           return (
             <Button
               key={preset.label}
@@ -374,7 +374,7 @@ export default function AiChat({
               variant="outline"
               className={`px-2 py-1 text-xs flex items-center gap-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ borderRadius: '0.5rem' }}
-              title={(!user || authLoading) ? 'Sign in to use AI' : (aiLocked ? 'Upgrade to continue using AI' : undefined)}
+              title={(!user || _authLoading) ? 'Sign in to use AI' : (aiLocked ? 'Upgrade to continue using AI' : undefined)}
             >
               <IconComponent className="h-3.5 w-3.5" />
               {preset.label}
@@ -386,7 +386,7 @@ export default function AiChat({
       {/* Messages (scrollable area) */}
       <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 bg-gray-50" ref={scrollContainerRef} onScroll={handleScroll}>
         {/* Show sign in prompt if anon and at limit */}
-        {(!user && !authLoading && anonLimitReached) ? (
+        {(!user && !_authLoading && anonLimitReached) ? (
           <div className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-2">Sign in to continue using the AI Assistant</p>
@@ -424,7 +424,7 @@ export default function AiChat({
                     } else {
                       alert('Failed to create checkout session.');
                     }
-                  } catch (err) {
+                  } catch (_err) {
                     alert('Failed to create checkout session.');
                   } finally {
                     setSubscribing(false);
@@ -499,7 +499,7 @@ export default function AiChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Ask about ${documentTitle || 'this document'}...`}
-            disabled={isLoading || aiLocked || (!user && !authLoading && anonLimitReached) || authLoading}
+            disabled={isLoading || aiLocked || (!user && !_authLoading && anonLimitReached) || _authLoading}
             style={{ borderRadius: '0.5rem' }}
             className="h-9"
           />
@@ -507,7 +507,7 @@ export default function AiChat({
             type="submit"
             className="px-3 py-1.5 text-white text-sm h-9"
             style={{ borderRadius: '0.5rem' }}
-            disabled={isLoading || !input.trim() || aiLocked || (!user && !authLoading && anonLimitReached) || authLoading}
+            disabled={isLoading || !input.trim() || aiLocked || (!user && !_authLoading && anonLimitReached) || _authLoading}
           >
             Send
           </Button>

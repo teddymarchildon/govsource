@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '../utils/supabase/client';
 import BillCard from '../components/BillCard';
@@ -28,15 +28,15 @@ import { Button } from '@/components/ui/button';
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: _authLoading } = useAuth();
   const currentPolicyArea = searchParams.get('policy_area');
   const pathname = usePathname();
 
   // State for logged-out experience
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPolicyArea, setSelectedPolicyArea] = useState(currentPolicyArea || '');
-  const [selectedSponsor, setSelectedSponsor] = useState<Congressman | null>(null);
+  const [selectedPolicyArea, _setSelectedPolicyArea] = useState(currentPolicyArea || '');
+  const [selectedSponsor, _setSelectedSponsor] = useState<Congressman | null>(null);
 
   // State for logged-in experience
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
