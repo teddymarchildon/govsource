@@ -17,7 +17,7 @@ import LoadingIndicator from './ui/LoadingIndicator';
 
 const UserPreferencesSection = () => {
   const { user } = useAuth();
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [_preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [selectedPolicyAreas, setSelectedPolicyAreas] = useState<PolicyArea[]>([]);
   const [isLoading, setIsLoading] = useState(true);

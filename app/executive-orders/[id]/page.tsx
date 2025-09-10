@@ -8,7 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import SaveButton from '@/components/SaveButton';
 import AiChatWrapper from '@/components/AiChatWrapper';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
-import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface ExecutiveOrder {

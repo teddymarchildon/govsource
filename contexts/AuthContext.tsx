@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const count = usage?.ai_interactions || 0;
       setAiInteractions(count);
       setAiLimitReached(!isPaid && count >= AI_FREE_USAGE_LIMIT);
-    } catch (err) {
+    } catch (_err) {
       setIsPaidSubscriber(false);
       setSubscription(null);
       setAiInteractions(0);
@@ -77,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && supaUser.id) {
               try {
                 await upsertUserUsage(supaUser.id);
-              } catch (err) {
-                console.error('Error upserting user_usage or subscription:', err);
+              } catch (_err) {
+                console.error('Error upserting user_usage or subscription:', _err);
               }
               await handlePostLogin(supaUser.id);
             }

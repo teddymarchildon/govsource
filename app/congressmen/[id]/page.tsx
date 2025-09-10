@@ -207,7 +207,7 @@ export default function CongressmanDetailPage() {
   }
 
   // Helper function to get party color
-  const getPartyColor = (party: string) => {
+  const _getPartyColor = (party: string) => {
     switch (party.toLowerCase()) {
       case 'democrat':
         return 'bg-secondary text-secondary-foreground';
