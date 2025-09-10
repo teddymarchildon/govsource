@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { globalSearch } from '../services/api';
 
 export default function useSearch() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [results, setResults] = useState({
+  
+  const emptyResults = useMemo(() => ({
     bills: [],
     congressmen: [],
     agencies: [],
     cases: [],
     judges: [],
     agencyDocuments: []
-  });
+  }), []);
+  
+  const [results, setResults] = useState(emptyResults);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
@@ -30,14 +33,7 @@ export default function useSearch() {
   useEffect(() => {
     const fetchResults = async () => {
       if (debouncedQuery.trim() === '') {
-        setResults({
-          bills: [],
-          congressmen: [],
-          agencies: [],
-          cases: [],
-          judges: [],
-          agencyDocuments: []
-        });
+        setResults(emptyResults);
         setIsLoading(false);
         return;
       }
@@ -56,7 +52,7 @@ export default function useSearch() {
     };
 
     fetchResults();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, emptyResults]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -69,16 +65,9 @@ export default function useSearch() {
   const clearSearch = useCallback(() => {
     setSearchQuery('');
     setDebouncedQuery('');
-    setResults({
-      bills: [],
-      congressmen: [],
-      agencies: [],
-      cases: [],
-      judges: [],
-      agencyDocuments: []
-    });
+    setResults(emptyResults);
     setShowResults(false);
-  }, []);
+  }, [emptyResults]);
 
   const closeResults = useCallback(() => {
     setShowResults(false);
