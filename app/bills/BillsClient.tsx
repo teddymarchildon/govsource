@@ -38,7 +38,7 @@ export default function BillsClient({
 
   const [bills, setBills] = useState<Bill[]>(initialBills);
   const [loading, setLoading] = useState(false);
-  const [selectedPolicyArea, _setSelectedPolicyArea] = useState<
+  const [selectedPolicyArea, setSelectedPolicyArea] = useState<
     PolicyArea | ""
   >(currentPolicyArea as PolicyArea | "");
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery);

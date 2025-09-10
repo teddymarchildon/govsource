@@ -16,25 +16,6 @@ const PRESET_PROMPTS: Record<PresetType, string> = {
   diff: 'You are an AI assistant helping a user understand the differences between two versions of a US Federal Government document. Compare the two versions and explain the differences in content, structure, and meaning. Be specific about what changed.'
 };
 
-const _PRESET_KEYWORDS: Record<PresetType, string[]> = {
-  default: [],
-  summarizeKeyPoints: [
-    'purpose', 'establishes', 'provides', 'creates', 'amends', 'act', 'section', 'title',
-    'shall', 'must', 'requires', 'requirement', 'provision', 'prohibits', 'authorizes'
-  ],
-  historicalContext: ['whereas', 'background', 'previously', 'history', 'amended', 'prior', 'existing', 'finds that'],
-  prosAndCons: ['benefit', 'impact', 'effect', 'cost', 'concern', 'advantage', 'disadvantage', 'improve', 'risk'],
-  diff: ['change', 'modification', 'addition', 'deletion', 'revision', 'amend', 'strike', 'insert']
-};
-
-const _PRESET_INSTRUCTIONS: Record<PresetType, string> = {
-  default: 'Answer the user\'s question based on the provided sections.',
-  summarizeKeyPoints: 'Based on these key sections, provide a comprehensive summary of the document\'s main purpose and implications. Extract and explain the most important requirements and provisions from these sections.',
-  historicalContext: 'Using these sections, explain the historical background and what led to this document.',
-  prosAndCons: 'Analyze these sections to present balanced arguments for and against the document\'s provisions.',
-  diff: 'Compare the provided sections to identify and explain the key differences.'
-};
-
 interface DocumentChunk {
   content: string;
   index: number;

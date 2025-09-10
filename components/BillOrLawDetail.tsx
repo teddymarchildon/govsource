@@ -52,8 +52,6 @@ interface BillOrLawDetailProps {
   isLaw?: boolean;
 }
 
-type _TabType = 'details' | 'sponsors' | 'actions' | 'text';
-
 export default function BillOrLawDetail({
   item,
   texts,
