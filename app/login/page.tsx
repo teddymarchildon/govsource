@@ -184,54 +184,37 @@ function LoginPageInner() {
                 </div>
 
                 {authMode === 'password' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Account Status
-                      </label>
-                      <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-                        <button
-                          type="button"
-                          onClick={() => setIsFirstTime(false)}
-                          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                            !isFirstTime
-                              ? 'bg-white text-gray-900 shadow-sm'
-                              : 'text-gray-600 hover:text-gray-900'
-                          }`}
-                        >
-                          Existing User
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsFirstTime(true)}
-                          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                            isFirstTime
-                              ? 'bg-white text-gray-900 shadow-sm'
-                              : 'text-gray-600 hover:text-gray-900'
-                          }`}
-                        >
-                          First Time
-                        </button>
-                      </div>
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Password
+                    </label>
+                    <div className="mt-1">
+                      <Input
+                        type="password"
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="block w-full"
+                        placeholder="Enter your password"
+                        required
+                      />
                     </div>
+                  </div>
+                )}
 
-                    <div>
-                      <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                        Password
-                      </label>
-                      <div className="mt-1">
-                        <Input
-                          type="password"
-                          id="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="block w-full"
-                          placeholder="Enter your password"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </>
+                {authMode === 'password' && (
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isFirstTime"
+                      checked={isFirstTime}
+                      onChange={(e) => setIsFirstTime(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isFirstTime" className="ml-2 block text-sm text-gray-700">
+                      This is my first time signing up
+                    </label>
+                  </div>
                 )}
 
                 <div>
