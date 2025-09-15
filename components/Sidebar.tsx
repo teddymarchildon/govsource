@@ -231,7 +231,7 @@ export default function Sidebar() {
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/agency-rules')}`}
                 >
                   <ClipboardList className="h-5 w-5 mr-2" />
-                  Agency Rules
+                  Agency Documents
                 </Link>
               </li>
             </ul>

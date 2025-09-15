@@ -169,8 +169,8 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Agency Rules</h1>
-      <p className="text-gray-600 text-sm mb-6">Review federal agency rules and regulations that implement and enforce laws passed by Congress.</p>
+      <h1 className="text-3xl font-bold mb-2">Agency Documents</h1>
+      <p className="text-gray-600 text-sm mb-6">Review federal agency documents, rules, and regulations that implement and enforce laws passed by Congress.</p>
       
       <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
@@ -191,11 +191,11 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
           </div>
           <div>
             <label htmlFor="rule-type-filter" className="block text-sm font-medium mb-1">
-              Rule Type
+              Document type
             </label>
             <Select value={ruleType} onValueChange={handleRuleTypeChange}>
               <SelectTrigger id="rule-type-filter">
-                <SelectValue placeholder="All Rule Types" />
+                <SelectValue placeholder="All Document types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Presidential Document">Presidential Document</SelectItem>
@@ -207,7 +207,7 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
           </div>
           <div>
             <label htmlFor="search-filter" className="block text-sm font-medium mb-1">
-              Search Rules
+              Search documents
             </label>
             <Input
               id="search-filter"
