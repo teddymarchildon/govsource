@@ -15,8 +15,10 @@ import { Menu } from 'lucide-react';
 export default function Header() {
   const { user, signOut, loading } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileDropdownRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { isMobileOpen, setIsMobileOpen } = useSidebar();
@@ -36,6 +38,7 @@ export default function Header() {
     try {
       await signOut();
       setDropdownOpen(false);
+      setMobileDropdownOpen(false);
       setMobileMenuOpen(false);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -45,8 +48,16 @@ export default function Header() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      
+      // Close desktop dropdown
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setDropdownOpen(false);
+      }
+      
+      // Close mobile dropdown
+      if (mobileDropdownRef.current && !mobileDropdownRef.current.contains(target)) {
+        setMobileDropdownOpen(false);
       }
     };
 
@@ -125,20 +136,20 @@ export default function Header() {
               </Link>
             )}
             {!loading && user && (
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative" ref={mobileDropdownRef}>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
                   className="flex items-center focus:outline-none"
-                  aria-expanded={dropdownOpen}
+                  aria-expanded={mobileDropdownOpen}
                   aria-haspopup="true"
                 >
                   <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium cursor-pointer">
                     {user.email?.substring(0, 2).toUpperCase() || 'ME'}
                   </div>
                 </Button>
-                {dropdownOpen && (
+                {mobileDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 ring-1 ring-black ring-opacity-5">
                     <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
                       Signed in as<br />
@@ -147,7 +158,7 @@ export default function Header() {
                     <Link
                       href="/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setDropdownOpen(false)}
+                      onClick={() => setMobileDropdownOpen(false)}
                     >
                       Your Profile
                     </Link>
