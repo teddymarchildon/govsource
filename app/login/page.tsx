@@ -27,13 +27,16 @@ const GoogleIcon = () => (
 
 function LoginPageInner() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'magic-link' | 'password'>('magic-link');
+  const [isFirstTime, setIsFirstTime] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmNotice, setShowConfirmNotice] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/';
-  const { signInWithMagicLink, signInWithGoogle, user, loading: isAuthLoading } = useAuth();
+  const { signInWithMagicLink, signInWithPassword, signUp, signInWithGoogle, user, loading: isAuthLoading } = useAuth();
   const { userPreferences, isLoading: isOnboardingLoading } = useOnboarding();
 
   // Redirect if user is already logged in
@@ -57,15 +60,29 @@ function LoginPageInner() {
     setIsLoading(true);
 
     try {
-      // Construct the absolute redirect URL
-      const redirectUrl = typeof window !== 'undefined'
-        ? window.location.origin + (redirectPath || '/')
-        : undefined;
-      await signInWithMagicLink(email, redirectUrl);
-      setShowConfirmNotice(true);
+      if (authMode === 'password') {
+        if (isFirstTime) {
+          const redirectUrl = typeof window !== 'undefined'
+            ? window.location.origin + (redirectPath || '/')
+            : undefined;
+          await signUp(email, password, redirectUrl);
+          setShowConfirmNotice(true);
+        } else {
+          await signInWithPassword(email, password);
+        }
+      } else {
+        const redirectUrl = typeof window !== 'undefined'
+          ? window.location.origin + (redirectPath || '/')
+          : undefined;
+        await signInWithMagicLink(email, redirectUrl);
+        setShowConfirmNotice(true);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to send link');
-    } finally {
+      const action = authMode === 'password' 
+        ? (isFirstTime ? 'sign up' : 'sign in')
+        : 'send link';
+      setError(err.message || `Failed to ${action}`);
+    }finally {
       setIsLoading(false);
     }
   };
@@ -122,6 +139,32 @@ function LoginPageInner() {
 
           {!showConfirmNotice && (
             <>
+              {/* Authentication Mode Toggle */}
+              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('magic-link')}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMode === 'magic-link'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Magic Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('password')}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMode === 'password'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Password
+                </button>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -140,13 +183,54 @@ function LoginPageInner() {
                   </div>
                 </div>
 
+                {authMode === 'password' && (
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Password
+                    </label>
+                    <div className="mt-1">
+                      <Input
+                        type="password"
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="block w-full"
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {authMode === 'password' && (
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isFirstTime"
+                      checked={isFirstTime}
+                      onChange={(e) => setIsFirstTime(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isFirstTime" className="ml-2 block text-sm text-gray-700">
+                      This is my first time signing up
+                    </label>
+                  </div>
+                )}
+
                 <div>
                   <Button
                     type="submit"
                     className="flex w-full justify-center"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Sending link...' : 'Send link'}
+                    {isLoading 
+                      ? (authMode === 'password' 
+                          ? (isFirstTime ? 'Creating account...' : 'Signing in...') 
+                          : 'Sending link...') 
+                      : (authMode === 'password' 
+                          ? (isFirstTime ? 'Create account' : 'Sign in') 
+                          : 'Send link')
+                    }
                   </Button>
                 </div>
               </form>
