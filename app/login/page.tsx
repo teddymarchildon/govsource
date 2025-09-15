@@ -29,13 +29,14 @@ function LoginPageInner() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authMode, setAuthMode] = useState<'magic-link' | 'password'>('magic-link');
+  const [isFirstTime, setIsFirstTime] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmNotice, setShowConfirmNotice] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/';
-  const { signInWithMagicLink, signInWithPassword, signInWithGoogle, user, loading: isAuthLoading } = useAuth();
+  const { signInWithMagicLink, signInWithPassword, signUp, signInWithGoogle, user, loading: isAuthLoading } = useAuth();
   const { userPreferences, isLoading: isOnboardingLoading } = useOnboarding();
 
   // Redirect if user is already logged in
@@ -60,7 +61,15 @@ function LoginPageInner() {
 
     try {
       if (authMode === 'password') {
-        await signInWithPassword(email, password);
+        if (isFirstTime) {
+          const redirectUrl = typeof window !== 'undefined'
+            ? window.location.origin + (redirectPath || '/')
+            : undefined;
+          await signUp(email, password, redirectUrl);
+          setShowConfirmNotice(true);
+        } else {
+          await signInWithPassword(email, password);
+        }
       } else {
         const redirectUrl = typeof window !== 'undefined'
           ? window.location.origin + (redirectPath || '/')
@@ -69,8 +78,11 @@ function LoginPageInner() {
         setShowConfirmNotice(true);
       }
     } catch (err: any) {
-      setError(err.message || `Failed to ${authMode === 'password' ? 'sign in' : 'send link'}`);
-    } finally {
+      const action = authMode === 'password' 
+        ? (isFirstTime ? 'sign up' : 'sign in')
+        : 'send link';
+      setError(err.message || `Failed to ${action}`);
+    }finally {
       setIsLoading(false);
     }
   };
@@ -172,22 +184,54 @@ function LoginPageInner() {
                 </div>
 
                 {authMode === 'password' && (
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                      Password
-                    </label>
-                    <div className="mt-1">
-                      <Input
-                        type="password"
-                        id="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full"
-                        placeholder="Enter your password"
-                        required
-                      />
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Account Status
+                      </label>
+                      <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                        <button
+                          type="button"
+                          onClick={() => setIsFirstTime(false)}
+                          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                            !isFirstTime
+                              ? 'bg-white text-gray-900 shadow-sm'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          Existing User
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsFirstTime(true)}
+                          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                            isFirstTime
+                              ? 'bg-white text-gray-900 shadow-sm'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          First Time
+                        </button>
+                      </div>
                     </div>
-                  </div>
+
+                    <div>
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                        Password
+                      </label>
+                      <div className="mt-1">
+                        <Input
+                          type="password"
+                          id="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="block w-full"
+                          placeholder="Enter your password"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 <div>
@@ -197,8 +241,12 @@ function LoginPageInner() {
                     disabled={isLoading}
                   >
                     {isLoading 
-                      ? (authMode === 'password' ? 'Signing in...' : 'Sending link...') 
-                      : (authMode === 'password' ? 'Sign in' : 'Send link')
+                      ? (authMode === 'password' 
+                          ? (isFirstTime ? 'Creating account...' : 'Signing in...') 
+                          : 'Sending link...') 
+                      : (authMode === 'password' 
+                          ? (isFirstTime ? 'Create account' : 'Sign in') 
+                          : 'Send link')
                     }
                   </Button>
                 </div>
