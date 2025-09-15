@@ -27,13 +27,15 @@ const GoogleIcon = () => (
 
 function LoginPageInner() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'magic-link' | 'password'>('magic-link');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmNotice, setShowConfirmNotice] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/';
-  const { signInWithMagicLink, signInWithGoogle, user, loading: isAuthLoading } = useAuth();
+  const { signInWithMagicLink, signInWithPassword, signInWithGoogle, user, loading: isAuthLoading } = useAuth();
   const { userPreferences, isLoading: isOnboardingLoading } = useOnboarding();
 
   // Redirect if user is already logged in
@@ -57,14 +59,17 @@ function LoginPageInner() {
     setIsLoading(true);
 
     try {
-      // Construct the absolute redirect URL
-      const redirectUrl = typeof window !== 'undefined'
-        ? window.location.origin + (redirectPath || '/')
-        : undefined;
-      await signInWithMagicLink(email, redirectUrl);
-      setShowConfirmNotice(true);
+      if (authMode === 'password') {
+        await signInWithPassword(email, password);
+      } else {
+        const redirectUrl = typeof window !== 'undefined'
+          ? window.location.origin + (redirectPath || '/')
+          : undefined;
+        await signInWithMagicLink(email, redirectUrl);
+        setShowConfirmNotice(true);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to send link');
+      setError(err.message || `Failed to ${authMode === 'password' ? 'sign in' : 'send link'}`);
     } finally {
       setIsLoading(false);
     }
@@ -122,6 +127,32 @@ function LoginPageInner() {
 
           {!showConfirmNotice && (
             <>
+              {/* Authentication Mode Toggle */}
+              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('magic-link')}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMode === 'magic-link'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Magic Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('password')}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMode === 'password'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Password
+                </button>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -140,13 +171,35 @@ function LoginPageInner() {
                   </div>
                 </div>
 
+                {authMode === 'password' && (
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Password
+                    </label>
+                    <div className="mt-1">
+                      <Input
+                        type="password"
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="block w-full"
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <Button
                     type="submit"
                     className="flex w-full justify-center"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Sending link...' : 'Send link'}
+                    {isLoading 
+                      ? (authMode === 'password' ? 'Signing in...' : 'Sending link...') 
+                      : (authMode === 'password' ? 'Sign in' : 'Send link')
+                    }
                   </Button>
                 </div>
               </form>
