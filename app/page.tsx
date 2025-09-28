@@ -675,7 +675,7 @@ function HomeContent() {
         </CardHeader>
         <CardContent>
           <p className="text-primary-foreground/90">
-            Get to the source of US federal legislation, executive orders, court cases, and more. Track members of congress, congressman activities, and legislative developments.
+            See the source of US federal legislation, executive orders, court cases, and more. Track members of congress, congressman activities, and legislative developments.
           </p>
         </CardContent>
       </Card>
