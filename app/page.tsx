@@ -675,7 +675,7 @@ function HomeContent() {
         </CardHeader>
         <CardContent>
           <p className="text-primary-foreground/90">
-            Use AI to discover, track, and understand US federal legislation, court cases, and more. Track members of Congress, congressman activities, and legislative developments.
+            Get to the source of US federal legislation, executive orders, court cases, and more. Track members of congress, congressman activities, and legislative developments.
           </p>
         </CardContent>
       </Card>
