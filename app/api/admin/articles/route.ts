@@ -32,9 +32,8 @@ interface GenerationResult {
   wordCount: number;
 }
 
-const PROMPT_VERSION = 'v2';
+const PROMPT_VERSION = 'v3';
 const MODEL_NAME = 'gpt-4.1-mini';
-const EXPECTED_SECTION_HEADINGS = ['What happened', 'Why it matters', 'Key implications'] as const;
 
 const GenerateArticleSchema = z.object({
   primaryItemType: z.enum(['bill', 'law', 'executive_order', 'cluster']),
@@ -43,18 +42,11 @@ const GenerateArticleSchema = z.object({
 
 const ArticleModelSchema = z.object({
   title: z.string().min(10).max(120),
-  dek: z.string().min(1).max(160),
-  summary: z.string().min(1).max(240),
-  excerpt: z.string().min(1).max(200),
+  dek: z.string().min(1).max(220),
+  summary: z.string().min(1).max(360),
+  excerpt: z.string().min(1).max(240),
   body: z.object({
-    sections: z
-      .array(
-        z.object({
-          heading: z.enum(EXPECTED_SECTION_HEADINGS),
-          bullets: z.array(z.string().min(1).max(160)).min(2).max(3),
-        })
-      )
-      .length(3),
+    paragraphs: z.array(z.string().min(1).max(800)).min(3).max(6),
   }),
   source_urls: z.array(z.string().url()).length(1),
 });
@@ -255,20 +247,8 @@ function buildSiteUrl(request: Request, path: string) {
   return `${normalizedBase}${normalizedPath}`;
 }
 
-function ensureSectionsHeadings(sections: Array<{ heading: string }>) {
-  const headings = sections.map((section) => section.heading);
-  const expected = Array.from(EXPECTED_SECTION_HEADINGS);
-  return expected.every((heading) => headings.includes(heading));
-}
-
 function convertBodyToMarkdown(body: z.infer<typeof ArticleModelSchema>['body']) {
-  return body.sections
-    .map((section) => {
-      const heading = `### ${section.heading}`;
-      const bullets = section.bullets.map((bullet) => `- ${bullet}`).join('\n');
-      return `${heading}\n${bullets}`;
-    })
-    .join('\n\n');
+  return body.paragraphs.map((paragraph) => paragraph.trim()).join('\n\n');
 }
 
 async function gatherBillOrLawContext(
@@ -315,7 +295,7 @@ async function gatherBillOrLawContext(
 
   const { data: textRecords, error: textError } = await client
     .from('bill_text')
-    .select('html_file_path, extracted_pdf_text_path, text_file_path, date')
+    .select('html_file_path, text_file_path, date')
     .eq('bill_id', primaryItemId)
     .order('date', { ascending: false })
     .limit(1);
@@ -595,7 +575,7 @@ function composeArticleRecord(
     primary_item_type: context.primaryItemType,
     primary_item_id: context.primaryItemId,
     author: 'GovLens Automated Writer',
-    agent_identifier: 'govlens:article-agent:v2',
+    agent_identifier: 'govlens:article-agent:v3',
     reading_time: Math.max(1, Math.round(wordCount / 200)),
   };
 }
@@ -645,10 +625,7 @@ function computeTotalWordCount(payload: z.infer<typeof ArticleModelSchema>) {
   const summaryWords = countWords(payload.summary);
   const dekWords = countWords(payload.dek);
   const excerptWords = countWords(payload.excerpt);
-  const bodyWords = payload.body.sections.reduce(
-    (sum, section) => sum + section.bullets.reduce((inner, bullet) => inner + countWords(bullet), 0),
-    0
-  );
+  const bodyWords = payload.body.paragraphs.reduce((sum, paragraph) => sum + countWords(paragraph), 0);
   return summaryWords + dekWords + excerptWords + bodyWords;
 }
 
@@ -1018,17 +995,28 @@ export async function POST(request: Request) {
         'Workflow rules:',
         '1. Call search_relevant_sections before fetch_more_content to locate key passages.',
         '2. Gather only the passages you will cite. Do not guess or rely on memory.',
-        '3. Reference passages as [Section N] in the article wherever facts are used.',
-        '4. Highlight missing information explicitly inside the relevant bullet rather than inventing details.',
-        '5. Keep the entire article ≤ 200 words (target ~180) and each bullet ≤ 25 words.',
-      ].join(' '),
+        '3. Cite supporting evidence inline using [Section N] after the relevant sentence.',
+        '4. If key context is missing, state what is unavailable rather than speculating.',
+      ].join('\n'),
+      [
+        'Writing guidelines:',
+        '- Adopt a neutral, newsroom-style voice suitable for policy professionals.',
+        '- Produce 3–5 short paragraphs of narrative prose (no lists) that flow logically from the event to its implications.',
+        '- When the item is a bill or law, name the primary sponsor and their party (and state if available).',
+        '- When the item is an executive order, name the president who signed it.',
+        '- Use citations like [Section N] in the body wherever facts rely on fetched passages.',
+        '- Keep the overall word count at or below 200 words; keep dek and summary tight.',
+        '- Each paragraph should cover one idea (about 2–4 sentences).',
+      ].join('\n'),
       [
         'Output requirements:',
-        '- Return valid JSON with keys: title, dek, summary, excerpt, body.sections (three entries), source_urls.',
-        '- body.sections must contain exactly the headings "What happened", "Why it matters", "Key implications", each with 2-3 bullet sentences including citations like [Section N].',
+        '- Return valid JSON with keys: title, dek, summary, excerpt, body.paragraphs, source_urls.',
+        '- body.paragraphs must be an array of 3–6 paragraphs in publication order.',
         '- source_urls must contain exactly one item: the canonical GovLens URL.',
         '- Do not include any text outside the JSON object.',
-      ].join(' '),
+        '- Example JSON structure:',
+        '  {"title":"...","dek":"...","summary":"...","excerpt":"...","body":{"paragraphs":["Paragraph [Section 1] ...","Paragraph [Section 2] ...","Paragraph [Section 3] ..."]},"source_urls":["https://example.com"]}',
+      ].join('\n'),
     ].join('\n\n');
 
     const agent = new Agent({
@@ -1055,7 +1043,6 @@ export async function POST(request: Request) {
       console.error('[article-agent] Failed to parse agent output', finalText);
       return NextResponse.json({ error: 'Agent output was not valid JSON' }, { status: 500 });
     }
-
     const payloadResult = ArticleModelSchema.safeParse(parsedOutput);
     if (!payloadResult.success) {
       console.error('[article-agent] Agent output failed schema validation', payloadResult.error);
@@ -1065,15 +1052,7 @@ export async function POST(request: Request) {
     const payload = payloadResult.data;
     payload.source_urls = [siteUrl];
 
-    if (!ensureSectionsHeadings(payload.body.sections)) {
-      return NextResponse.json({ error: 'Agent output missing required sections' }, { status: 500 });
-    }
-
     const wordCount = computeTotalWordCount(payload);
-    if (wordCount > 200) {
-      return NextResponse.json({ error: `Draft is too long (${wordCount} words).` }, { status: 400 });
-    }
-
     const usage = { inputTokens: null, outputTokens: null };
     const articleRecord = composeArticleRecord(payload, { ...context, siteUrl }, systemInstructions, usage, wordCount);
     const persistenceResult = await insertOrUpdateArticle(articleRecord);
