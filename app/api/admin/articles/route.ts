@@ -4,6 +4,14 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { createClient } from '@/utils/supabase/server';
+import { fetchHtmlContent, processDocumentContent } from '@/utils/documentUtils';
+import {
+  Agent,
+  run,
+  tool,
+  user as createUserMessage,
+  type AgentInputItem,
+} from '@openai/agents';
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 
 type PrimaryItemType = 'bill' | 'law' | 'executive_order' | 'cluster';
@@ -13,7 +21,7 @@ interface ArticleContext {
   primaryItemId: number;
   siteUrl: string;
   metadata: Record<string, unknown>;
-  textSections: Array<{ label: string; content: string }>;
+  documentSources: DocumentSource[];
 }
 
 interface GenerationResult {
@@ -24,7 +32,7 @@ interface GenerationResult {
   wordCount: number;
 }
 
-const PROMPT_VERSION = 'v1';
+const PROMPT_VERSION = 'v2';
 const MODEL_NAME = 'gpt-4.1-mini';
 const EXPECTED_SECTION_HEADINGS = ['What happened', 'Why it matters', 'Key implications'] as const;
 
@@ -73,6 +81,154 @@ const supabaseAdmin = createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_K
   },
 });
 
+interface DocumentSource {
+  label: string;
+  format: 'html' | 'text';
+  bucket?: string;
+  path?: string;
+  content?: string;
+}
+
+interface DocumentChunk {
+  content: string;
+  index: number;
+  sourceLabel: string;
+}
+
+const EMBEDDING_MODEL = 'text-embedding-3-small';
+
+function cleanHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&[^;]+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function splitBySize(text: string, chunkSize: number, overlap: number = 200): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = start + chunkSize;
+    if (end < text.length) {
+      const sentenceEnd = text.lastIndexOf('. ', end);
+      const wordEnd = text.lastIndexOf(' ', end);
+      if (sentenceEnd > start + chunkSize * 0.8) {
+        end = sentenceEnd + 1;
+      } else if (wordEnd > start + chunkSize * 0.8) {
+        end = wordEnd;
+      }
+    }
+    chunks.push(text.slice(start, Math.min(end, text.length)));
+    start = Math.max(end - overlap, end);
+  }
+  return chunks;
+}
+
+function normalizePlainText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function chunkContent(content: string, sourceLabel: string, startIndex: number, chunkSize = 3000) {
+  const segments = splitBySize(content, chunkSize);
+  const chunks: DocumentChunk[] = [];
+  let index = startIndex;
+  for (const segment of segments) {
+    const normalized = normalizePlainText(segment);
+    if (normalized.length === 0) continue;
+    chunks.push({
+      content: normalized,
+      index,
+      sourceLabel,
+    });
+    index += 1;
+  }
+  return { chunks, nextIndex: index };
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  let a2 = 0;
+  let b2 = 0;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    dot += x * y;
+    a2 += x * x;
+    b2 += y * y;
+  }
+  if (a2 === 0 || b2 === 0) return 0;
+  return dot / (Math.sqrt(a2) * Math.sqrt(b2));
+}
+
+function extractFinalText(result: unknown): string {
+  if (typeof result === 'string') return result;
+  try {
+    const r: any = result as any;
+    if (r && typeof r.output_text === 'string') return r.output_text;
+    if (r && r.currentStep && typeof r.currentStep.output === 'string') return r.currentStep.output;
+    const lmr = r?.lastModelResponse;
+    if (lmr && Array.isArray(lmr.output)) {
+      for (const item of lmr.output) {
+        if (item && Array.isArray(item.content)) {
+          for (const c of item.content) {
+            if (c && c.type === 'output_text' && typeof c.text === 'string') return c.text;
+          }
+        }
+      }
+    }
+    const seen = new Set<any>();
+    const stack: any[] = [r];
+    let depth = 0;
+    while (stack.length && depth < 10000) {
+      depth++;
+      const node = stack.pop();
+      if (!node || typeof node !== 'object' || seen.has(node)) continue;
+      seen.add(node);
+      if ((node as any).type === 'output_text' && typeof (node as any).text === 'string') return (node as any).text;
+      for (const v of Object.values(node)) {
+        if (v && typeof v === 'object') stack.push(v);
+      }
+    }
+  } catch {}
+  return typeof result === 'string' ? result : JSON.stringify(result);
+}
+
+async function resolveSourceContent(source: DocumentSource): Promise<string | null> {
+  if (typeof source.content === 'string' && source.content.trim().length > 0) {
+    return source.content;
+  }
+  if (source.bucket && source.path) {
+    return await fetchHtmlContent(source.bucket, source.path);
+  }
+  return null;
+}
+
+async function buildChunksForSources(sources: DocumentSource[]): Promise<DocumentChunk[]> {
+  const chunks: DocumentChunk[] = [];
+  let nextIndex = 0;
+  for (const source of sources) {
+    const rawContent = await resolveSourceContent(source);
+    if (!rawContent) continue;
+
+    let baseText: string | null = null;
+    if (source.format === 'html') {
+      const processed = processDocumentContent(rawContent);
+      baseText = processed ? cleanHtml(processed) : cleanHtml(rawContent);
+    } else {
+      baseText = normalizePlainText(rawContent);
+    }
+
+    if (!baseText || baseText.length === 0) continue;
+
+    const prefixed = `${source.label}\n\n${baseText}`;
+    const { chunks: sourceChunks, nextIndex: updated } = chunkContent(prefixed, source.label, nextIndex);
+    chunks.push(...sourceChunks);
+    nextIndex = updated;
+  }
+  return chunks;
+}
+
 function countWords(text: string | null | undefined): number {
   if (!text) return 0;
   return text
@@ -103,40 +259,6 @@ function ensureSectionsHeadings(sections: Array<{ heading: string }>) {
   const headings = sections.map((section) => section.heading);
   const expected = Array.from(EXPECTED_SECTION_HEADINGS);
   return expected.every((heading) => headings.includes(heading));
-}
-
-function buildPrompt(context: ArticleContext) {
-  const { primaryItemType, metadata, textSections, siteUrl } = context;
-  const trimmedSections = textSections.map((section) => ({
-    label: section.label,
-    content: truncate(section.content, 3500),
-  }));
-
-  const prompt = [
-    `You are GovLens' editorial agent. Write a concise, factual briefing article about the provided ${primaryItemType.replace('_', ' ')}.`,
-    'Rules:',
-    '- Rely exclusively on the supplied metadata and text sections. Do not invent facts or speculate.',
-    '- The finished product must be easy to scan: very short summary and three sections with bullets.',
-    '- Stay within 180 total words across summary, dek, excerpt, and bullet content. Shorter is better.',
-    '- Sections must be: "What happened", "Why it matters", "Key implications". Each with 2-3 bullet sentences under 25 words.',
-    '- Use the provided source URL exactly once in the source list. Do not add any other URLs.',
-    '- If critical facts are missing, explicitly note the gap inside the relevant bullet instead of fabricating.',
-    '',
-    'Return JSON that matches the provided schema. Ensure text is clean and human ready.',
-    '',
-    'Context:',
-    JSON.stringify(
-      {
-        metadata,
-        siteUrl,
-        textSections: trimmedSections,
-      },
-      null,
-      2
-    ),
-  ].join('\n');
-
-  return prompt;
 }
 
 function convertBodyToMarkdown(body: z.infer<typeof ArticleModelSchema>['body']) {
@@ -191,6 +313,17 @@ async function gatherBillOrLawContext(
       .limit(1),
   ]);
 
+  const { data: textRecords, error: textError } = await client
+    .from('bill_text')
+    .select('html_file_path, extracted_pdf_text_path, text_file_path, date')
+    .eq('bill_id', primaryItemId)
+    .order('date', { ascending: false })
+    .limit(1);
+
+  if (textError) {
+    console.error('[article-agent] Unable to fetch bill text paths', textError);
+  }
+
   const summaryText = summaryData && summaryData.length > 0 ? summaryData[0].text : null;
   const actionsText =
     actionsData && actionsData.length > 0
@@ -202,15 +335,34 @@ async function gatherBillOrLawContext(
           .join('\n')
       : null;
 
-  const textSections = [];
-  if (summaryText) {
-    textSections.push({ label: 'Official Summary', content: summaryText });
-  }
-  if (actionsText) {
-    textSections.push({ label: 'Recent Actions', content: actionsText });
+  const documentSources: DocumentSource[] = [];
+  const latestTextRecord = textRecords?.[0] ?? null;
+  if (latestTextRecord?.html_file_path) {
+    documentSources.push({
+      label: 'Official Document Text',
+      format: 'html',
+      bucket: 'bill-htmls',
+      path: latestTextRecord.html_file_path,
+    });
   }
 
-  if (textSections.length === 0) {
+  if (summaryText) {
+    documentSources.push({
+      label: 'Latest Official Summary',
+      format: 'text',
+      content: summaryText,
+    });
+  }
+
+  if (actionsText) {
+    documentSources.push({
+      label: 'Recent Legislative Actions',
+      format: 'text',
+      content: actionsText,
+    });
+  }
+
+  if (documentSources.length === 0) {
     return null;
   }
 
@@ -235,7 +387,7 @@ async function gatherBillOrLawContext(
     primaryItemId,
     siteUrl,
     metadata,
-    textSections,
+    documentSources,
   };
 }
 
@@ -246,7 +398,7 @@ async function gatherExecutiveOrderContext(
   const { data: order, error } = await client
     .from('agency_document')
     .select(
-      'id, title, abstract, type, subtype, remote_document_number, signing_date, publication_date, president'
+      'id, title, abstract, type, subtype, remote_document_number, signing_date, publication_date, president, html_file_path'
     )
     .eq('id', primaryItemId)
     .single();
@@ -282,9 +434,20 @@ async function gatherExecutiveOrderContext(
     primaryItemId,
     siteUrl: `/executive-orders/${primaryItemId}`,
     metadata,
-    textSections: [
+    documentSources: [
+      ...(order.html_file_path
+        ? [
+            {
+              label: 'Executive Order Full Text',
+              format: 'html' as const,
+              bucket: 'agency-docs',
+              path: order.html_file_path,
+            },
+          ]
+        : []),
       {
         label: 'Executive Order Abstract',
+        format: 'text',
         content: order.abstract,
       },
     ],
@@ -372,7 +535,11 @@ async function gatherClusterContext(
     primaryItemId,
     siteUrl: `/supreme-court-cases/${primaryItemId}`,
     metadata,
-    textSections,
+    documentSources: textSections.map((section) => ({
+      label: section.label,
+      format: 'text' as const,
+      content: section.content,
+    })),
   };
 }
 
@@ -393,15 +560,6 @@ async function gatherContext(
     default:
       return null;
   }
-}
-
-function buildPromptTemplate(context: ArticleContext) {
-  return [
-    `GovLens Article Agent Prompt (version ${PROMPT_VERSION})`,
-    `Primary type: ${context.primaryItemType}`,
-    'Goal: Produce a concise briefing article highlighting what happened, why it matters, and key implications.',
-    'Constraints: <=180 words total; three sections with bullet points; cite provided site URL only; no speculation.',
-  ].join('\n');
 }
 
 function composeArticleRecord(
@@ -437,7 +595,7 @@ function composeArticleRecord(
     primary_item_type: context.primaryItemType,
     primary_item_id: context.primaryItemId,
     author: 'GovLens Automated Writer',
-    agent_identifier: 'govlens:article-agent:v1',
+    agent_identifier: 'govlens:article-agent:v2',
     reading_time: Math.max(1, Math.round(wordCount / 200)),
   };
 }
@@ -492,113 +650,6 @@ function computeTotalWordCount(payload: z.infer<typeof ArticleModelSchema>) {
     0
   );
   return summaryWords + dekWords + excerptWords + bodyWords;
-}
-
-function extractJsonFromResponse(response: OpenAI.Responses.Response) {
-  if (response.output_text) {
-    return response.output_text;
-  }
-
-  const outputItems = response.output ?? [];
-  for (const item of outputItems) {
-    if (item.type === 'message') {
-      for (const content of item.content) {
-        if (content.type === 'output_text' && content.text) {
-          return content.text;
-        }
-      }
-    } else if ('text' in item) {
-      const maybeText = (item as { text?: unknown }).text;
-      if (typeof maybeText === 'string' && maybeText) {
-        return maybeText;
-      }
-    }
-  }
-
-  // Fallback: deep search
-  const stack: unknown[] = Array.isArray(outputItems) ? [...outputItems] : [outputItems];
-  const visited = new Set<unknown>();
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current || typeof current !== 'object') continue;
-    if (visited.has(current)) continue;
-    visited.add(current);
-
-    const candidate = current as { type?: unknown; text?: unknown };
-    if (candidate.type === 'output_text' && typeof candidate.text === 'string') {
-      return candidate.text;
-    }
-
-    for (const value of Object.values(current as Record<string, unknown>)) {
-      if (value && typeof value === 'object') {
-        stack.push(value);
-      }
-    }
-  }
-  return null;
-}
-
-async function runArticleModel(prompt: string) {
-  const response = await openai.responses.create({
-    model: MODEL_NAME,
-    input: [
-      {
-        role: 'system',
-        content: 'You are a concise, factual editorial assistant for GovLens. Follow instructions exactly and emit valid JSON that matches the schema.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.3,
-    text: {
-      format: {
-        type: 'json_schema',
-        name: 'govlens_article_payload',
-        schema: ARTICLE_JSON_SCHEMA,
-        strict: true,
-      },
-    },
-    max_output_tokens: 900,
-  });
-
-  const text = extractJsonFromResponse(response);
-  if (!text) {
-    throw new Error('Model returned no output');
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch (_error) {
-    console.error('[article-agent] Failed to parse model JSON', text);
-    throw new Error('Model response was not valid JSON');
-  }
-
-  const payload = ArticleModelSchema.safeParse(parsed);
-  if (!payload.success) {
-    console.error('[article-agent] Model output failed schema validation', payload.error);
-    throw new Error('Model output failed validation');
-  }
-
-  if (!ensureSectionsHeadings(payload.data.body.sections)) {
-    throw new Error('Model output missing required sections');
-  }
-
-  const wordCount = computeTotalWordCount(payload.data);
-  if (wordCount > 200) {
-    throw new Error(`Draft is too long (${wordCount} words).`);
-  }
-
-  return {
-    payload: payload.data,
-    wordCount,
-    usage: {
-      inputTokens: response.usage?.input_tokens ?? null,
-      outputTokens: response.usage?.output_tokens ?? null,
-    },
-  };
 }
 
 const ARTICLE_BASE_FIELDS =
@@ -840,34 +891,198 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const parsed = GenerateArticleSchema.safeParse(body);
-    if (!parsed.success) {
+    const parsedRequest = GenerateArticleSchema.safeParse(body);
+    if (!parsedRequest.success) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const { primaryItemType, primaryItemId } = parsed.data;
+    const { primaryItemType, primaryItemId } = parsedRequest.data;
     const context = await gatherContext(supabaseAdmin, primaryItemType, primaryItemId);
     if (!context) {
       return NextResponse.json({ error: 'Unable to gather article context' }, { status: 404 });
     }
 
     const siteUrl = buildSiteUrl(request, context.siteUrl);
-    const prompt = buildPrompt({ ...context, siteUrl });
-    const promptTemplate = buildPromptTemplate({ ...context, siteUrl });
+    const documentChunks = await buildChunksForSources(context.documentSources);
+    if (documentChunks.length === 0) {
+      return NextResponse.json({ error: 'No document content available' }, { status: 404 });
+    }
 
-    const { payload, wordCount, usage } = await runArticleModel(prompt);
+    const embeddingsResp = await openai.embeddings.create({
+      model: EMBEDDING_MODEL,
+      input: documentChunks.map((chunk) => chunk.content),
+    });
+    const chunkEmbeddings: number[][] = embeddingsResp.data.map((item) => item.embedding);
 
-    // Force source URL to the canonical site URL.
+    const searchRelevantSections = tool({
+      name: 'search_relevant_sections',
+      description: 'Return top relevant sections by semantic similarity. Use before fetching content.',
+      parameters: z.object({
+        query: z.string(),
+        limit: z.number().int().min(1).max(8).nullable(),
+      }),
+      execute: async (input) => {
+        const { query, limit } = input as { query: string; limit: number | null };
+        const q = typeof query === 'string' ? query : '';
+        const k = typeof limit === 'number' && !Number.isNaN(limit) ? limit : 5;
+        const qEmbedResp = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: q });
+        const qVec = qEmbedResp.data[0].embedding;
+        const scored = chunkEmbeddings.map((vec, i) => ({
+          id: i,
+          score: cosineSimilarity(qVec, vec),
+        }));
+        scored.sort((a, b) => b.score - a.score);
+        const top = scored.slice(0, k).map((s) => ({
+          id: s.id,
+          score: s.score,
+          source: documentChunks[s.id].sourceLabel,
+          preview: documentChunks[s.id].content.slice(0, 400),
+        }));
+        return JSON.stringify(top);
+      },
+    });
+
+    const fetchMoreContent = tool({
+      name: 'fetch_more_content',
+      description:
+        'Fetch full text for specific sections by ids or a fuzzy query. Returns ordered excerpts labeled as [Section N | Source: name].',
+      parameters: z.object({
+        chunk_ids: z.array(z.number()).nullable(),
+        section_query: z.string().nullable(),
+        max_sections: z.number().int().min(1).max(8).nullable(),
+      }),
+      execute: async (input) => {
+        const { chunk_ids, section_query, max_sections } = input as {
+          chunk_ids: number[] | null;
+          section_query: string | null;
+          max_sections: number | null;
+        };
+        const max = typeof max_sections === 'number' && !Number.isNaN(max_sections) ? max_sections : 6;
+        let selected: DocumentChunk[] = [];
+        if (Array.isArray(chunk_ids) && chunk_ids.length > 0) {
+          selected = chunk_ids
+            .map((id) => documentChunks[id])
+            .filter(Boolean)
+            .slice(0, max)
+            .sort((a, b) => a.index - b.index);
+        } else if (typeof section_query === 'string' && section_query.trim().length > 0) {
+          const q = section_query.toLowerCase();
+          const terms = q.split(/\s+/).filter(Boolean);
+          const scored = documentChunks.map((chunk) => ({
+            chunk,
+            score: terms.reduce((acc, term) => {
+              const matches = chunk.content.toLowerCase().match(new RegExp(term, 'gi')) || [];
+              return acc + matches.length;
+            }, 0),
+          }));
+          scored.sort((a, b) => b.score - a.score);
+          selected = scored
+            .slice(0, max)
+            .map((entry) => entry.chunk)
+            .sort((a, b) => a.index - b.index);
+        }
+        if (selected.length === 0) return 'No matching sections found.';
+        let text = `Extracted sections for article drafting:\n\n`;
+        selected.forEach((chunk, idx) => {
+          text += `[Section ${idx + 1} | Source: ${chunk.sourceLabel}]\n${chunk.content}\n\n`;
+          if (idx < selected.length - 1) text += '---\n\n';
+        });
+        text += '\nEach section corresponds to the original document passage shown above.';
+        return text;
+      },
+    });
+
+    const getDocumentMetadata = tool({
+      name: 'get_document_metadata',
+      description: 'Return structured metadata for the primary item.',
+      parameters: z.object({}),
+      execute: async () =>
+        JSON.stringify({
+          primaryItemType: context.primaryItemType,
+          primaryItemId: context.primaryItemId,
+          siteUrl,
+          metadata: context.metadata,
+          sources: context.documentSources.map((source) => source.label),
+        }),
+    });
+
+    const metadataSummary = JSON.stringify(context.metadata ?? {}, null, 2);
+    const sourcesSummary = context.documentSources.map((source) => `- ${source.label}`).join('\n');
+
+    const systemInstructions = [
+      `You are GovLens' editorial agent. Your job is to draft a concise, factual briefing article grounded strictly in the provided primary source documents.`,
+      `Primary item type: ${context.primaryItemType}. Canonical GovLens URL: ${siteUrl}.`,
+      `Metadata:\n${metadataSummary}`,
+      sourcesSummary ? `Available sources:\n${sourcesSummary}` : 'Available sources: (metadata only)',
+      [
+        'Workflow rules:',
+        '1. Call search_relevant_sections before fetch_more_content to locate key passages.',
+        '2. Gather only the passages you will cite. Do not guess or rely on memory.',
+        '3. Reference passages as [Section N] in the article wherever facts are used.',
+        '4. Highlight missing information explicitly inside the relevant bullet rather than inventing details.',
+        '5. Keep the entire article ≤ 200 words (target ~180) and each bullet ≤ 25 words.',
+      ].join(' '),
+      [
+        'Output requirements:',
+        '- Return valid JSON with keys: title, dek, summary, excerpt, body.sections (three entries), source_urls.',
+        '- body.sections must contain exactly the headings "What happened", "Why it matters", "Key implications", each with 2-3 bullet sentences including citations like [Section N].',
+        '- source_urls must contain exactly one item: the canonical GovLens URL.',
+        '- Do not include any text outside the JSON object.',
+      ].join(' '),
+    ].join('\n\n');
+
+    const agent = new Agent({
+      name: 'ArticleAuthor',
+      instructions: systemInstructions,
+      tools: [searchRelevantSections, fetchMoreContent, getDocumentMetadata],
+      model: MODEL_NAME,
+    });
+
+    const initialMessage = [
+      `Draft the GovLens article for ${context.metadata?.title ?? 'the referenced item'}.`,
+      'Follow the workflow rules, gather the necessary passages, then produce the final JSON payload.',
+      'Respond only with the final JSON once you have all required context.',
+    ].join('\n\n');
+
+    const agentMessages: AgentInputItem[] = [createUserMessage(initialMessage)];
+    const agentResult = await run(agent, agentMessages);
+    const finalText = extractFinalText(agentResult);
+
+    let parsedOutput: unknown;
+    try {
+      parsedOutput = JSON.parse(finalText);
+    } catch (_error) {
+      console.error('[article-agent] Failed to parse agent output', finalText);
+      return NextResponse.json({ error: 'Agent output was not valid JSON' }, { status: 500 });
+    }
+
+    const payloadResult = ArticleModelSchema.safeParse(parsedOutput);
+    if (!payloadResult.success) {
+      console.error('[article-agent] Agent output failed schema validation', payloadResult.error);
+      return NextResponse.json({ error: 'Agent output failed validation' }, { status: 500 });
+    }
+
+    const payload = payloadResult.data;
     payload.source_urls = [siteUrl];
 
-    const articleRecord = composeArticleRecord(payload, { ...context, siteUrl }, promptTemplate, usage, wordCount);
-    const result = await insertOrUpdateArticle(articleRecord);
+    if (!ensureSectionsHeadings(payload.body.sections)) {
+      return NextResponse.json({ error: 'Agent output missing required sections' }, { status: 500 });
+    }
+
+    const wordCount = computeTotalWordCount(payload);
+    if (wordCount > 200) {
+      return NextResponse.json({ error: `Draft is too long (${wordCount} words).` }, { status: 400 });
+    }
+
+    const usage = { inputTokens: null, outputTokens: null };
+    const articleRecord = composeArticleRecord(payload, { ...context, siteUrl }, systemInstructions, usage, wordCount);
+    const persistenceResult = await insertOrUpdateArticle(articleRecord);
 
     const response: GenerationResult = {
-      articleId: result.articleId,
-      status: result.status,
-      title: result.title,
-      updated: result.updated,
+      articleId: persistenceResult.articleId,
+      status: persistenceResult.status,
+      title: persistenceResult.title,
+      updated: persistenceResult.updated,
       wordCount,
     };
 
@@ -878,49 +1093,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-const ARTICLE_JSON_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['title', 'dek', 'summary', 'excerpt', 'body', 'source_urls'],
-  properties: {
-    title: { type: 'string', minLength: 10, maxLength: 120 },
-    dek: { type: 'string', minLength: 1, maxLength: 160 },
-    summary: { type: 'string', minLength: 1, maxLength: 240 },
-    excerpt: { type: 'string', minLength: 1, maxLength: 200 },
-    body: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['sections'],
-      properties: {
-        sections: {
-          type: 'array',
-          minItems: 3,
-          maxItems: 3,
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['heading', 'bullets'],
-            properties: {
-              heading: {
-                type: 'string',
-                enum: Array.from(EXPECTED_SECTION_HEADINGS),
-              },
-              bullets: {
-                type: 'array',
-                minItems: 2,
-                maxItems: 3,
-                items: { type: 'string', minLength: 1, maxLength: 160 },
-              },
-            },
-          },
-        },
-      },
-    },
-    source_urls: {
-      type: 'array',
-      minItems: 1,
-      maxItems: 1,
-      items: { type: 'string', pattern: '^https?://.+' },
-    },
-  },
-} as const;
