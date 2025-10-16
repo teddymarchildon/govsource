@@ -450,6 +450,56 @@ A table for ranking and featuring important items of various types (bills, laws,
 **Relationships:**
 - None (item_type and item_id are used to reference other tables generically)
 
+### Article
+Editorial content that summarizes or contextualizes important legislative or regulatory events.
+
+**Columns:**
+- `id` bigint (PK, identity)
+- `created_at` timestamptz (default: now(), not null)
+- `updated_at` timestamptz (default: now(), not null)
+- `status` text (default: 'draft', not null, check: draft|review|scheduled|published|archived)
+- `title` text (not null)
+- `slug` text (unique, nullable)
+- `dek` text (nullable)
+- `excerpt` text (nullable)
+- `summary` text (nullable)
+- `body` jsonb (nullable) — Structured article body produced by the LLM or editors
+- `body_markdown` text (nullable) — Optional markdown representation of the article body
+- `reading_time` smallint (nullable, check: >= 0)
+- `hero_image_url` text (nullable)
+- `source_urls` text[] (default: '{}', not null) — References to official documents or external coverage
+- `auto_generated` boolean (default: true, not null) — Whether the article was produced automatically
+- `prompt_template` text (nullable) — Prompt used to generate the article
+- `generation_metadata` jsonb (nullable) — Model, temperature, token counts, etc.
+- `generated_at` timestamptz (nullable)
+- `published_at` timestamptz (nullable)
+- `is_featured` boolean (default: false, not null)
+- `featured_until` timestamptz (nullable)
+- `primary_item_type` text (not null, check: bill|law|agency_document|cluster|executive_order)
+- `primary_item_id` bigint (not null) — ID of the primary referenced record
+- `author` text (nullable) — Display name of the agent or editor
+- `agent_identifier` text (nullable) — Identifier for the automated agent that produced the article
+- `editor_notes` text (nullable)
+- `views_count` bigint (default: 0, not null)
+- `clickthroughs` bigint (default: 0, not null)
+
+**Relationships:**
+- `primary_item_type`/`primary_item_id` polymorphically reference domain tables (bill, law, agency_document, cluster, executive_order)
+
+### Article Related Item
+Join table mapping articles to other relevant entities beyond the primary reference.
+
+**Columns:**
+- `id` bigint (PK, identity)
+- `created_at` timestamptz (default: now(), not null)
+- `article_id` bigint (FK, not null)
+- `item_type` text (not null, check: bill|law|agency_document|cluster|executive_order)
+- `item_id` bigint (not null)
+- `relation_role` text (nullable) — Context, such as `primary_source`, `background`, `analysis`
+
+**Relationships:**
+- References `article.id`
+
 ## Auth Schema Tables
 
 The auth schema contains tables managed by Supabase Auth, including:

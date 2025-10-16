@@ -70,9 +70,9 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           {/* Left: Tabs - full width on mobile */}
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue="details" className="w-full h-full flex flex-col">
-              <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
-                <TabsTrigger value="details" className="bg-transparent px-2 py-1 text-sm">Summary</TabsTrigger>
-                <TabsTrigger value="text" className="bg-transparent px-2 py-1 text-sm">Text</TabsTrigger>
+              <TabsList className="mb-3 flex-shrink-0">
+                <TabsTrigger value="details">Summary</TabsTrigger>
+                <TabsTrigger value="text">Text</TabsTrigger>
               </TabsList>
               <div className="flex-1 overflow-hidden">
                 <TabsContent value="details" className="mt-0 h-full">

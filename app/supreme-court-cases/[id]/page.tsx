@@ -161,9 +161,9 @@ export default function SupremeCourtCaseDetailPage() {
           {/* Left: Tabs for Opinions - full width on mobile */}
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
             <Tabs defaultValue={sortedOpinions.length > 0 ? sortedOpinions[0].id : ''} className="w-full h-full flex flex-col">
-              <TabsList className="mb-3 justify-start bg-transparent flex-shrink-0 h-9 p-0">
+              <TabsList className="mb-3 flex-shrink-0">
                 {sortedOpinions.map((opinion, _idx) => (
-                  <TabsTrigger key={opinion.id} value={opinion.id} className="bg-transparent px-2 py-1 text-sm">
+                  <TabsTrigger key={opinion.id} value={opinion.id}>
                     {mapOpinionType(opinion.type)}
                   </TabsTrigger>
                 ))}
