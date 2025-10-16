@@ -494,26 +494,43 @@ function computeTotalWordCount(payload: z.infer<typeof ArticleModelSchema>) {
   return summaryWords + dekWords + excerptWords + bodyWords;
 }
 
-function extractJsonFromResponse(response: OpenAI.Beta.Types.Response) {
-  const output = response.output ?? [];
-  for (const item of output) {
-    if (item.type === 'output_text' && item.text) {
-      return item.text;
+function extractJsonFromResponse(response: OpenAI.Responses.Response) {
+  if (response.output_text) {
+    return response.output_text;
+  }
+
+  const outputItems = response.output ?? [];
+  for (const item of outputItems) {
+    if (item.type === 'message') {
+      for (const content of item.content) {
+        if (content.type === 'output_text' && content.text) {
+          return content.text;
+        }
+      }
+    } else if ('text' in item) {
+      const maybeText = (item as { text?: unknown }).text;
+      if (typeof maybeText === 'string' && maybeText) {
+        return maybeText;
+      }
     }
   }
 
   // Fallback: deep search
-  const stack = Array.isArray(output) ? [...output] : [output];
-  const visited = new Set<any>();
+  const stack: unknown[] = Array.isArray(outputItems) ? [...outputItems] : [outputItems];
+  const visited = new Set<unknown>();
   while (stack.length > 0) {
     const current = stack.pop();
-    if (!current || typeof current !== 'object' || visited.has(current)) continue;
+    if (!current || typeof current !== 'object') continue;
+    if (visited.has(current)) continue;
     visited.add(current);
-    if ((current as any).type === 'output_text' && typeof (current as any).text === 'string') {
-      return (current as any).text;
+
+    const candidate = current as { type?: unknown; text?: unknown };
+    if (candidate.type === 'output_text' && typeof candidate.text === 'string') {
+      return candidate.text;
     }
-    for (const value of Object.values(current)) {
-      if (typeof value === 'object' && value !== null) {
+
+    for (const value of Object.values(current as Record<string, unknown>)) {
+      if (value && typeof value === 'object') {
         stack.push(value);
       }
     }
