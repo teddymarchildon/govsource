@@ -4,7 +4,14 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { fetchHtmlContent, processDocumentContent } from '@/utils/documentUtils';
 import { createClient } from '@/utils/supabase/server';
-import { Agent, run, tool } from '@openai/agents';
+import {
+  Agent,
+  run,
+  tool,
+  assistant as createAssistantMessage,
+  user as createUserMessage,
+  type AgentInputItem,
+} from '@openai/agents';
 
 type PresetType = 'default' | 'summarizeKeyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
 
@@ -20,6 +27,11 @@ interface DocumentChunk {
   content: string;
   index: number;
 }
+
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 function cleanHtml(html: string): string {
   return html
@@ -116,8 +128,24 @@ export async function POST(request: Request) {
   try {
     const { messages, documentTitle, htmlFilePath, documentType, presetType = 'default', userId } = await request.json();
 
-    if (!messages || !messages.length) {
+    if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'Messages are required' }, { status: 400 });
+    }
+
+    const chatMessages: ChatMessage[] = messages
+      .map((msg: any) => {
+        if (!msg || typeof msg !== 'object') return null;
+        const role = msg.role;
+        const content = msg.content;
+        if ((role === 'user' || role === 'assistant') && typeof content === 'string' && content.trim().length > 0) {
+          return { role, content };
+        }
+        return null;
+      })
+      .filter((msg): msg is ChatMessage => msg !== null);
+
+    if (chatMessages.length === 0 || chatMessages[chatMessages.length - 1].role !== 'user') {
+      return NextResponse.json({ error: 'A user message is required' }, { status: 400 });
     }
 
     let aiUsage: number | undefined = undefined;
@@ -165,7 +193,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const userQuery: string = messages[messages.length - 1]?.content ?? '';
+    const agentMessages: AgentInputItem[] = chatMessages.map((message) =>
+      message.role === 'user' ? createUserMessage(message.content) : createAssistantMessage(message.content)
+    );
 
     let storageBucket = '';
     switch (documentType) {
@@ -298,7 +328,7 @@ export async function POST(request: Request) {
       model: 'gpt-4o-mini'
     });
 
-    const result = await run(agent, userQuery);
+    const result = await run(agent, agentMessages);
     const finalText = extractFinalText(result);
 
     const response = new NextResponse(finalText, {
