@@ -15,6 +15,21 @@ interface Message {
   content: string;
 }
 
+type AgentActivityStatus = 'running' | 'completed' | 'error';
+
+interface AgentActivity {
+  id: string;
+  label: string;
+  status: AgentActivityStatus;
+  detail?: string;
+}
+
+type AgentStreamPayload =
+  | { type: 'phase'; id: string; label: string; status: AgentActivityStatus; detail?: string }
+  | { type: 'tool'; id: string; label: string; status: AgentActivityStatus; detail?: string }
+  | { type: 'final_answer'; content: string }
+  | { type: 'error'; message: string };
+
 // Define preset types that match the backend types
 type PresetType = 'default' | 'summarizeKeyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
 
@@ -99,6 +114,8 @@ export default function AiChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [agentActivities, setAgentActivities] = useState<AgentActivity[]>([]);
+  const streamControllerRef = useRef<AbortController | null>(null);
 
   // Auth state
   const { user, loading: _authLoading, isPaidSubscriber, aiInteractions, aiLimitReached } = useAuth();
@@ -126,6 +143,14 @@ export default function AiChat({
     }
   }, [user, _authLoading]);
 
+  useEffect(() => {
+    return () => {
+      if (streamControllerRef.current) {
+        streamControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // When a successful AI request is made as anon, increment local usage
   const incrementAnonUsage = () => {
     setAnonAiUsage((prev) => {
@@ -137,6 +162,18 @@ export default function AiChat({
 
   // Get tailored presets for the current documentType
   const PRESETS = getPresets(documentType, diffHtmlFilePaths);
+
+  const upsertActivity = (activity: AgentActivity) => {
+    setAgentActivities((prev) => {
+      const index = prev.findIndex((item) => item.id === activity.id);
+      if (index === -1) {
+        return [...prev, activity];
+      }
+      const updated = [...prev];
+      updated[index] = { ...updated[index], ...activity };
+      return updated;
+    });
+  };
 
   // Function to check if the scroll is at the bottom
   const isScrollAtBottom = () => {
@@ -176,15 +213,40 @@ export default function AiChat({
     setIsLoading(true);
     setIsStreaming(false);
     setError(null);
+    setAgentActivities([{
+      id: 'thinking',
+      label: 'Thinking',
+      status: 'running',
+      detail: 'Preparing analysis...'
+    }]);
+
+    if (streamControllerRef.current) {
+      streamControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    streamControllerRef.current = controller;
+
+    const handleActivityPayload = (payload: Extract<AgentStreamPayload, { type: 'phase' | 'tool' }>) => {
+      upsertActivity({
+        id: payload.id,
+        label: payload.label,
+        status: payload.status,
+        detail: payload.detail
+      });
+    };
+
+    const handleFinalAnswer = (content: string) => {
+      setMessages(prev => [...prev, { role: 'assistant', content }]);
+      if (!user) {
+        incrementAnonUsage();
+      }
+      setAgentActivities([]);
+      setIsStreaming(false);
+    };
 
     try {
-      // We'll let the API handle content fetching
-      const documentContent = null;
-
-      // For diff preset, send the two html file paths
       const body: any = {
         messages: messagesToSend,
-        documentContent,
         documentType,
         documentId,
         documentTitle,
@@ -196,70 +258,134 @@ export default function AiChat({
         body.diffHtmlFilePaths = diffHtmlFilePaths;
       }
 
-      // Call the API endpoint with the messages and document content
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        // If anonymous and hit limit, update local state
         if (!user && response.status === 403) {
           setAnonLimitReached(true);
         }
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      // If anonymous and successful, increment local usage
-      if (!user) {
-        incrementAnonUsage();
-      }
-
-      // Check if the response is a stream (text/plain) or JSON (web search fallback)
-      const contentType = response.headers.get('Content-Type') || '';
-      if (contentType.includes('application/json')) {
-        // Web search fallback (non-streaming)
-        const data = await response.json();
-        setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
-      } else {
-        // Streaming response
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('No response body');
-        let assistantMessage = '';
-        setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-        let done = false;
-        let firstChunk = true;
-        while (!done) {
-          const { value, done: doneReading } = await reader.read();
-          done = doneReading;
-          if (value) {
-            if (firstChunk) {
-              setIsStreaming(true);
-              firstChunk = false;
-            }
-            const chunk = new TextDecoder().decode(value);
-            assistantMessage += chunk;
-            setMessages(prev => {
-              // Update the last assistant message in the array
-              const updated = [...prev];
-              // Only update if the last message is assistant
-              if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
-                updated[updated.length - 1] = { role: 'assistant', content: assistantMessage };
-              }
-              return updated;
-            });
+        let message = `Error: ${response.status}`;
+        try {
+          const data = await response.json();
+          if (data?.error) {
+            message = data.error;
           }
+        } catch {}
+        throw new Error(message);
+      }
+
+      const contentType = response.headers.get('Content-Type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        const data = await response.json().catch(() => ({}));
+        const fallbackMessage =
+          typeof data.message === 'string'
+            ? data.message
+            : typeof data.error === 'string'
+            ? data.error
+            : 'No response returned.';
+        setMessages(prev => [...prev, { role: 'assistant', content: fallbackMessage }]);
+        if (!user) {
+          incrementAnonUsage();
         }
-        setIsStreaming(false);
+        setAgentActivities([]);
+        upsertActivity({
+          id: 'thinking',
+          label: 'Thinking',
+          status: 'completed',
+          detail: 'Responded with available information.'
+        });
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+      const decoder = new TextDecoder();
+      let buffer = '';
+      setIsStreaming(true);
+
+      const handlePayload = (payload: AgentStreamPayload) => {
+        if (payload.type === 'phase' || payload.type === 'tool') {
+          handleActivityPayload(payload);
+        } else if (payload.type === 'final_answer') {
+          handleFinalAnswer(payload.content);
+        } else if (payload.type === 'error') {
+          setError(payload.message || 'Agent error');
+          setIsStreaming(false);
+          upsertActivity({
+            id: 'agent-error',
+            label: 'Agent error',
+            status: 'error',
+            detail: payload.message
+          });
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let boundaryIndex = buffer.indexOf('\n\n');
+        while (boundaryIndex !== -1) {
+          const chunk = buffer.slice(0, boundaryIndex).trim();
+          buffer = buffer.slice(boundaryIndex + 2);
+          if (chunk) {
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (!line.startsWith('data:')) continue;
+              const dataLine = line.slice(5).trim();
+              if (!dataLine) continue;
+              try {
+                const payload = JSON.parse(dataLine) as AgentStreamPayload;
+                handlePayload(payload);
+              } catch (parseErr) {
+                console.error('Failed to parse stream chunk', parseErr, dataLine);
+              }
+            }
+          }
+          boundaryIndex = buffer.indexOf('\n\n');
+        }
+      }
+
+      const remaining = buffer.trim();
+      if (remaining.startsWith('data:')) {
+        try {
+          handlePayload(JSON.parse(remaining.slice(5).trim()) as AgentStreamPayload);
+        } catch (parseErr) {
+          console.error('Failed to parse remaining stream chunk', parseErr, remaining);
+        }
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
       console.error('Error calling AI API:', err);
       setError('Failed to get a response. Please try again.');
+      upsertActivity({
+        id: 'thinking',
+        label: 'Thinking',
+        status: 'error',
+        detail: 'Request failed.'
+      });
+      upsertActivity({
+        id: 'agent-error',
+        label: 'Agent error',
+        status: 'error',
+        detail: err instanceof Error ? err.message : 'Unknown error'
+      });
     } finally {
-      setIsLoading(false);
+      if (streamControllerRef.current === controller) {
+        streamControllerRef.current = null;
+        setIsLoading(false);
+        setIsStreaming(false);
+        setAgentActivities([]);
+      }
     }
   };
 
@@ -270,7 +396,7 @@ export default function AiChat({
     const userMessage: Message = { role: 'user', content: preset.userMessage };
     setMessages(prev => [...prev, userMessage]);
     setIsUserScrolling(false);
-    sendMessageToApi([userMessage], preset.type);
+    await sendMessageToApi([userMessage], preset.type);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -470,6 +596,48 @@ export default function AiChat({
                 </div>
               </div>
             ))}
+            {agentActivities.length > 0 && (isLoading || isStreaming) && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] text-sm text-primary/80 leading-snug">
+                  <div className="space-y-1">
+                    {agentActivities.map((activity, index) => {
+                      const isPrimary = index === 0;
+                      const statusText =
+                        activity.status === 'completed'
+                          ? 'Completed'
+                          : activity.status === 'error'
+                          ? 'Error'
+                          : 'Running';
+                      const textClass = isPrimary
+                        ? 'text-base font-semibold text-primary/90'
+                        : 'text-sm font-medium text-primary/80';
+                      const statusClass =
+                        activity.status === 'completed'
+                          ? 'text-emerald-600'
+                          : activity.status === 'error'
+                          ? 'text-red-500'
+                          : 'text-primary/70';
+                      return (
+                        <div key={activity.id}>
+                          <div className="flex items-center gap-2">
+                            <span className={textClass}>{activity.label}</span>
+                            <span className={`text-[10px] uppercase font-semibold ${statusClass}`}>
+                              {statusText}
+                            </span>
+                            {activity.status === 'running' && (
+                              <Loader className="h-3 w-3 text-primary/60 animate-spin" />
+                            )}
+                          </div>
+                          {activity.detail && (
+                            <p className="text-xs text-primary/60 mt-0.5 truncate">{activity.detail}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
             {isLoading && !isStreaming && (
               <div className="flex justify-start">
                 <div className="max-w-[85%] rounded-lg p-2 bg-white border border-gray-200" style={{ borderRadius: '0.5rem' }}>

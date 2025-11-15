@@ -33,6 +33,14 @@ type ChatMessage = {
   content: string;
 };
 
+type AgentActivityStatus = 'running' | 'completed' | 'error';
+
+type AgentStreamPayload =
+  | { type: 'phase'; id: string; label: string; status: AgentActivityStatus; detail?: string }
+  | { type: 'tool'; id: string; label: string; status: AgentActivityStatus; detail?: string }
+  | { type: 'final_answer'; content: string }
+  | { type: 'error'; message: string };
+
 function cleanHtml(html: string): string {
   return html
     .replace(/<[^>]*>/g, ' ')
@@ -89,6 +97,65 @@ function cosineSimilarity(a: number[], b: number[]): number {
 export const maxDuration = 60;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const TOOL_LABELS: Record<string, string> = {
+  search_relevant_sections: 'Searching relevant sections',
+  fetch_more_content: 'Reviewing document',
+  get_document_metadata: 'Gathering document context'
+};
+
+const truncateDetail = (text: string | undefined, max = 200) => {
+  if (!text) return undefined;
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+};
+
+const parseToolArgs = (args: string | undefined) => {
+  if (!args) return null;
+  try {
+    return JSON.parse(args);
+  } catch {
+    return null;
+  }
+};
+
+const formatArgsDetail = (toolName: string, args: any): string | undefined => {
+  if (!args || typeof args !== 'object') return undefined;
+  if (toolName === 'search_relevant_sections' && typeof args.query === 'string') {
+    return `Query: ${args.query}`;
+  }
+  if (toolName === 'fetch_more_content') {
+    if (Array.isArray(args.chunk_ids) && args.chunk_ids.length > 0) {
+      return `Loading ${args.chunk_ids.length} section${args.chunk_ids.length > 1 ? 's' : ''}`;
+    }
+    if (typeof args.section_query === 'string' && args.section_query.trim()) {
+      return `Searching for "${args.section_query.trim()}"`;
+    }
+  }
+  return undefined;
+};
+
+const formatOutputDetail = (toolName: string, output: unknown): string | undefined => {
+  if (typeof output === 'string') {
+    if (toolName === 'search_relevant_sections') {
+      try {
+        const parsed = JSON.parse(output);
+        if (Array.isArray(parsed)) {
+          return `Found ${parsed.length} relevant section${parsed.length === 1 ? '' : 's'}`;
+        }
+      } catch {
+        return truncateDetail(output);
+      }
+    }
+    if (toolName === 'fetch_more_content') {
+      return 'Shared detailed excerpts';
+    }
+    if (toolName === 'get_document_metadata') {
+      return 'Provided context metadata';
+    }
+    return truncateDetail(output);
+  }
+  return undefined;
+};
 
 function extractFinalText(result: unknown): string {
   if (typeof result === 'string') return result;
@@ -328,13 +395,118 @@ export async function POST(request: Request) {
       model: 'gpt-4o-mini'
     });
 
-    const result = await run(agent, agentMessages);
-    const finalText = extractFinalText(result);
+    const encoder = new TextEncoder();
+    const toolCallMap = new Map<string, string>();
+    let toolCounter = 0;
 
-    const response = new NextResponse(finalText, {
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (payload: AgentStreamPayload) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        };
+
+        const sendThinking = (detail?: string, status: AgentActivityStatus = 'running') => {
+          send({
+            type: 'phase',
+            id: 'thinking',
+            label: 'Thinking',
+            status,
+            detail
+          });
+        };
+
+        const sendToolEvent = (id: string, label: string, status: AgentActivityStatus, detail?: string) => {
+          send({
+            type: 'tool',
+            id,
+            label,
+            status,
+            detail
+          });
+        };
+
+        sendThinking('Analyzing your request...');
+
+        const getToolLabel = (toolName: string) => {
+          if (toolName === 'fetch_more_content' && documentTitle) {
+            const truncated = truncateDetail(documentTitle, 80);
+            return truncated ? `Reviewing ${truncated}` : 'Reviewing document';
+          }
+          return TOOL_LABELS[toolName] || `Running ${toolName}`;
+        };
+
+        try {
+          const streamResult = await run(agent, agentMessages, { stream: true });
+          let assistantMessage = '';
+
+          for await (const agentEvent of streamResult as AsyncIterable<any>) {
+            if (!agentEvent) continue;
+            if (agentEvent.type === 'agent_updated_stream_event') {
+              sendThinking(`Running ${agentEvent.agent.name}...`);
+              continue;
+            }
+
+            if (agentEvent.type !== 'run_item_stream_event') continue;
+
+            const itemName = agentEvent.name;
+            const item = agentEvent.item as any;
+
+            if (itemName === 'tool_called' && item?.rawItem) {
+              const raw = item.rawItem as { callId?: string; name?: string; arguments?: string };
+              const callId = raw.callId || `tool-${++toolCounter}`;
+              const toolName = raw.name || 'tool';
+              toolCallMap.set(callId, toolName);
+              const argsDetail = formatArgsDetail(toolName, parseToolArgs(raw.arguments));
+              const label = getToolLabel(toolName);
+              sendToolEvent(callId, label, 'running', argsDetail);
+            } else if (itemName === 'tool_output' && item) {
+              const raw = item.rawItem as { callId?: string; name?: string };
+              const callId = raw?.callId || `tool-${++toolCounter}`;
+              const toolName = toolCallMap.get(callId) || raw?.name || 'tool';
+              const label = getToolLabel(toolName);
+              const detail = formatOutputDetail(toolName, item.output);
+              sendToolEvent(callId, label, 'completed', detail);
+            } else if (itemName === 'message_output_created' && item) {
+              if (typeof item.content === 'string') {
+                assistantMessage = item.content;
+              }
+            }
+          }
+
+          await (streamResult as any).completed;
+
+          const fallbackOutput = (streamResult as any).finalOutput ?? '';
+          let finalText = assistantMessage;
+          if (!finalText) {
+            if (typeof fallbackOutput === 'string' && fallbackOutput.trim().length > 0) {
+              finalText = fallbackOutput;
+            } else {
+              finalText = extractFinalText(fallbackOutput);
+            }
+          }
+
+          if (finalText && finalText.trim().length > 0) {
+            sendThinking(undefined, 'completed');
+            send({ type: 'final_answer', content: finalText });
+          } else {
+            sendThinking(undefined, 'error');
+            send({ type: 'error', message: 'The agent did not return a response.' });
+          }
+        } catch (err) {
+          console.error('Error streaming AI response:', err);
+          sendThinking(undefined, 'error');
+          send({ type: 'error', message: 'Failed to generate a response.' });
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    const response = new NextResponse(stream, {
       headers: {
-        'Content-Type': 'text/markdown; charset=utf-8',
-        'Cache-Control': 'no-cache',
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
       },
     });
     if (isAnonymous && typeof aiUsage === 'number') {
