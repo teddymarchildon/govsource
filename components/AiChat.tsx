@@ -636,27 +636,21 @@ export default function AiChat({
               <div className="flex justify-start">
                 <div className="max-w-[85%] text-sm text-primary/80 leading-snug">
                   <div className="space-y-1">
-                    {agentActivities.map((activity, index) => {
-                      const isThinking = activity.id === 'thinking';
-                      const isPrimary = !isThinking && index === 0;
-                      const textClass = isPrimary
-                        ? 'text-base font-semibold text-primary/90'
-                        : 'text-sm font-medium text-primary/80';
+                    {agentActivities.map((activity) => {
+                      const textClass = 'text-xs font-medium text-primary/80';
                       const statusIcon =
                         activity.status === 'completed'
                           ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                           : activity.status === 'error'
                           ? <XCircle className="h-3.5 w-3.5 text-red-500" />
-                          : <Loader className="h-3 w-3 text-primary/60 animate-spin" />;
+                          : <Loader className="h-3.5 w-3.5 text-primary/60 animate-spin" />;
+                      const lineText = activity.detail
+                        ? `${activity.label} — ${activity.detail}`
+                        : activity.label;
                       return (
-                        <div key={activity.id}>
-                          <div className="flex items-center gap-2">
-                            <span className={textClass}>{activity.label}</span>
-                            {statusIcon}
-                          </div>
-                          {activity.detail && (
-                            <p className="text-xs text-primary/60 mt-0.5 truncate">{activity.detail}</p>
-                          )}
+                        <div key={activity.id} className="flex items-center gap-2 text-xs text-primary/80 min-w-0">
+                          {statusIcon}
+                          <span className={`${textClass} truncate min-w-0`}>{lineText}</span>
                         </div>
                       );
                     })}
