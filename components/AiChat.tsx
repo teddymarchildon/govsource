@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FileText, Sparkles, Clock, Scale, Loader } from 'lucide-react';
+import { FileText, Sparkles, Clock, Scale, Loader, CheckCircle2, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
@@ -38,6 +38,8 @@ interface Preset {
   label: string;
   userMessage: string;
 }
+
+const TOOL_COMPLETION_DELAY_MS = 700;
 
 // Helper to get the noun for the document type
 function getDocumentNoun(documentType: AiChatProps['documentType']) {
@@ -115,6 +117,7 @@ export default function AiChat({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [agentActivities, setAgentActivities] = useState<AgentActivity[]>([]);
+  const completionTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const streamControllerRef = useRef<AbortController | null>(null);
 
   // Auth state
@@ -134,6 +137,13 @@ export default function AiChat({
     return null;
   }
 
+  const clearCompletionTimers = () => {
+    Object.values(completionTimersRef.current).forEach((timer) => {
+      if (timer) clearTimeout(timer);
+    });
+    completionTimersRef.current = {};
+  };
+
   // On mount, read the ai_usage cookie if not logged in
   useEffect(() => {
     if (!user && !_authLoading) {
@@ -148,6 +158,7 @@ export default function AiChat({
       if (streamControllerRef.current) {
         streamControllerRef.current.abort();
       }
+      clearCompletionTimers();
     };
   }, []);
 
@@ -163,11 +174,32 @@ export default function AiChat({
   // Get tailored presets for the current documentType
   const PRESETS = getPresets(documentType, diffHtmlFilePaths);
 
-  const upsertActivity = (activity: AgentActivity) => {
+  const upsertActivity = (activity: AgentActivity, options?: { delayOnComplete?: boolean }) => {
     setAgentActivities((prev) => {
       const index = prev.findIndex((item) => item.id === activity.id);
       if (index === -1) {
         return [...prev, activity];
+      }
+      const prevActivity = prev[index];
+      if (
+        options?.delayOnComplete &&
+        activity.status === 'completed' &&
+        prevActivity?.status === 'running'
+      ) {
+        if (completionTimersRef.current[activity.id]) {
+          clearTimeout(completionTimersRef.current[activity.id]);
+        }
+        completionTimersRef.current[activity.id] = setTimeout(() => {
+          setAgentActivities((innerPrev) => {
+            const innerIndex = innerPrev.findIndex((item) => item.id === activity.id);
+            if (innerIndex === -1) return innerPrev;
+            const updatedInner = [...innerPrev];
+            updatedInner[innerIndex] = { ...updatedInner[innerIndex], ...activity };
+            return updatedInner;
+          });
+          delete completionTimersRef.current[activity.id];
+        }, TOOL_COMPLETION_DELAY_MS);
+        return prev;
       }
       const updated = [...prev];
       updated[index] = { ...updated[index], ...activity };
@@ -213,6 +245,7 @@ export default function AiChat({
     setIsLoading(true);
     setIsStreaming(false);
     setError(null);
+    clearCompletionTimers();
     setAgentActivities([{
       id: 'thinking',
       label: 'Thinking',
@@ -232,7 +265,7 @@ export default function AiChat({
         label: payload.label,
         status: payload.status,
         detail: payload.detail
-      });
+      }, { delayOnComplete: payload.status === 'completed' });
     };
 
     const handleFinalAnswer = (content: string) => {
@@ -240,6 +273,7 @@ export default function AiChat({
       if (!user) {
         incrementAnonUsage();
       }
+      clearCompletionTimers();
       setAgentActivities([]);
       setIsStreaming(false);
     };
@@ -295,6 +329,7 @@ export default function AiChat({
           incrementAnonUsage();
         }
         setAgentActivities([]);
+        clearCompletionTimers();
         upsertActivity({
           id: 'thinking',
           label: 'Thinking',
@@ -384,6 +419,7 @@ export default function AiChat({
         streamControllerRef.current = null;
         setIsLoading(false);
         setIsStreaming(false);
+        clearCompletionTimers();
         setAgentActivities([]);
       }
     }
@@ -601,32 +637,22 @@ export default function AiChat({
                 <div className="max-w-[85%] text-sm text-primary/80 leading-snug">
                   <div className="space-y-1">
                     {agentActivities.map((activity, index) => {
-                      const isPrimary = index === 0;
-                      const statusText =
-                        activity.status === 'completed'
-                          ? 'Completed'
-                          : activity.status === 'error'
-                          ? 'Error'
-                          : 'Running';
+                      const isThinking = activity.id === 'thinking';
+                      const isPrimary = !isThinking && index === 0;
                       const textClass = isPrimary
                         ? 'text-base font-semibold text-primary/90'
                         : 'text-sm font-medium text-primary/80';
-                      const statusClass =
+                      const statusIcon =
                         activity.status === 'completed'
-                          ? 'text-emerald-600'
+                          ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                           : activity.status === 'error'
-                          ? 'text-red-500'
-                          : 'text-primary/70';
+                          ? <XCircle className="h-3.5 w-3.5 text-red-500" />
+                          : <Loader className="h-3 w-3 text-primary/60 animate-spin" />;
                       return (
                         <div key={activity.id}>
                           <div className="flex items-center gap-2">
                             <span className={textClass}>{activity.label}</span>
-                            <span className={`text-[10px] uppercase font-semibold ${statusClass}`}>
-                              {statusText}
-                            </span>
-                            {activity.status === 'running' && (
-                              <Loader className="h-3 w-3 text-primary/60 animate-spin" />
-                            )}
+                            {statusIcon}
                           </div>
                           {activity.detail && (
                             <p className="text-xs text-primary/60 mt-0.5 truncate">{activity.detail}</p>
@@ -634,15 +660,6 @@ export default function AiChat({
                         </div>
                       );
                     })}
-                  </div>
-                </div>
-              </div>
-            )}
-            {isLoading && !isStreaming && (
-              <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-lg p-2 bg-white border border-gray-200" style={{ borderRadius: '0.5rem' }}>
-                  <div className="flex items-center justify-center">
-                    <Loader className="h-4 w-4 text-primary animate-spin" />
                   </div>
                 </div>
               </div>
