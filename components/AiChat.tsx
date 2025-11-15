@@ -250,7 +250,7 @@ export default function AiChat({
       id: 'thinking',
       label: 'Thinking',
       status: 'running',
-      detail: 'Preparing analysis...'
+      detail: 'preparing analysis...'
     }]);
 
     if (streamControllerRef.current) {
@@ -645,7 +645,7 @@ export default function AiChat({
                           ? <XCircle className="h-3.5 w-3.5 text-red-500" />
                           : <Loader className="h-3.5 w-3.5 text-primary/60 animate-spin" />;
                       const lineText = activity.detail
-                        ? `${activity.label} — ${activity.detail}`
+                        ? `${activity.label} - ${activity.detail}`
                         : activity.label;
                       return (
                         <div key={activity.id} className="flex items-center gap-2 text-xs text-primary/80 min-w-0">
