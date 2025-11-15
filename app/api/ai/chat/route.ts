@@ -140,17 +140,17 @@ const formatOutputDetail = (toolName: string, output: unknown): string | undefin
       try {
         const parsed = JSON.parse(output);
         if (Array.isArray(parsed)) {
-          return `Found ${parsed.length} relevant section${parsed.length === 1 ? '' : 's'}`;
+          return `found relevant sections`;
         }
       } catch {
         return truncateDetail(output);
       }
     }
     if (toolName === 'fetch_more_content') {
-      return 'Shared detailed excerpts';
+      return 'shared detailed excerpts';
     }
     if (toolName === 'get_document_metadata') {
-      return 'Provided context metadata';
+      return 'provided documentcontext';
     }
     return truncateDetail(output);
   }
@@ -425,7 +425,7 @@ export async function POST(request: Request) {
           });
         };
 
-        sendThinking('Analyzing your request...');
+        sendThinking('analyzing your request...');
 
         const getToolLabel = (toolName: string) => {
           if (toolName === 'fetch_more_content' && documentTitle) {
