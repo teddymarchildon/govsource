@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import { formatDate } from '@/utils/utils';
 import SaveButton from './SaveButton';
 import PdfViewer from './PdfViewer';
@@ -156,7 +157,9 @@ export default function BillOrLawDetail({
                             prose-pre:bg-gray-100 prose-pre:text-xs
                             prose-blockquote:border-gray-300 prose-blockquote:text-gray-700
                             prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
-                            {getSummaryText()}
+                            <ReactMarkdown>
+                              {getSummaryText()}
+                            </ReactMarkdown>
                           </div>
                           {needsTruncation && (
                             <Button
