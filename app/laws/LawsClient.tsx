@@ -280,7 +280,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-2">Laws</h1>
-      <p className="text-gray-600 text-sm mb-6">Explore federal laws enacted by Congress.</p>
+      <p className="text-gray-600 text-sm mb-6">Explore federal laws enacted by Congress</p>
 
       <FilterToolbar
         searchValue={searchQuery}

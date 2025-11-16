@@ -87,7 +87,10 @@ function JudgesContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Supreme Court Judges</h1>
+      <h1 className="text-3xl font-bold mb-2">Supreme Court Judges</h1>
+      <p className="text-gray-600 text-sm mb-6">
+        Browse current and former justices, then search to quickly zero in on a particular name.
+      </p>
 
       <FilterToolbar
         searchValue={searchQuery}

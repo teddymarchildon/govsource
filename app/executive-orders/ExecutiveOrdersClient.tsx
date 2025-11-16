@@ -287,7 +287,10 @@ export default function ExecutiveOrdersClient({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Executive Orders</h1>
+      <h1 className="text-3xl font-bold mb-2">Executive Orders</h1>
+      <p className="text-gray-600 text-sm mb-6">
+        Track presidential directives, filter by administration, and see when each order was issued.
+      </p>
 
       <FilterToolbar
         searchValue={searchQuery}
