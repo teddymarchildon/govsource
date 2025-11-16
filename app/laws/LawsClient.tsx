@@ -7,11 +7,13 @@ import LawCard from '@/components/LawCard';
 import { Law, PolicyArea } from '@/types/types';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
-import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
+import {
+  FilterToolbar,
+  type FilterChip,
+} from "@/components/listing/FilterToolbar";
+import { FilterPopover } from "@/components/listing/FilterPopover";
 
 interface LawsClientProps {
   initialLaws: Law[];
@@ -142,8 +144,8 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
     setSelectedPolicyArea(value as PolicyArea | '');
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
   };
 
   const handleStartDateChange = (date: Date | undefined) => {
@@ -173,47 +175,82 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   const clearEndDateFilter = () => setEndDate(undefined);
   const clearSortOrderFilter = () => setSortOrder('desc');
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Laws</h1>
-      <p className="text-gray-600 text-sm mb-6">Explore federal laws enacted by Congress.</p>
+  const appliedFilterCount =
+    (selectedPolicyArea ? 1 : 0) +
+    (startDate ? 1 : 0) +
+    (endDate ? 1 : 0);
 
-      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-          <div>
-            <label htmlFor="policy-area" className="block text-sm font-medium mb-1">
-              Policy Area
-            </label>
-            <Select value={selectedPolicyArea} onValueChange={handlePolicyAreaChange}>
-              <SelectTrigger id="policy-area">
-                <SelectValue placeholder="All Policy Areas" />
+  const activeFilters: FilterChip[] = [];
+
+  if (searchQuery) {
+    activeFilters.push({
+      id: 'search',
+      label: `Search: ${searchQuery}`,
+      onRemove: clearSearchQueryFilter,
+    });
+  }
+
+  if (selectedPolicyArea) {
+    activeFilters.push({
+      id: 'policy',
+      label: `Policy: ${selectedPolicyArea}`,
+      onRemove: clearPolicyAreaFilter,
+    });
+  }
+
+  if (startDate) {
+    activeFilters.push({
+      id: 'start',
+      label: `From: ${startDate.toLocaleDateString()}`,
+      onRemove: clearStartDateFilter,
+    });
+  }
+
+  if (endDate) {
+    activeFilters.push({
+      id: 'end',
+      label: `To: ${endDate.toLocaleDateString()}`,
+      onRemove: clearEndDateFilter,
+    });
+  }
+
+  if (sortOrder !== 'desc') {
+    activeFilters.push({
+      id: 'sort',
+      label: `Sort: ${sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}`,
+      onRemove: clearSortOrderFilter,
+    });
+  }
+
+  const toolbarActions = (
+    <>
+      <FilterPopover count={appliedFilterCount}>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Policy area
+            </p>
+            <Select
+              value={selectedPolicyArea}
+              onValueChange={handlePolicyAreaChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All policy areas" />
               </SelectTrigger>
               <SelectContent>
                 {policyAreas.map((area) => (
-                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                  <SelectItem key={area} value={area}>
+                    {area}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          <div>
-            <label htmlFor="search-filter" className="block text-sm font-medium mb-1">
-              Search Laws
-            </label>
-            <Input
-              id="search-filter"
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search by title..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Enacted Date Range
-            </label>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Enacted between
+            </p>
+            <div className="grid grid-cols-2 gap-2">
               <DatePicker
                 date={startDate}
                 setDate={handleStartDateChange}
@@ -226,75 +263,36 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
               />
             </div>
           </div>
-
-          <div>
-            <label htmlFor="sort-order" className="block text-sm font-medium mb-1">
-              Sort By
-            </label>
-            <Select value={sortOrder} onValueChange={handleSortOrderChange}>
-              <SelectTrigger id="sort-order">
-                <SelectValue placeholder="Sort by date..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Newest First</SelectItem>
-                <SelectItem value="asc">Oldest First</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
+      </FilterPopover>
+      <Select value={sortOrder} onValueChange={handleSortOrderChange}>
+        <SelectTrigger className="h-10 w-[240px] text-sm">
+          <SelectValue placeholder="Sort by date..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="desc">Newest first</SelectItem>
+          <SelectItem value="asc">Oldest first</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  );
 
-        <div className="flex items-center justify-end">
-           <Button variant="outline" onClick={clearFilters} size="sm">
-              Clear All Filters
-            </Button>
-        </div>
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-2">Laws</h1>
+      <p className="text-gray-600 text-sm mb-6">Explore federal laws enacted by Congress.</p>
 
-        {(selectedPolicyArea || searchQuery || startDate || endDate || sortOrder !== 'desc') && (
-        <div className="mt-4 flex items-center flex-wrap gap-2">
-          <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
-          {selectedPolicyArea && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              Policy: {selectedPolicyArea}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearPolicyAreaFilter} aria-label="Clear policy area filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-          {searchQuery && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              Search: {searchQuery}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSearchQueryFilter} aria-label="Clear search filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-          {startDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              From: {startDate.toLocaleDateString()}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-          {endDate && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              To: {endDate.toLocaleDateString()}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-          {sortOrder !== 'desc' && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              Sort: {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
-              <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSortOrderFilter} aria-label="Clear sort order filter">
-                <X className="h-3 w-3" />
-              </Button>
-            </span>
-          )}
-        </div>
-      )}
-      </div>
+      <FilterToolbar
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
+        searchLabel="Search laws"
+        searchPlaceholder="Search by law title or topic..."
+        helperText="Use search, policy areas, or dates to zero in on enacted legislation."
+        actions={toolbarActions}
+        activeFilters={activeFilters}
+        clearAll={clearFilters}
+        className="mb-8"
+      />
 
       {loading ? (
         <div className="flex justify-center items-center h-64">

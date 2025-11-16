@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import { getCongressmen } from '../../services/api';
 import CongressmanCard from '../../components/CongressmanCard';
 import { Congressman } from '../../types/types';
-import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import {
+  FilterToolbar,
+  type FilterChip,
+} from "@/components/listing/FilterToolbar";
+import { FilterPopover } from "@/components/listing/FilterPopover";
 
 export default function CongressmenPage() {
   const [congressmen, setCongressmen] = useState<Congressman[]>([]);
@@ -60,6 +62,10 @@ export default function CongressmenPage() {
     fetchInitialData();
   }, [party, state, chamber, searchTerm, currentOnly]);
 
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+  };
+
   const clearFilters = () => {
     setParty('');
     setState('');
@@ -69,10 +75,130 @@ export default function CongressmenPage() {
   };
 
   // Individual clear handlers
+  const clearSearchTermFilter = () => setSearchTerm('');
   const clearPartyFilter = () => setParty('');
   const clearStateFilter = () => setState('');
   const clearChamberFilter = () => setChamber('');
   const clearCurrentOnlyFilter = () => setCurrentOnly(true);
+
+  const appliedFilterCount =
+    (party ? 1 : 0) +
+    (state ? 1 : 0) +
+    (chamber ? 1 : 0) +
+    (!currentOnly ? 1 : 0);
+
+  const activeFilters: FilterChip[] = [];
+
+  if (searchTerm) {
+    activeFilters.push({
+      id: 'search',
+      label: `Search: ${searchTerm}`,
+      onRemove: clearSearchTermFilter,
+    });
+  }
+
+  if (party) {
+    activeFilters.push({
+      id: 'party',
+      label: `Party: ${party}`,
+      onRemove: clearPartyFilter,
+    });
+  }
+
+  if (state) {
+    activeFilters.push({
+      id: 'state',
+      label: `State: ${state}`,
+      onRemove: clearStateFilter,
+    });
+  }
+
+  if (chamber) {
+    activeFilters.push({
+      id: 'chamber',
+      label: `Chamber: ${chamber}`,
+      onRemove: clearChamberFilter,
+    });
+  }
+
+  if (!currentOnly) {
+    activeFilters.push({
+      id: 'status',
+      label: 'Including former members',
+      onRemove: clearCurrentOnlyFilter,
+    });
+  }
+
+  const toolbarActions = (
+    <FilterPopover count={appliedFilterCount}>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Party
+          </p>
+          <Select value={party} onValueChange={setParty}>
+            <SelectTrigger>
+              <SelectValue placeholder="All parties" />
+            </SelectTrigger>
+            <SelectContent>
+              {parties.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            State
+          </p>
+          <Select value={state} onValueChange={setState}>
+            <SelectTrigger>
+              <SelectValue placeholder="All states" />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Chamber
+          </p>
+          <Select value={chamber} onValueChange={setChamber}>
+            <SelectTrigger>
+              <SelectValue placeholder="All chambers" />
+            </SelectTrigger>
+            <SelectContent>
+              {chambers.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="rounded-lg border px-3 py-2">
+          <label
+            htmlFor="currentOnly"
+            className="flex cursor-pointer items-center gap-3 text-sm font-medium"
+          >
+            <Checkbox
+              id="currentOnly"
+              checked={currentOnly}
+              onCheckedChange={(checked) => setCurrentOnly(!!checked)}
+            />
+            Show current members only
+          </label>
+        </div>
+      </div>
+    </FilterPopover>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -81,140 +207,17 @@ export default function CongressmenPage() {
         Discover and track congress members. Search by name, party, state, or chamber to find specific members of congress and their legislative activities.
       </p>
 
-      {/* Redesigned Search & Filters */}
-      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-end md:space-x-4 gap-4 mb-4">
-          <div className="flex-1">
-            <label htmlFor="search" className="block text-sm font-medium mb-1">
-              Search Congressmembers
-            </label>
-            <Input
-              id="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Type to search by name..."
-              className="w-full"
-            />
-          </div>
-          <div className="flex-1">
-            <label htmlFor="party-filter" className="block text-sm font-medium mb-1">
-              Party
-            </label>
-            <Select value={party} onValueChange={setParty}>
-              <SelectTrigger id="party-filter" className="w-full">
-                <SelectValue placeholder="All Parties" />
-              </SelectTrigger>
-              <SelectContent>
-                {parties.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <label htmlFor="state-filter" className="block text-sm font-medium mb-1">
-              State
-            </label>
-            <Select value={state} onValueChange={setState}>
-              <SelectTrigger id="state-filter" className="w-full">
-                <SelectValue placeholder="All States" />
-              </SelectTrigger>
-              <SelectContent>
-                {states.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <label htmlFor="chamber-filter" className="block text-sm font-medium mb-1">
-              Chamber
-            </label>
-            <Select value={chamber} onValueChange={setChamber}>
-              <SelectTrigger id="chamber-filter" className="w-full">
-                <SelectValue placeholder="All Chambers" />
-              </SelectTrigger>
-              <SelectContent>
-                {chambers.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 mt-2">
-          <Checkbox id="currentOnly" checked={currentOnly} onCheckedChange={(checked) => setCurrentOnly(!!checked)} />
-          <label htmlFor="currentOnly" className="text-sm select-none">
-            Show current members only
-          </label>
-          <div className="ml-auto">
-            <Button variant="outline" onClick={clearFilters} size="sm">
-              Clear All Filters
-            </Button>
-          </div>
-        </div>
-        {(party || state || chamber || !currentOnly) && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
-            {party && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Party: {party}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-1 h-4 w-4 p-0"
-                  onClick={clearPartyFilter}
-                  aria-label="Clear party filter"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {state && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                State: {state}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-1 h-4 w-4 p-0"
-                  onClick={clearStateFilter}
-                  aria-label="Clear state filter"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {chamber && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                Chamber: {chamber}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-1 h-4 w-4 p-0"
-                  onClick={clearChamberFilter}
-                  aria-label="Clear chamber filter"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {!currentOnly && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                Former Members
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-1 h-4 w-4 p-0"
-                  onClick={clearCurrentOnlyFilter}
-                  aria-label="Clear current only filter"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+      <FilterToolbar
+        searchValue={searchTerm}
+        onSearchChange={handleSearchChange}
+        searchLabel="Search members of Congress"
+        searchPlaceholder="Type a name or keyword..."
+        helperText="Open filters to narrow by party, state, chamber, or show former members."
+        actions={toolbarActions}
+        activeFilters={activeFilters}
+        clearAll={clearFilters}
+        className="mb-8"
+      />
 
       {loading ? (
         <div className="flex justify-center items-center h-64">

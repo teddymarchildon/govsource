@@ -7,11 +7,13 @@ import ExecutiveOrderCard from '@/components/ExecutiveOrderCard';
 import { AgencyDocument } from '@/types/types';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
-import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
+import {
+  FilterToolbar,
+  type FilterChip,
+} from "@/components/listing/FilterToolbar";
+import { FilterPopover } from "@/components/listing/FilterPopover";
 
 interface ExecutiveOrdersClientProps {
   initialOrders: AgencyDocument[];
@@ -149,8 +151,8 @@ export default function ExecutiveOrdersClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, startDate, endDate, sortOrder, selectedPresident, initialLoadComplete, router]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
   };
 
   const handlePresidentChange = (value: string) => {
@@ -184,33 +186,67 @@ export default function ExecutiveOrdersClient({
   const clearEndDateFilter = () => setEndDate(undefined);
   const clearSortOrderFilter = () => setSortOrder('desc');
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Executive Orders</h1>
+  const appliedFilterCount =
+    (selectedPresident ? 1 : 0) +
+    (startDate ? 1 : 0) +
+    (endDate ? 1 : 0);
 
-      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
-          <div>
-            <label htmlFor="search" className="block text-sm font-medium mb-1">
-              Search
-            </label>
-            <Input
-              id="search"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search by title or document number"
-            />
-          </div>
-          <div>
-            <label htmlFor="president" className="block text-sm font-medium mb-1">
+  const activeFilters: FilterChip[] = [];
+
+  if (searchQuery) {
+    activeFilters.push({
+      id: 'search',
+      label: `Search: ${searchQuery}`,
+      onRemove: clearSearchQueryFilter,
+    });
+  }
+
+  if (selectedPresident) {
+    activeFilters.push({
+      id: 'president',
+      label: `President: ${selectedPresident}`,
+      onRemove: clearPresidentFilter,
+    });
+  }
+
+  if (startDate) {
+    activeFilters.push({
+      id: 'start',
+      label: `From: ${startDate.toLocaleDateString()}`,
+      onRemove: clearStartDateFilter,
+    });
+  }
+
+  if (endDate) {
+    activeFilters.push({
+      id: 'end',
+      label: `To: ${endDate.toLocaleDateString()}`,
+      onRemove: clearEndDateFilter,
+    });
+  }
+
+  if (sortOrder !== 'desc') {
+    activeFilters.push({
+      id: 'sort',
+      label: `Sort: ${sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}`,
+      onRemove: clearSortOrderFilter,
+    });
+  }
+
+  const toolbarActions = (
+    <>
+      <FilterPopover count={appliedFilterCount}>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               President
-            </label>
+            </p>
             <Select value={selectedPresident} onValueChange={handlePresidentChange}>
-              <SelectTrigger id="president">
-                <SelectValue placeholder="All Presidents" />
+              <SelectTrigger>
+                <SelectValue placeholder="All presidents" />
               </SelectTrigger>
               <SelectContent>
-                {presidents.map(president => (
+                {presidents.map((president) => (
                   <SelectItem key={president} value={president}>
                     {president}
                   </SelectItem>
@@ -218,11 +254,10 @@ export default function ExecutiveOrdersClient({
               </SelectContent>
             </Select>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Date Range
-            </label>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Publication date
+            </p>
             <div className="grid grid-cols-2 gap-2">
               <DatePicker
                 date={startDate}
@@ -236,75 +271,35 @@ export default function ExecutiveOrdersClient({
               />
             </div>
           </div>
-
-          <div>
-            <label htmlFor="sort-order" className="block text-sm font-medium mb-1">
-              Sort By
-            </label>
-            <Select value={sortOrder} onValueChange={handleSortOrderChange}>
-              <SelectTrigger id="sort-order">
-                <SelectValue placeholder="Sort by date..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Newest First</SelectItem>
-                <SelectItem value="asc">Oldest First</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
+      </FilterPopover>
+      <Select value={sortOrder} onValueChange={handleSortOrderChange}>
+        <SelectTrigger className="h-10 w-[240px] text-sm">
+          <SelectValue placeholder="Sort by date..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="desc">Newest first</SelectItem>
+          <SelectItem value="asc">Oldest first</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  );
 
-        <div className="flex items-center justify-end">
-           <Button variant="outline" onClick={clearFilters} size="sm">
-              Clear All Filters
-            </Button>
-        </div>
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Executive Orders</h1>
 
-        {(searchQuery || startDate || endDate || sortOrder !== 'desc' || selectedPresident) && (
-          <div className="mt-4 flex items-center flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
-            {searchQuery && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Search: {searchQuery}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSearchQueryFilter} aria-label="Clear search filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {selectedPresident && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                President: {selectedPresident}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearPresidentFilter} aria-label="Clear president filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {startDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                From: {startDate.toLocaleDateString()}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {endDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                To: {endDate.toLocaleDateString()}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {sortOrder !== 'desc' && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Sort: {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSortOrderFilter} aria-label="Clear sort order filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+      <FilterToolbar
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
+        searchLabel="Search executive orders"
+        searchPlaceholder="Search by title or document number..."
+        helperText="Use the filters to focus on a specific president or timeframe."
+        actions={toolbarActions}
+        activeFilters={activeFilters}
+        clearAll={clearFilters}
+        className="mb-8"
+      />
 
       {loading ? (
         <div className="flex justify-center items-center h-64">

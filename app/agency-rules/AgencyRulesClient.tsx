@@ -7,11 +7,13 @@ import { Agency, AgencyDocument } from "@/types/types";
 import { supabase } from "@/utils/supabase/client";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
-import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
+import {
+  FilterToolbar,
+  type FilterChip,
+} from "@/components/listing/FilterToolbar";
+import { FilterPopover } from "@/components/listing/FilterPopover";
 
 interface AgencyRulesClientProps {
   initialRules: AgencyDocument[];
@@ -139,8 +141,8 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   const handleRuleTypeChange = (value: string) => {
     setRuleType(value);
   };
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
   };
   const handleStartDateChange = (date: Date | undefined) => {
     setStartDate(date);
@@ -167,61 +169,109 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   const clearEndDateFilter = () => setEndDate(undefined);
   const clearSortOrderFilter = () => setSortOrder("desc");
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Agency Documents</h1>
-      <p className="text-gray-600 text-sm mb-6">Review federal agency documents, rules, and regulations that implement and enforce laws passed by Congress.</p>
-      
-      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
-          <div>
-            <label htmlFor="agency-filter" className="block text-sm font-medium mb-1">
+  const appliedFilterCount =
+    (selectedAgencyId ? 1 : 0) +
+    (ruleType ? 1 : 0) +
+    (startDate ? 1 : 0) +
+    (endDate ? 1 : 0);
+
+  const activeFilters: FilterChip[] = [];
+
+  if (searchQuery) {
+    activeFilters.push({
+      id: "search",
+      label: `Search: ${searchQuery}`,
+      onRemove: clearSearchQueryFilter,
+    });
+  }
+
+  if (selectedAgencyId) {
+    activeFilters.push({
+      id: "agency",
+      label: `Agency: ${
+        agencies.find((agency) => agency.id.toString() === selectedAgencyId)
+          ?.name || "Selected agency"
+      }`,
+      onRemove: clearAgencyFilter,
+    });
+  }
+
+  if (ruleType) {
+    activeFilters.push({
+      id: "type",
+      label: `Type: ${ruleType}`,
+      onRemove: clearRuleTypeFilter,
+    });
+  }
+
+  if (startDate) {
+    activeFilters.push({
+      id: "start",
+      label: `From: ${startDate.toLocaleDateString()}`,
+      onRemove: clearStartDateFilter,
+    });
+  }
+
+  if (endDate) {
+    activeFilters.push({
+      id: "end",
+      label: `To: ${endDate.toLocaleDateString()}`,
+      onRemove: clearEndDateFilter,
+    });
+  }
+
+  if (sortOrder !== "desc") {
+    activeFilters.push({
+      id: "sort",
+      label: `Sort: ${sortOrder === "asc" ? "Oldest first" : "Newest first"}`,
+      onRemove: clearSortOrderFilter,
+    });
+  }
+
+  const toolbarActions = (
+    <>
+      <FilterPopover count={appliedFilterCount}>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Agency
-            </label>
+            </p>
             <Select value={selectedAgencyId} onValueChange={handleAgencyChange}>
-              <SelectTrigger id="agency-filter">
-                <SelectValue placeholder="All Agencies" />
+              <SelectTrigger>
+                <SelectValue placeholder="All agencies" />
               </SelectTrigger>
               <SelectContent>
                 {agencies.map((agency) => (
-                  <SelectItem key={agency.id} value={agency.id.toString()}>{agency.name}</SelectItem>
+                  <SelectItem key={agency.id} value={agency.id.toString()}>
+                    {agency.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <label htmlFor="rule-type-filter" className="block text-sm font-medium mb-1">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Document type
-            </label>
+            </p>
             <Select value={ruleType} onValueChange={handleRuleTypeChange}>
-              <SelectTrigger id="rule-type-filter">
-                <SelectValue placeholder="All Document types" />
+              <SelectTrigger>
+                <SelectValue placeholder="All document types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Presidential Document">Presidential Document</SelectItem>
+                <SelectItem value="Presidential Document">
+                  Presidential Document
+                </SelectItem>
                 <SelectItem value="Proposed Rule">Proposed Rule</SelectItem>
                 <SelectItem value="Rule">Rule</SelectItem>
                 <SelectItem value="Notice">Notice</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <label htmlFor="search-filter" className="block text-sm font-medium mb-1">
-              Search documents
-            </label>
-            <Input
-              id="search-filter"
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search by title..."
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">
-              Publication Date Range
-            </label>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Publication date
+            </p>
+            <div className="grid grid-cols-2 gap-2">
               <DatePicker
                 date={startDate}
                 setDate={handleStartDateChange}
@@ -234,82 +284,36 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
               />
             </div>
           </div>
-          <div>
-            <label htmlFor="sort-order" className="block text-sm font-medium mb-1">
-              Sort By
-            </label>
-            <Select value={sortOrder} onValueChange={handleSortOrderChange}>
-              <SelectTrigger id="sort-order">
-                <SelectValue placeholder="Sort by date..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Newest First</SelectItem>
-                <SelectItem value="asc">Oldest First</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
+      </FilterPopover>
+      <Select value={sortOrder} onValueChange={handleSortOrderChange}>
+        <SelectTrigger className="h-10 w-[240px] text-sm">
+          <SelectValue placeholder="Sort by date..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="desc">Newest first</SelectItem>
+          <SelectItem value="asc">Oldest first</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  );
 
-        <div className="flex items-center justify-end">
-           <Button variant="outline" onClick={clearFilters} size="sm">
-              Clear All Filters
-            </Button>
-        </div>
-
-        {(selectedAgencyId || ruleType || searchQuery || startDate || endDate || sortOrder !== "desc") && (
-          <div className="mt-4 flex items-center flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
-            {selectedAgencyId && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Agency: {agencies.find(a => a.id.toString() === selectedAgencyId)?.name || 'Selected'}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearAgencyFilter} aria-label="Clear agency filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {ruleType && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Type: {ruleType}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearRuleTypeFilter} aria-label="Clear rule type filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {searchQuery && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Search: {searchQuery}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSearchQueryFilter} aria-label="Clear search filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {startDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                From: {startDate.toLocaleDateString()}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearStartDateFilter} aria-label="Clear start date filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {endDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                To: {endDate.toLocaleDateString()}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearEndDateFilter} aria-label="Clear end date filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-            {sortOrder !== "desc" && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Sort: {sortOrder === "asc" ? "Oldest First" : "Newest First"}
-                <Button variant="ghost" size="icon" className="ml-1 h-4 w-4 p-0" onClick={clearSortOrderFilter} aria-label="Clear sort order filter">
-                  <X className="h-3 w-3" />
-                </Button>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-2">Agency Documents</h1>
+      <p className="text-gray-600 text-sm mb-6">Review federal agency documents, rules, and regulations that implement and enforce laws passed by Congress.</p>
+      
+      <FilterToolbar
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
+        searchLabel="Search agency documents"
+        searchPlaceholder="Search by title or keyword..."
+        helperText="Use the quick search, then pop open filters for agency, document type, or timeframe."
+        actions={toolbarActions}
+        activeFilters={activeFilters}
+        clearAll={clearFilters}
+        className="mb-8"
+      />
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <LoadingIndicator size="large" />
