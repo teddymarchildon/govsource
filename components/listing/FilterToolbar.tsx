@@ -64,23 +64,23 @@ export function FilterToolbar({
             </div>
           )}
         </div>
+        {(helperText || clearAll) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {helperText && <p className="flex-1">{helperText}</p>}
+            {clearAll && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                onClick={clearAll}
+                className="ml-auto px-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:no-underline"
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+        )}
       </div>
-      {(helperText || clearAll) && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {helperText && <p className="flex-1">{helperText}</p>}
-          {clearAll && (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={clearAll}
-              className="ml-auto px-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:no-underline"
-            >
-              Reset
-            </Button>
-          )}
-        </div>
-      )}
       {activeFilters && activeFilters.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Active filters:</span>
