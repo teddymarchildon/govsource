@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getPolicyAreaColors } from "@/utils/policyColors";
 
 interface LawCardProps {
   law: Law;
@@ -33,7 +34,7 @@ export default function LawCard({ law }: LawCardProps) {
           <CardTitle className="text-base">{lawIdentifier}</CardTitle>
 
           {law.policy_area ? (
-            <Badge variant="secondary" className="truncate text-xs">
+            <Badge variant="outline" className={`truncate text-xs ${getPolicyAreaColors(law.policy_area)}`}>
               {law.policy_area}
             </Badge>
           ) : (

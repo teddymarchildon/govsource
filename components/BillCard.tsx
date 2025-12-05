@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getPolicyAreaColors } from "@/utils/policyColors";
 
 interface BillCardProps {
   bill: Bill;
@@ -56,7 +57,7 @@ export default function BillCard({ bill }: BillCardProps) {
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-base">{billIdentifier}</CardTitle>
           {bill.policy_area && (
-            <Badge variant="secondary" className="truncate max-w-[150px] text-xs">
+            <Badge variant="outline" className={`truncate max-w-[150px] text-xs ${getPolicyAreaColors(bill.policy_area)}`}>
               {bill.policy_area}
             </Badge>
           )}

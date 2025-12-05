@@ -56,10 +56,6 @@ export default function BillsClient({
   const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
 
   const fetchBills = async (page: number) => {
-    if (page === 1) {
-      setBills([]);
-    }
-
     try {
       // Calculate range for pagination
       const from = (page - 1) * 50;
@@ -149,10 +145,9 @@ export default function BillsClient({
       const url = queryString ? `/bills?${queryString}` : "/bills";
       router.push(url, { scroll: false });
 
-      // Always fetch, even if no filters are applied
+      // Reset and trigger a new fetch - the hook will handle loading state
       setLoading(true);
-      resetScroll();
-      fetchBills(1);
+      resetScroll(true); // Pass true to trigger immediate load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

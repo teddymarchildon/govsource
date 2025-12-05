@@ -42,11 +42,6 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
 
   const fetchLaws = async (page: number) => {
-      
-    if (page === 1) {
-      setLaws([]);
-    }
-
     try {
       // Calculate range for pagination
       const from = (page - 1) * 50;
@@ -132,10 +127,9 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
       const url = queryString ? `/laws?${queryString}` : '/laws';
       router.push(url, { scroll: false });
 
-      // Always fetch, even if no filters are applied
+      // Reset and trigger a new fetch - the hook will handle loading state
       setLoading(true);
-      resetScroll();
-      fetchLaws(1);
+      resetScroll(true); // Pass true to trigger immediate load
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPolicyArea, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, router]);

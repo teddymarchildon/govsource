@@ -45,10 +45,6 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
 
   const fetchRules = async (page: number) => {
-    if (page === 1) {
-      setRules([]);
-    }
-    setLoading(true);
     try {
       // Calculate range for pagination
       const from = (page - 1) * 50;
@@ -128,9 +124,9 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
       const queryString = params.toString();
       const url = queryString ? `/agency-rules?${queryString}` : "/agency-rules";
       router.push(url, { scroll: false });
+      // Reset and trigger a new fetch - the hook will handle loading state
       setLoading(true);
-      resetScroll();
-      fetchRules(1);
+      resetScroll(true); // Pass true to trigger immediate load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgencyId, ruleType, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, router]);

@@ -47,10 +47,6 @@ export default function ExecutiveOrdersClient({
   const [selectedPresident, setSelectedPresident] = useState(currentPresident);
 
   const fetchOrders = async (page: number) => {
-    if (page === 1) {
-      setOrders([]);
-    }
-
     try {
       // Calculate range for pagination
       const from = (page - 1) * 50;
@@ -143,10 +139,9 @@ export default function ExecutiveOrdersClient({
       const url = queryString ? `/executive-orders?${queryString}` : '/executive-orders';
       router.push(url, { scroll: false });
 
-      // Always fetch when any filter changes
+      // Reset and trigger a new fetch - the hook will handle loading state
       setLoading(true);
-      resetScroll();
-      fetchOrders(1);
+      resetScroll(true); // Pass true to trigger immediate load
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, startDate, endDate, sortOrder, selectedPresident, initialLoadComplete, router]);
