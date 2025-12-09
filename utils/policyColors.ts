@@ -57,3 +57,4 @@ export function getPolicyAreaColors(policyArea: PolicyArea | string): string {
   return colorMap[policyArea] || 'bg-gray-100 text-gray-800 border-gray-200';
 }
 
+
