@@ -22,7 +22,7 @@ export default function AgencyRuleCard({ rule }: AgencyRuleCardProps) {
             {rule.publication_date ? new Date(rule.publication_date).toLocaleDateString() : 'No Date'}
           </span>
           {rule.agency && (
-            <Badge variant="secondary" className="max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+            <Badge variant="secondary" className="max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[10px]">
               {rule.agency.name}
             </Badge>
           )}

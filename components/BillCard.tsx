@@ -57,7 +57,7 @@ export default function BillCard({ bill }: BillCardProps) {
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-base">{billIdentifier}</CardTitle>
           {bill.policy_area && (
-            <Badge variant="outline" className={`max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-xs ${getPolicyAreaColors(bill.policy_area)}`}>
+            <Badge variant="outline" className={`max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[10px] ${getPolicyAreaColors(bill.policy_area)}`}>
               {bill.policy_area}
             </Badge>
           )}

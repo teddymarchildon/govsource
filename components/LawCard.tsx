@@ -34,11 +34,11 @@ export default function LawCard({ law }: LawCardProps) {
           <CardTitle className="text-base">{lawIdentifier}</CardTitle>
 
           {law.policy_area ? (
-            <Badge variant="outline" className={`max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-xs ${getPolicyAreaColors(law.policy_area)}`}>
+            <Badge variant="outline" className={`max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[10px] ${getPolicyAreaColors(law.policy_area)}`}>
               {law.policy_area}
             </Badge>
           ) : (
-            <Badge variant="outline" className="whitespace-nowrap text-xs">
+            <Badge variant="outline" className="whitespace-nowrap text-[10px]">
               Uncategorized
             </Badge>
           )}
