@@ -677,7 +677,7 @@ function HomeContent() {
               Federal Source Data
             </Badge>
             <Badge className="border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">
-              AI-Powered Tracking
+              AI-Powered Analysis
             </Badge>
           </div>
           <CardTitle className="text-3xl md:text-4xl">Welcome to GovSource</CardTitle>
