@@ -32,7 +32,13 @@ export default function SearchResults({ results, isLoading, onClose, searchQuery
   // Close results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (resultsRef.current && !resultsRef.current.contains(event.target as Node)) {
+      if (!resultsRef.current) return;
+
+      // Header renders mobile + desktop search UIs simultaneously and hides one with CSS.
+      // Ignore outside-click behavior for hidden instances so they don't close visible results.
+      if (resultsRef.current.offsetParent === null) return;
+
+      if (!resultsRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
