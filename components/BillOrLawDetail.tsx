@@ -14,6 +14,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from './ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { getPolicyAreaColors } from '@/utils/policyColors';
 
 interface BillAction {
   id: string;
@@ -108,7 +109,13 @@ export default function BillOrLawDetail({
               <div className="text-base md:text-lg text-gray-600">{number}</div>
             </div>
             <div className="flex flex-wrap gap-3 text-sm text-gray-700 mt-1">
-              <div className="text-gray-600">{item.policy_area || 'Uncategorized'}</div>
+              {item.policy_area ? (
+                <Badge variant="outline" className={getPolicyAreaColors(item.policy_area)}>
+                  {item.policy_area}
+                </Badge>
+              ) : (
+                <Badge variant="outline">Uncategorized</Badge>
+              )}
               <div>
                 <span className="font-medium">{dateLabel}:</span> {date && formatDate(date)}
               </div>

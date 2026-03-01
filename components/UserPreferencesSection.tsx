@@ -14,6 +14,7 @@ import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { XIcon } from 'lucide-react';
 import LoadingIndicator from './ui/LoadingIndicator';
+import { getPolicyAreaColors } from '../utils/policyColors';
 
 const UserPreferencesSection = () => {
   const { user } = useAuth();
@@ -196,7 +197,7 @@ const UserPreferencesSection = () => {
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
               {selectedPolicyAreas.map(area => (
-                 <Badge key={area} variant="secondary" className="pl-3 pr-1 py-1 text-sm">
+                 <Badge key={area} variant="outline" className={`pl-3 pr-1 py-1 text-sm ${getPolicyAreaColors(area)}`}>
                   {area}
                   <Button
                     variant="ghost"
