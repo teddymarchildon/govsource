@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../utils/supabase/client';
@@ -52,7 +52,7 @@ export default function SupremeCourtCaseDetailPage() {
   }, [params.id]);
 
   // Sort opinions by type (majority first, then concurring, then dissenting)
-  const sortedOpinions = [...(cluster?.opinions || [])].sort((a, b) => {
+  const sortedOpinions = useMemo(() => {
     const typeOrder: Record<string, number> = {
       'majority': 0,
       'plurality': 1,
@@ -61,19 +61,22 @@ export default function SupremeCourtCaseDetailPage() {
       'dissent': 4,
       'per curiam': 5
     };
-    const typeA = a.type?.toLowerCase() || '';
-    const typeB = b.type?.toLowerCase() || '';
-    const orderA = typeOrder[typeA] !== undefined ? typeOrder[typeA] : 999;
-    const orderB = typeOrder[typeB] !== undefined ? typeOrder[typeB] : 999;
-    return orderA - orderB;
-  });
+
+    return [...(cluster?.opinions || [])].sort((a, b) => {
+      const typeA = a.type?.toLowerCase() || '';
+      const typeB = b.type?.toLowerCase() || '';
+      const orderA = typeOrder[typeA] !== undefined ? typeOrder[typeA] : 999;
+      const orderB = typeOrder[typeB] !== undefined ? typeOrder[typeB] : 999;
+      return orderA - orderB;
+    });
+  }, [cluster?.opinions]);
 
   useEffect(() => {
     if (sortedOpinions.length > 0) {
       const majorityIdx = sortedOpinions.findIndex(o => o.type?.toLowerCase() === 'majority');
       setActiveTab(majorityIdx >= 0 ? majorityIdx : 0);
     }
-  }, [JSON.stringify(sortedOpinions)]);
+  }, [sortedOpinions]);
 
   // Get the most recent opinion date
   const _mostRecentDate = cluster?.opinions?.length && cluster.opinions.length > 0

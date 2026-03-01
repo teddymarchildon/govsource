@@ -230,16 +230,16 @@ export const getCongressmanSponsoredBills = async (congressmanId: string): Promi
     .eq('congressman_id', congressmanId);
 
   if (error) throw error;
-  // @ts-ignore - Ignoring type checking for the entire return block due to complex nested structure
+  // @ts-expect-error - Ignoring type checking for the entire return block due to complex nested structure
   return data.map(item => ({
     ...item.bill,
-    // @ts-ignore - Ignoring type checking for sponsor property due to potential undefined or array structure
+    // @ts-expect-error - Ignoring type checking for sponsor property due to potential undefined or array structure
     sponsor: item.bill.sponsor && item.bill.sponsor.length > 0 ?
-    // @ts-ignore - Ignoring type checking for cosponsors mapping due to unknown structure
+    // @ts-expect-error - Ignoring type checking for cosponsors mapping due to unknown structure
       { congressman: item.bill.sponsor[0].congressman } : undefined,
-    // @ts-ignore - Ignoring type checking for cosponsors mapping due to unknown structure
+    // @ts-expect-error - Ignoring type checking for cosponsors mapping due to unknown structure
     cosponsors: item.bill.cosponsors ?
-    // @ts-ignore - Ignoring type checking for cosponsors mapping due to unknown structure
+    // @ts-expect-error - Ignoring type checking for cosponsors mapping due to unknown structure
       item.bill.cosponsors.map((c: unknown) => ({ congressman: c.congressman })) : []
   })) as Bill[];
 };
@@ -262,16 +262,16 @@ export const getCongressmanCosponsoredBills = async (congressmanId: string): Pro
     .eq('congressman_id', congressmanId);
 
   if (error) throw error;
-  // @ts-ignore - Ignoring type checking for the entire return block due to complex nested structure
+  // @ts-expect-error - Ignoring type checking for the entire return block due to complex nested structure
   return data.map(item => ({
     ...item.bill,
-    // @ts-ignore - Ignoring type checking for sponsor property due to potential undefined or array structure
+    // @ts-expect-error - Ignoring type checking for sponsor property due to potential undefined or array structure
     sponsor: item.bill.sponsor && item.bill.sponsor.length > 0 ?
-    // @ts-ignore - Ignoring type checking for cosponsors mapping due to unknown structure
+    // @ts-expect-error - Ignoring type checking for cosponsors mapping due to unknown structure
       { congressman: item.bill.sponsor[0].congressman } : undefined,
-    // @ts-ignore - Ignoring type checking for cosponsors mapping due to unknown structure
+    // @ts-expect-error - Ignoring type checking for cosponsors mapping due to unknown structure
     cosponsors: item.bill.cosponsors ?
-    // @ts-ignore - Ignoring type checking for cosponsors mapping due to unknown structure
+    // @ts-expect-error - Ignoring type checking for cosponsors mapping due to unknown structure
       item.bill.cosponsors.map((c: unknown) => ({ congressman: c.congressman })) : []
   })) as Bill[];
 };
@@ -342,7 +342,7 @@ export const isCongressmanSaved = async (userId: string, congressmanId: string) 
 
     const isSaved = (count || 0) > 0;
     return isSaved;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -401,7 +401,7 @@ export const isBillSaved = async (userId: string, billId: string) => {
 
     const isSaved = (count || 0) > 0;
     return isSaved;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -540,7 +540,7 @@ export const unsaveAgency = async (userId: string, agencyId: string) => {
 export const isAgencySaved = async (userId: string, agencyId: string) => {
   
   try {
-    const { data, error, count } = await supabase
+    const { error, count } = await supabase
       .from('saved_agency')
       .select('*', { count: 'exact' })
       .match({ user_id: userId, agency_id: agencyId });
@@ -551,7 +551,7 @@ export const isAgencySaved = async (userId: string, agencyId: string) => {
 
     const isSaved = (count || 0) > 0;
     return isSaved;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -890,7 +890,7 @@ export const getUserPreferences = async (userId: string) => {
 
     // Return the first preference found, or null if none exist
     return data && data.length > 0 ? data[0] : null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 };
@@ -1197,7 +1197,7 @@ export const isJudgeSaved = async (userId: string, judgeId: string) => {
     }
 
     return data && data.length > 0;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -1257,7 +1257,7 @@ export const isClusterSaved = async (userId: string, clusterId: string) => {
     }
 
     return data && data.length > 0;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -1317,7 +1317,7 @@ export const isAgencyDocumentSaved = async (userId: string, agencyDocumentId: st
     }
 
     return data && data.length > 0;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };

@@ -40,6 +40,7 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
   );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
   const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   const fetchLaws = async (page: number) => {
     try {
@@ -114,7 +115,8 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
 
   // Update URL and fetch data when filters change
   useEffect(() => {
-    if (initialLoadComplete) {
+    if (!initialLoadComplete || !hasHydrated) return;
+
       const params = new URLSearchParams();
 
       if (selectedPolicyArea) params.set('policy_area', selectedPolicyArea);
@@ -130,9 +132,12 @@ export default function LawsClient({ initialLaws, policyAreas }: LawsClientProps
       // Reset and trigger a new fetch - the hook will handle loading state
       setLoading(true);
       resetScroll(true); // Pass true to trigger immediate load
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPolicyArea, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, router]);
+  }, [selectedPolicyArea, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, hasHydrated, router]);
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const handlePolicyAreaChange = (value: string) => {
     setSelectedPolicyArea(value as PolicyArea | '');

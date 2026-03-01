@@ -41,8 +41,7 @@ export default function useSearch() {
       setIsLoading(true);
       try {
         const searchResults = await globalSearch(debouncedQuery);
-        // @ts-ignore
-        setResults(searchResults);
+        setResults(searchResults as typeof emptyResults);
         setShowResults(true);
       } catch (error) {
         console.error('Error searching:', error);

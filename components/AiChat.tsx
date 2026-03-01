@@ -285,7 +285,7 @@ export default function AiChat({
         <span>
           {htmlFilePath
             ? 'The assistant will objectively analyze the text and information here. No other sources are considered.'
-            : 'The assistant cannot process this document. It will search the web to find additional information.'}
+            : 'The assistant cannot process this document because source text is unavailable.'}
         </span>
       </div>
 

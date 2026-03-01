@@ -18,6 +18,7 @@ async function fetchInitialRules() {
           agency:agency(*)
         )
       `)
+      .neq('subtype', 'Executive Order')
       .order('publication_date', { ascending: false })
       .limit(50);
 

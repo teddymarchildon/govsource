@@ -159,7 +159,8 @@ export default function Sidebar() {
   }, [isMobileOpen, setIsMobileOpen]);
 
   const isActive = (path: string) => {
-    return pathname === path ? 'bg-gray-100 text-primary font-medium' : '';
+    const isCurrent = path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
+    return isCurrent ? 'bg-gray-100 text-primary font-medium' : '';
   };
 
   return (
@@ -246,7 +247,7 @@ export default function Sidebar() {
                   className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${isActive('/congressmen')}`}
                 >
                   <Users className="h-5 w-5 mr-2" />
-                  Congress
+                  Congress Members
                 </Link>
               </li>
               <li>

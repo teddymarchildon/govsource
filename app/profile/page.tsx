@@ -320,7 +320,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Congressmembers watched</h2>
+        <h2 className="text-2xl font-semibold mb-4">Congress members watched</h2>
         {savedCongressmen.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedCongressmen.map((savedCongressman) => (

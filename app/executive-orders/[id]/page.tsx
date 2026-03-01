@@ -160,6 +160,8 @@ export default function ExecutiveOrderDetailPage() {
                       <div className="flex-1 min-h-0">
                         {order.pdf_file_path ? (
                           <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" />
+                        ) : order.pdf_url ? (
+                          <PdfViewer pdfUrl={order.pdf_url} className="h-full" />
                         ) : (
                           <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
                         )}

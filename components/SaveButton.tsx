@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   saveCongressman, unsaveCongressman, isCongressmanSaved, 
   saveBill, unsaveBill, isBillSaved, 
@@ -11,6 +12,7 @@ import {
   saveAgencyDocument, unsaveAgencyDocument, isAgencyDocumentSaved
 } from '../services/api';
 import { Button } from './ui/button';
+import { getLoginUrl } from '@/utils/utils';
 
 interface SaveButtonProps {
   itemId: string;
@@ -20,6 +22,8 @@ interface SaveButtonProps {
 
 export default function SaveButton({ itemId, itemType, className = '' }: SaveButtonProps) {
   const { user } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -68,8 +72,7 @@ export default function SaveButton({ itemId, itemType, className = '' }: SaveBut
 
   const handleToggleSave = async () => {
     if (!user) {
-      // TODO: Redirect to login or show login modal
-      alert('Please sign in to save items');
+      router.push(getLoginUrl(pathname));
       return;
     }
 

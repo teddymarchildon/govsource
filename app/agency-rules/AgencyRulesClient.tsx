@@ -43,6 +43,7 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
   );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
   const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   const fetchRules = async (page: number) => {
     try {
@@ -82,8 +83,8 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
       if (endDate) {
         baseQuery = baseQuery.lte("publication_date", endDate.toISOString().split('T')[0]);
       }
-      // Always exclude Executive Orders
-      baseQuery = baseQuery.neq("type", "Executive Order");
+      // Always exclude Executive Orders (they belong on the dedicated EO page)
+      baseQuery = baseQuery.neq("subtype", "Executive Order");
       // Execute the query
       const { data, error } = await baseQuery;
       if (error) throw error;
@@ -113,23 +114,27 @@ export default function AgencyRulesClient({ initialRules, agencies }: AgencyRule
 
   // Update URL and fetch data when filters change
   useEffect(() => {
-    if (initialLoadComplete) {
-      const params = new URLSearchParams();
-      if (selectedAgencyId) params.set("agency_id", selectedAgencyId);
-      if (ruleType) params.set("type", ruleType);
-      if (searchQuery) params.set("search", searchQuery);
-      if (startDate) params.set("start_date", startDate.toISOString().split('T')[0]);
-      if (endDate) params.set("end_date", endDate.toISOString().split('T')[0]);
-      if (sortOrder !== "desc") params.set("sort_order", sortOrder);
-      const queryString = params.toString();
-      const url = queryString ? `/agency-rules?${queryString}` : "/agency-rules";
-      router.push(url, { scroll: false });
-      // Reset and trigger a new fetch - the hook will handle loading state
-      setLoading(true);
-      resetScroll(true); // Pass true to trigger immediate load
-    }
+    if (!initialLoadComplete || !hasHydrated) return;
+
+    const params = new URLSearchParams();
+    if (selectedAgencyId) params.set("agency_id", selectedAgencyId);
+    if (ruleType) params.set("type", ruleType);
+    if (searchQuery) params.set("search", searchQuery);
+    if (startDate) params.set("start_date", startDate.toISOString().split('T')[0]);
+    if (endDate) params.set("end_date", endDate.toISOString().split('T')[0]);
+    if (sortOrder !== "desc") params.set("sort_order", sortOrder);
+    const queryString = params.toString();
+    const url = queryString ? `/agency-rules?${queryString}` : "/agency-rules";
+    router.push(url, { scroll: false });
+    // Reset and trigger a new fetch - the hook will handle loading state
+    setLoading(true);
+    resetScroll(true); // Pass true to trigger immediate load
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAgencyId, ruleType, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, router]);
+  }, [selectedAgencyId, ruleType, searchQuery, startDate, endDate, sortOrder, initialLoadComplete, hasHydrated, router]);
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const handleAgencyChange = (value: string) => {
     setSelectedAgencyId(value);

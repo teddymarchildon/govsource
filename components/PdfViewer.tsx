@@ -11,10 +11,10 @@ interface PdfViewerProps {
   className?: string;
 }
 
-const PdfViewer: React.FC<PdfViewerProps> = ({ storagePath, storageBucket, className }) => {
+const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucket, className }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [url, setUrl] = useState<string | null>(null);
+  const [storageUrl, setStorageUrl] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [viewMode, setViewMode] = useState<'iframe' | 'browser' | 'download'>('iframe');
 
@@ -40,20 +40,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ storagePath, storageBucket, class
       if (storagePath && storageBucket) {
         try {
           const publicUrl = await getStoragePublicUrl(storageBucket, storagePath);
-          setUrl(publicUrl);
-        } catch (error) {
-          console.error('Error fetching storage URL:', error);
+          setStorageUrl(publicUrl);
+        } catch (storageError) {
+          console.error('Error fetching storage URL:', storageError);
           setError('Failed to load PDF from storage');
         }
       }
     };
 
-    if (!url && storagePath && storageBucket) {
+    // Prefer explicit URL when provided, otherwise resolve storage path.
+    if (!pdfUrl && storagePath && storageBucket) {
       fetchStorageUrl();
-    } else {
-      setUrl(url || null);
     }
-  }, [url, storagePath, storageBucket]);
+  }, [pdfUrl, storagePath, storageBucket]);
+
+  const url = pdfUrl || storageUrl;
 
   const handleLoad = () => {
     setIsLoading(false);

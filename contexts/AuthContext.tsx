@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check if the user is a paid subscriber
   const handlePostLogin = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('subscription')
         .select('*')
         .eq('user_id', userId)
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const signInWithPassword = async (email: string, password: string, redirectUrl?: string) => {
+  const signInWithPassword = async (email: string, password: string, _redirectUrl?: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,

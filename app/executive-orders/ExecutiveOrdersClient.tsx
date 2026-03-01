@@ -43,6 +43,7 @@ export default function ExecutiveOrdersClient({
   );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(currentSortOrder === 'asc' ? 'asc' : 'desc');
   const [initialLoadComplete, _setInitialLoadComplete] = useState(true); // Already loaded from server
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [presidents] = useState<string[]>(initialPresidents);
   const [selectedPresident, setSelectedPresident] = useState(currentPresident);
 
@@ -126,7 +127,8 @@ export default function ExecutiveOrdersClient({
 
   // Update URL and fetch data when filters change
   useEffect(() => {
-    if (initialLoadComplete) {
+    if (!initialLoadComplete || !hasHydrated) return;
+
       const params = new URLSearchParams();
 
       if (searchQuery) params.set('q', searchQuery);
@@ -142,9 +144,12 @@ export default function ExecutiveOrdersClient({
       // Reset and trigger a new fetch - the hook will handle loading state
       setLoading(true);
       resetScroll(true); // Pass true to trigger immediate load
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, startDate, endDate, sortOrder, selectedPresident, initialLoadComplete, router]);
+  }, [searchQuery, startDate, endDate, sortOrder, selectedPresident, initialLoadComplete, hasHydrated, router]);
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
