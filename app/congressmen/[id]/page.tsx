@@ -206,17 +206,15 @@ export default function CongressmanDetailPage() {
     );
   }
 
-  // Helper function to get party color
-  const _getPartyColor = (party: string) => {
+  // Match party chip colors used in CongressmanCard
+  const getPartyBadgeClass = (party: string) => {
     switch (party.toLowerCase()) {
       case 'democrat':
-        return 'bg-secondary text-secondary-foreground';
+        return 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/90';
       case 'republican':
-        return 'bg-red-100 text-red-800';
-      case 'independent':
-        return 'bg-purple-100 text-purple-800';
+        return 'border-transparent bg-red-100 text-red-800 hover:bg-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'border-transparent bg-muted text-muted-foreground hover:bg-muted/90';
     }
   };
 
@@ -277,7 +275,7 @@ export default function CongressmanDetailPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">{congressman.full_name}</h1>
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm md:text-base">
-                <Badge variant="secondary" className="px-2 py-1">
+                <Badge className={`px-2 py-1 ${getPartyBadgeClass(congressman.party)}`}>
                   {congressman.party}
                 </Badge>
                 <div>{getChamberInfo()}</div>
@@ -289,15 +287,15 @@ export default function CongressmanDetailPage() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-            <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
+          <div className="border-b border-border/60 mb-6 overflow-x-auto">
+            <nav className="flex gap-2 whitespace-nowrap pb-1" aria-label="Tabs">
               <Button
                 variant="ghost"
                 onClick={() => setActiveTab('bills')}
-                className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
+                className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
                   activeTab === 'bills'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'rounded-md bg-muted/80 text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 }`}
               >
                 Bills
@@ -308,10 +306,10 @@ export default function CongressmanDetailPage() {
               <Button
                 variant="ghost"
                 onClick={() => setActiveTab('terms')}
-                className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
+                className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
                   activeTab === 'terms'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'rounded-md bg-muted/80 text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 }`}
               >
                 Terms
@@ -322,10 +320,10 @@ export default function CongressmanDetailPage() {
               <Button
                 variant="ghost"
                 onClick={() => setActiveTab('statistics')}
-                className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
+                className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
                   activeTab === 'statistics'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'rounded-md bg-muted/80 text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 }`}
               >
                 Statistics

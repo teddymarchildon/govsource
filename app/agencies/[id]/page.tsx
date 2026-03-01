@@ -130,15 +130,15 @@ export default function AgencyDetailPage() {
       </div>
 
       {/* Tab Navigation (moved out of Card, styled like CongressmanDetailPage) */}
-      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-        <nav className="flex space-x-4 md:space-x-8 whitespace-nowrap" aria-label="Tabs">
+      <div className="border-b border-border/60 mb-6 overflow-x-auto">
+        <nav className="flex gap-2 whitespace-nowrap pb-1" aria-label="Tabs">
           <Button
             variant="ghost"
             onClick={() => setActiveTab('subagencies')}
-            className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
+            className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
               activeTab === 'subagencies'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'rounded-md bg-muted/80 text-foreground'
+                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
             }`}
           >
             Sub-Agencies
@@ -149,10 +149,10 @@ export default function AgencyDetailPage() {
           <Button
             variant="ghost"
             onClick={() => setActiveTab('rules')}
-            className={`py-2 md:py-3 px-1 inline-flex items-center gap-2 border-b-2 rounded-none text-sm md:text-base font-normal transition-colors duration-200 ${
+            className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
               activeTab === 'rules'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'rounded-md bg-muted/80 text-foreground'
+                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
             }`}
           >
             Rules
