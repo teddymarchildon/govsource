@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Judge } from '../types/types';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface JudgeCardProps {
   judge: Judge;
@@ -11,23 +12,23 @@ export default function JudgeCard({ judge }: JudgeCardProps) {
   const fullName = judge.full_name || `${judge.first_name} ${judge.last_name}`;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
-      <div className="p-3 md:p-4 h-full flex flex-col">
+    <Card className="group h-full border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <CardContent className="flex h-full flex-col p-3 md:p-4">
         <div className="flex justify-between items-start mb-2">
-          <span className="text-sm font-semibold text-gray-700">
+          <span className="text-sm font-semibold text-muted-foreground">
             {'Federal Judge'}
           </span>
         </div>
 
         <Link
           href={`/judges/${judge.id}`}
-          className="block mb-3 hover:text-blue-600 transition-colors"
+          className="mb-3 block transition-colors group-hover:text-primary"
         >
-          <h3 className="text-sm md:text-base font-medium text-gray-900 line-clamp-2">
+          <h3 className="line-clamp-2 text-sm font-medium text-foreground md:text-base">
             {fullName}
           </h3>
         </Link>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

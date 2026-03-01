@@ -17,38 +17,38 @@ export default function AgencyCard({ agency }: AgencyCardProps) {
   };
 
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            <Link href={`/agencies/${agency.id}`} className="hover:text-blue-600 transition-colors">
+          <CardTitle className="text-lg font-semibold text-foreground">
+            <Link href={`/agencies/${agency.id}`} className="transition-colors group-hover:text-primary">
               {agency.name}
             </Link>
           </CardTitle>
           {agency.parent_id === null && (
-            <Badge className="bg-purple-100 text-purple-800 border-transparent whitespace-nowrap hover:bg-purple-200">
+            <Badge className="whitespace-nowrap border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/90">
               Parent Agency
             </Badge>
           )}
         </div>
         {agency.short_name && (
-          <p className="text-sm text-gray-500 pt-1">{agency.short_name}</p>
+          <p className="pt-1 text-sm text-muted-foreground/90">{agency.short_name}</p>
         )}
       </CardHeader>
       <CardContent className="p-4 pt-2 flex-grow flex flex-col">
         {agency.parent && (
-          <p className="text-sm text-gray-500 mb-2">
+          <p className="mb-2 text-sm text-muted-foreground/90">
             <span className="font-medium">Part of:</span>{' '}
             <Link
               href={`/agencies/${agency.parent.id}`}
-              className="text-blue-600 hover:underline"
+              className="text-primary hover:underline"
             >
               {agency.parent.name}
             </Link>
           </p>
         )}
         {agency.description && (
-          <p className="text-sm text-gray-600 line-clamp-3 mt-auto">
+          <p className="mt-auto line-clamp-3 text-sm text-muted-foreground">
             {truncateText(agency.description, 150)}
           </p>
         )}

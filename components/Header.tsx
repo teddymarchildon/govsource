@@ -103,7 +103,7 @@ export default function Header() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-10">
+    <header className="fixed top-0 left-0 right-0 z-10 border-b border-border/70 bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
@@ -129,7 +129,7 @@ export default function Header() {
             {!loading && !user && (
               <Link
                 href={getLoginUrl(pathname)}
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 style={{ minWidth: 64 }}
               >
                 Sign In
@@ -145,26 +145,26 @@ export default function Header() {
                   aria-expanded={mobileDropdownOpen}
                   aria-haspopup="true"
                 >
-                  <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium cursor-pointer">
+                  <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-sm font-medium text-white shadow-sm">
                     {user.email?.substring(0, 2).toUpperCase() || 'ME'}
                   </div>
                 </Button>
                 {mobileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 ring-1 ring-black ring-opacity-5">
-                    <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                  <div className="absolute right-0 z-10 mt-2 w-48 rounded-lg border border-border/80 bg-card/95 py-1 shadow-lg backdrop-blur-sm">
+                    <div className="border-b border-border/70 px-4 py-2 text-xs text-muted-foreground">
                       Signed in as<br />
-                      <span className="font-medium text-gray-900 truncate block">{user.email}</span>
+                      <span className="block truncate font-medium text-foreground">{user.email}</span>
                     </div>
                     <Link
                       href="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-foreground/90 hover:bg-accent"
                       onClick={() => setMobileDropdownOpen(false)}
                     >
                       Your Profile
                     </Link>
                     <Button
                       variant="ghost"
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-normal"
+                      className="block w-full px-4 py-2 text-left text-sm font-normal text-foreground/90 hover:bg-accent"
                       onClick={handleSignOut}
                     >
                       Sign Out
@@ -181,14 +181,14 @@ export default function Header() {
               <Input
                 type="text"
                 placeholder="Search the government..."
-                className="w-64 bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm"
+                className="w-64 rounded-full border-border/80 bg-background/90 py-2 pl-10 pr-4 text-sm shadow-sm"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 aria-label="Search"
                 aria-expanded={showResults}
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -199,10 +199,10 @@ export default function Header() {
                   variant="ghost"
                   size="icon"
                   onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
                   aria-label="Clear search"
                 >
-                  <svg className="h-4 w-4 text-gray-400 hover:text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-4 w-4 text-muted-foreground transition-colors hover:text-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 </Button>
@@ -223,7 +223,7 @@ export default function Header() {
               <div className="flex items-center space-x-4">
                 <Link
                   href={getLoginUrl(pathname)}
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Sign In
                 </Link>
@@ -240,27 +240,27 @@ export default function Header() {
                   aria-expanded={dropdownOpen}
                   aria-haspopup="true"
                 >
-                  <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium cursor-pointer">
+                  <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-sm font-medium text-white shadow-sm">
                     {user.email?.substring(0, 2).toUpperCase() || 'ME'}
                   </div>
                 </Button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 ring-1 ring-black ring-opacity-5">
-                    <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                  <div className="absolute right-0 z-10 mt-2 w-48 rounded-lg border border-border/80 bg-card/95 py-1 shadow-lg backdrop-blur-sm">
+                    <div className="border-b border-border/70 px-4 py-2 text-xs text-muted-foreground">
                       Signed in as<br />
-                      <span className="font-medium text-gray-900 truncate block">{user.email}</span>
+                      <span className="block truncate font-medium text-foreground">{user.email}</span>
                     </div>
                     <Link
                       href="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-foreground/90 hover:bg-accent"
                       onClick={() => setDropdownOpen(false)}
                     >
                       Your Profile
                     </Link>
                     <Button
                       variant="ghost"
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-normal"
+                      className="block w-full px-4 py-2 text-left text-sm font-normal text-foreground/90 hover:bg-accent"
                       onClick={handleSignOut}
                     >
                       Sign Out
@@ -278,14 +278,14 @@ export default function Header() {
             <Input
               type="text"
               placeholder="Search the government..."
-              className="w-full bg-gray-100 border border-gray-300 rounded-md py-2 px-4 pl-10 text-sm"
+              className="w-full rounded-full border-border/80 bg-background/90 py-2 pl-10 pr-4 text-sm shadow-sm"
               value={searchQuery}
               onChange={handleSearchChange}
               aria-label="Search"
               aria-expanded={showResults}
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
               </svg>
             </div>
@@ -294,10 +294,10 @@ export default function Header() {
                 variant="ghost"
                 size="icon"
                 onClick={clearSearch}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute inset-y-0 right-0 flex items-center pr-3"
                 aria-label="Clear search"
               >
-                <svg className="h-4 w-4 text-gray-400 hover:text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-4 w-4 text-muted-foreground transition-colors hover:text-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </Button>

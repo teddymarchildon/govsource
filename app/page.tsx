@@ -24,6 +24,7 @@ import AgencyRuleCard from '../components/AgencyRuleCard';
 import CourtCaseCard from '../components/CourtCaseCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 function HomeContent() {
   const router = useRouter();
@@ -317,7 +318,7 @@ function HomeContent() {
   // Render logged-in user experience
   if (user) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-10">
         {/* Popular Section */}
         <div className="mb-10">
           <div className="flex justify-between items-center mb-4">
@@ -328,8 +329,8 @@ function HomeContent() {
               <LoadingIndicator size="large" />
             </div>
           ) : popularItems.length === 0 ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-              <p className="text-gray-700">No popular items found.</p>
+            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+              <p className="text-muted-foreground">No popular items found.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -354,9 +355,9 @@ function HomeContent() {
         </div>
 
         {/* SEO Content Section for Logged-in Users */}
-        <div className="mb-8 bg-gray-50 rounded-lg p-6">
+        <div className="mb-8 rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Track Congress Members and Legislative Activities</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
+          <div className="grid grid-cols-1 gap-6 text-sm text-muted-foreground md:grid-cols-2">
             <div>
               <h3 className="font-medium mb-2">Members of Congress</h3>
               <p className="mb-3">
@@ -416,8 +417,8 @@ function HomeContent() {
                     }
                   </div>
                 ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                    <p className="text-gray-700">No recent legislation found in your policy areas.</p>
+                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+                    <p className="text-muted-foreground">No recent legislation found in your policy areas.</p>
                     <Link href="/bills" className="text-primary hover:underline mt-2 inline-block">
                       Browse all bills
                     </Link>
@@ -426,8 +427,8 @@ function HomeContent() {
               </div>
             )
           ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-              <p className="text-gray-700">You haven&apos;t selected any policy areas yet.</p>
+            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+              <p className="text-muted-foreground">You haven&apos;t selected any policy areas yet.</p>
               <Link href="/profile" className="text-primary hover:underline mt-2 inline-block">
                 Update preferences
               </Link>
@@ -440,14 +441,14 @@ function HomeContent() {
           <h2 className="text-2xl font-bold">Your Saved Items</h2>
 
           {/* Tabs */}
-          <div className="border-b border-gray-200 mb-4">
+          <div className="mb-4 border-b border-border/80">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('bills')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'bills'
                     ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
                 }`}
               >
                 Bills ({savedBills.length})
@@ -457,7 +458,7 @@ function HomeContent() {
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'congressmen'
                     ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
                 }`}
               >
                 Congress members ({savedCongressmen.length})
@@ -467,7 +468,7 @@ function HomeContent() {
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'judges'
                     ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
                 }`}
               >
                 Judges ({savedJudges.length})
@@ -477,7 +478,7 @@ function HomeContent() {
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'agencies'
                     ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
                 }`}
               >
                 Agencies ({savedAgencies.length})
@@ -496,8 +497,8 @@ function HomeContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                    <p className="text-gray-700">You haven&apos;t saved any bills yet.</p>
+                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+                    <p className="text-muted-foreground">You haven&apos;t saved any bills yet.</p>
                     <Link href="/bills" className="text-primary hover:underline mt-2 inline-block">
                       Browse bills
                     </Link>
@@ -512,21 +513,21 @@ function HomeContent() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {savedCongressmen.map((saved) => (
                       saved.congressman && (
-                        <div key={saved.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
+                        <div key={saved.id} className="h-full overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm transition-shadow duration-200 hover:shadow-md">
                           <div className="p-4 h-full flex flex-col">
                             <Link
                               href={`/congressmen/${saved.congressman.id}`}
                               className="block mb-2 hover:text-primary transition-colors"
                             >
-                              <h3 className="text-lg font-medium text-gray-900">
+                              <h3 className="text-lg font-medium text-foreground">
                                 {saved.congressman.full_name}
                               </h3>
                             </Link>
-                            <div className="text-sm text-gray-600 mb-2">
+                            <div className="mb-2 text-sm text-muted-foreground">
                               {saved.congressman.party} - {saved.congressman.state}
                               {saved.congressman.district && `, District ${saved.congressman.district}`}
                             </div>
-                            <div className="text-sm text-gray-600 mt-auto">
+                            <div className="mt-auto text-sm text-muted-foreground">
                               {saved.congressman.chamber === 'House' ? 'Representative' : 'Senator'}
                             </div>
                           </div>
@@ -535,8 +536,8 @@ function HomeContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                    <p className="text-gray-700">You haven&apos;t saved any congress members or congressman yet.</p>
+                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+                    <p className="text-muted-foreground">You haven&apos;t saved any congress members or congressman yet.</p>
                     <Link href="/congressmen" className="text-primary hover:underline mt-2 inline-block">
                       Browse members of Congress
                     </Link>
@@ -551,13 +552,13 @@ function HomeContent() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {savedJudges.map((saved) => (
                       saved.judge && (
-                        <div key={saved.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
+                        <div key={saved.id} className="h-full overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm transition-shadow duration-200 hover:shadow-md">
                           <div className="p-4 h-full flex flex-col">
                             <Link
                               href={`/judges/${saved.judge.id}`}
                               className="block mb-2 hover:text-primary transition-colors"
                             >
-                              <h3 className="text-lg font-medium text-gray-900">
+                              <h3 className="text-lg font-medium text-foreground">
                                 {saved.judge.full_name}
                               </h3>
                             </Link>
@@ -567,8 +568,8 @@ function HomeContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                    <p className="text-gray-700">You haven&apos;t saved any judges yet.</p>
+                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+                    <p className="text-muted-foreground">You haven&apos;t saved any judges yet.</p>
                     <Link href="/judges" className="text-primary hover:underline mt-2 inline-block">
                       Browse judges
                     </Link>
@@ -583,18 +584,18 @@ function HomeContent() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {savedAgencies.map((saved) => (
                       saved.agency && (
-                        <div key={saved.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
+                        <div key={saved.id} className="h-full overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm transition-shadow duration-200 hover:shadow-md">
                           <div className="p-4 h-full flex flex-col">
                             <Link
                               href={`/agencies/${saved.agency.id}`}
                               className="block mb-2 hover:text-primary transition-colors"
                             >
-                              <h3 className="text-lg font-medium text-gray-900">
+                              <h3 className="text-lg font-medium text-foreground">
                                 {saved.agency.name}
                               </h3>
                             </Link>
                             {saved.agency.description && (
-                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                              <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
                                 {saved.agency.description}
                               </p>
                             )}
@@ -604,8 +605,8 @@ function HomeContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                    <p className="text-gray-700">You haven&apos;t saved any agencies yet.</p>
+                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+                    <p className="text-muted-foreground">You haven&apos;t saved any agencies yet.</p>
                     <Link href="/agencies" className="text-primary hover:underline mt-2 inline-block">
                       Browse agencies
                     </Link>
@@ -628,16 +629,16 @@ function HomeContent() {
           {recentExecutiveOrders.length > 0 ? (
             <div className="space-y-4">
               {recentExecutiveOrders.map((order) => (
-                <div key={order.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div key={order.id} className="rounded-xl border border-border/80 bg-card/95 p-4 shadow-sm">
                   <div className="flex justify-between items-start">
                     <div>
                       <Link
                         href={`/executive-orders/${order.id}`}
-                        className="text-lg font-medium text-gray-900 hover:text-primary transition-colors"
+                        className="text-lg font-medium text-foreground transition-colors hover:text-primary"
                       >
                         {order.title}
                       </Link>
-                      <div className="mt-1 text-sm text-gray-600">
+                      <div className="mt-1 text-sm text-muted-foreground">
                         {order.signing_date && (
                           <span>Signed on {new Date(order.signing_date).toLocaleDateString()}</span>
                         )}
@@ -647,7 +648,7 @@ function HomeContent() {
                       </div>
                     </div>
                     <div className="ml-4 flex-shrink-0">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                         Executive Order
                       </span>
                     </div>
@@ -656,8 +657,8 @@ function HomeContent() {
               ))}
             </div>
           ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-              <p className="text-gray-700">No recent executive orders found.</p>
+            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+              <p className="text-muted-foreground">No recent executive orders found.</p>
             </div>
           )}
         </div>
@@ -667,16 +668,34 @@ function HomeContent() {
 
   // Render logged-out experience
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-10">
       {/* Welcome Section */}
-      <Card className="mb-8 bg-primary text-primary-foreground border-0">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-2xl">Welcome to GovSource</CardTitle>
+      <Card className="mb-8 border-0 bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="mb-3 flex flex-wrap gap-2">
+            <Badge className="border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">
+              Federal Source Data
+            </Badge>
+            <Badge className="border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">
+              AI-Powered Tracking
+            </Badge>
+          </div>
+          <CardTitle className="text-3xl md:text-4xl">Welcome to GovSource</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-primary-foreground/90">
+          <p className="max-w-3xl text-primary-foreground/90 md:text-base">
             See the source of US federal legislation, executive orders, court cases, and more. Track members of congress, congressman activities, and legislative developments.
           </p>
+          <div className="mt-6">
+            <Link href={getLoginUrl(pathname)}>
+              <Button
+                variant="outline"
+                className="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
+              >
+                Start Tracking
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 
@@ -690,8 +709,8 @@ function HomeContent() {
             <LoadingIndicator size="large" />
           </div>
         ) : popularItems.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-            <p className="text-gray-700">No popular items found.</p>
+          <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+            <p className="text-muted-foreground">No popular items found.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -716,12 +735,12 @@ function HomeContent() {
       </div>
 
       {/* Why Sign Up Section */}
-      <Card className="mb-8">
+      <Card className="mb-8 border-border/80 bg-card/95">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl">Sign in to:</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-1 text-muted-foreground">
+          <ul className="space-y-2 text-muted-foreground">
             <li className="flex items-start">
               <span className="mr-2">•</span>
               <span>Save and track government information including congress members and their activities</span>
@@ -739,7 +758,7 @@ function HomeContent() {
               <span>Get personalized legislative updates (coming soon)</span>
             </li>
           </ul>
-          <div className="mt-6">
+          <div className="mt-7">
             <Link href={getLoginUrl(pathname)}>
               <Button>Sign In</Button>
             </Link>
@@ -758,16 +777,16 @@ function HomeContent() {
         {recentExecutiveOrders.length > 0 ? (
           <div className="space-y-4">
             {recentExecutiveOrders.map((order) => (
-              <div key={order.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div key={order.id} className="rounded-xl border border-border/80 bg-card/95 p-4 shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
                     <Link
                       href={`/executive-orders/${order.id}`}
-                      className="text-lg font-medium text-gray-900 hover:text-primary transition-colors"
+                      className="text-lg font-medium text-foreground transition-colors hover:text-primary"
                     >
                       {order.title}
                     </Link>
-                    <div className="mt-1 text-sm text-gray-600">
+                    <div className="mt-1 text-sm text-muted-foreground">
                       {order.signing_date && (
                         <span>Signed on {new Date(order.signing_date).toLocaleDateString()}</span>
                       )}
@@ -777,7 +796,7 @@ function HomeContent() {
                     </div>
                   </div>
                   <div className="ml-4 flex-shrink-0">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                       Executive Order
                     </span>
                   </div>
@@ -786,16 +805,16 @@ function HomeContent() {
             ))}
           </div>
         ) : (
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-            <p className="text-gray-700">No recent executive orders found.</p>
+          <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+            <p className="text-muted-foreground">No recent executive orders found.</p>
           </div>
         )}
       </div>
 
       {/* SEO Content Section */}
-      <div className="mb-8 bg-gray-50 rounded-lg p-6">
+      <div className="mb-8 rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm">
         <h2 className="text-xl font-semibold mb-4">Track congress members and legislative activities</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
+        <div className="grid grid-cols-1 gap-6 text-sm text-muted-foreground md:grid-cols-2">
           <div>
             <h3 className="font-medium mb-2">Members of Congress</h3>
             <p className="mb-3">
@@ -841,8 +860,8 @@ function HomeContent() {
               ))}
             </div>
           ) : (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-              <p className="text-yellow-700">
+            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
+              <p className="text-muted-foreground">
                 No bills found.
               </p>
             </div>

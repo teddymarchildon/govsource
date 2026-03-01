@@ -28,7 +28,7 @@ export default function LawCard({ law }: LawCardProps) {
   const formattedDate = law.law_enacted_date ? formatDate(law.law_enacted_date) : 'Unknown date';
 
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-base">{lawIdentifier}</CardTitle>
@@ -47,9 +47,9 @@ export default function LawCard({ law }: LawCardProps) {
       <CardContent className="flex-grow px-4 pb-2">
         <Link
           href={`/laws/${law.id}`}
-          className="block hover:text-blue-600 transition-colors"
+          className="block transition-colors group-hover:text-primary"
         >
-          <p className="text-sm font-medium text-gray-900 line-clamp-3">
+          <p className="line-clamp-3 text-sm font-medium text-foreground">
             {law.law_title || law.title}
           </p>
         </Link>
@@ -57,21 +57,21 @@ export default function LawCard({ law }: LawCardProps) {
       <CardFooter className="p-4 pt-2">
         <div className="flex flex-col space-y-2 text-xs w-full">
           {sponsor && (
-            <div className="text-gray-700">
+            <div className="text-muted-foreground">
               <span className="font-medium">Sponsored by:</span>{' '}
               <Link
                 href={`/congressmen/${sponsor.id}`}
-                className="text-blue-600 hover:underline"
+                className="text-primary hover:underline"
               >
                 {sponsor.full_name}
               </Link>
-              <span className="text-gray-500 ml-1">
+              <span className="ml-1 text-muted-foreground/90">
                 ({sponsor.party}-{sponsor.state})
               </span>
             </div>
           )}
 
-          <div className="text-gray-500">
+          <div className="text-muted-foreground/90">
             <span className="font-medium">Enacted:</span> {formattedDate}
           </div>
         </div>

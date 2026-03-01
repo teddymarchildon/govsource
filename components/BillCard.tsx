@@ -52,7 +52,7 @@ export default function BillCard({ bill }: BillCardProps) {
   }, [bill.id, bill.sponsor]);
 
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-base">{billIdentifier}</CardTitle>
@@ -66,9 +66,9 @@ export default function BillCard({ bill }: BillCardProps) {
       <CardContent className="flex-grow px-4 pb-2">
         <Link
           href={`/bills/${bill.id}`}
-          className="block hover:text-blue-600 transition-colors"
+          className="block transition-colors group-hover:text-primary"
         >
-          <p className="text-sm font-medium text-gray-900 line-clamp-3">
+          <p className="line-clamp-3 text-sm font-medium text-foreground">
             {bill.title}
           </p>
         </Link>
@@ -76,28 +76,28 @@ export default function BillCard({ bill }: BillCardProps) {
       <CardFooter className="p-4 pt-2">
         <div className="flex flex-col space-y-2 text-xs w-full">
           {sponsor && (
-            <div className="text-gray-700">
+            <div className="text-muted-foreground">
               <span className="font-medium">Sponsored by:</span>{' '}
               <Link
                 href={`/congressmen/${sponsor.id}`}
-                className="text-blue-600 hover:underline"
+                className="text-primary hover:underline"
               >
                 {sponsor.full_name}
               </Link>
-              <span className="text-gray-500 ml-1 break-words">
+              <span className="ml-1 break-words text-muted-foreground/90">
                 ({sponsor.party}-{sponsor.state})
               </span>
             </div>
           )}
 
           {bill.introduced_date && (
-            <div className="text-gray-500">
+            <div className="text-muted-foreground/90">
               <span className="font-medium">Introduced:</span> {new Date(bill.introduced_date).toLocaleDateString()}
             </div>
           )}
 
           {bill.most_recent_action && bill.most_recent_action.date && (
-            <div className="text-gray-500">
+            <div className="text-muted-foreground/90">
               <span className="font-medium">Latest Action:</span> {new Date(bill.most_recent_action.date).toLocaleDateString()}
             </div>
           )}

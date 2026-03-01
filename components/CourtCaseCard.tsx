@@ -45,13 +45,13 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
   }, {});
 
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-4">
-          <CardTitle className="text-base font-medium text-gray-900 line-clamp-2">
+          <CardTitle className="line-clamp-2 text-base font-medium text-foreground">
             <Link
               href={`/supreme-court-cases/${cluster.id}`}
-              className="hover:text-blue-600 transition-colors"
+              className="transition-colors group-hover:text-primary"
             >
               {cluster.case_name}
             </Link>
@@ -64,7 +64,7 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
 
       <CardContent className="flex-grow px-4 pt-0 pb-2">
         {cluster.case_name_short && cluster.case_name_short !== cluster.case_name && (
-          <p className="text-sm text-gray-600 line-clamp-1">
+          <p className="line-clamp-1 text-sm text-muted-foreground">
             {cluster.case_name_short}
           </p>
         )}
@@ -73,11 +73,11 @@ export default function CourtCaseCard({ cluster }: CourtCaseCardProps) {
       <CardFooter className="p-4 pt-2">
         <div className="flex flex-col space-y-3 w-full mt-auto">
           {primaryOpinion?.author && (
-            <div className="text-xs text-gray-700">
+            <div className="text-xs text-muted-foreground">
               <span className="font-medium">Primary Opinion by:</span>{' '}
               <Link
                 href={`/supreme-court-cases?judge_id=${primaryOpinion.author.id}`}
-                className="text-blue-600 hover:underline"
+                className="text-primary hover:underline"
               >
                 {primaryOpinion.author.full_name}
               </Link>

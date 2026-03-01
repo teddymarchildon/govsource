@@ -15,10 +15,10 @@ interface AgencyRuleCardProps {
 
 export default function AgencyRuleCard({ rule }: AgencyRuleCardProps) {
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
-          <span className="text-sm font-semibold text-gray-700">
+          <span className="text-sm font-semibold text-muted-foreground">
             {rule.publication_date ? new Date(rule.publication_date).toLocaleDateString() : 'No Date'}
           </span>
           {rule.agency && (
@@ -30,24 +30,24 @@ export default function AgencyRuleCard({ rule }: AgencyRuleCardProps) {
       </CardHeader>
       
       <CardContent className="p-4 pt-2 flex-grow flex flex-col">
-        <Link href={`/agency-rules/${rule.id}`} className="block mb-2 hover:text-blue-600 transition-colors">
-          <h3 className="text-base font-medium text-gray-900 line-clamp-2">
+        <Link href={`/agency-rules/${rule.id}`} className="mb-2 block transition-colors group-hover:text-primary">
+          <h3 className="line-clamp-2 text-base font-medium text-foreground">
             {rule.title}
           </h3>
         </Link>
 
-        <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
+        <div className="mb-2 flex items-center space-x-2 text-xs text-muted-foreground/90">
           {rule.type && <span>{rule.type}</span>}
           {rule.subtype && (
             <>
-              {rule.type && <span className="text-gray-300">•</span>}
+              {rule.type && <span className="text-border">•</span>}
               <span>{rule.subtype}</span>
             </>
           )}
         </div>
 
         {rule.abstract && (
-          <p className="text-sm text-gray-600 line-clamp-3 mt-auto">
+          <p className="mt-auto line-clamp-3 text-sm text-muted-foreground">
             {rule.abstract}
           </p>
         )}

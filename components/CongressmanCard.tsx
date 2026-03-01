@@ -13,11 +13,11 @@ export default function CongressmanCard({ congressman }: CongressmanCardProps) {
   const getPartyBadgeClass = (party: string) => {
     switch (party.toLowerCase()) {
       case 'democrat':
-        return 'bg-secondary text-secondary-foreground border-transparent hover:bg-secondary/80';
+        return 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/90';
       case 'republican':
-        return 'bg-red-100 text-red-800 border-transparent hover:bg-red-200';
+        return 'border-transparent bg-red-100 text-red-800 hover:bg-red-200';
       default:
-        return 'bg-gray-200 text-gray-800 border-transparent hover:bg-gray-300';
+        return 'border-transparent bg-muted text-muted-foreground hover:bg-muted/90';
     }
   };
 
@@ -38,11 +38,11 @@ export default function CongressmanCard({ congressman }: CongressmanCardProps) {
   };
 
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-lg">
-            <Link href={`/congressmen/${congressman.id}`} className="hover:text-blue-600 transition-colors">
+            <Link href={`/congressmen/${congressman.id}`} className="transition-colors group-hover:text-primary">
               {congressman.full_name}
             </Link>
           </CardTitle>
@@ -54,27 +54,27 @@ export default function CongressmanCard({ congressman }: CongressmanCardProps) {
       </CardHeader>
       <CardContent className="p-4 pt-2 flex-grow flex flex-col">
         {congressman.chamber && (
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="mb-4 text-sm text-muted-foreground">
             {getChamberInfo()}
           </p>
         )}
 
         <div className="space-y-2 mt-auto">
           {congressman.phone && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Phone className="h-4 w-4 mr-2 text-gray-400" />
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Phone className="mr-2 h-4 w-4 text-muted-foreground/80" />
               {congressman.phone}
             </div>
           )}
 
           {congressman.website && (
             <div className="flex items-center text-sm">
-              <Globe className="h-4 w-4 mr-2 text-gray-400" />
+              <Globe className="mr-2 h-4 w-4 text-muted-foreground/80" />
               <a
                 href={congressman.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
+                className="text-primary hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 Official Website
