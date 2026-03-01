@@ -10,7 +10,7 @@ import { getLoginUrl } from '@/utils/utils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useSidebar } from '../contexts/SidebarContext';
-import { Menu } from 'lucide-react';
+import { Landmark, Menu } from 'lucide-react';
 
 export default function Header() {
   const { user, signOut, loading } = useAuth();
@@ -104,7 +104,7 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-10 border-b border-border/70 bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
-      <div className="container mx-auto px-4">
+      <div className="w-full pl-6 pr-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             {/* Hamburger sidebar toggle on mobile using shadcn Button */}
@@ -118,8 +118,17 @@ export default function Header() {
             >
               <Menu className="h-6 w-6 text-primary" />
             </Button>
-            <Link href="/" className="text-xl font-bold text-primary">
-              GovSource
+            <Link
+              href="/"
+              className="group inline-flex items-center gap-2 rounded-md py-1 text-primary transition-colors hover:text-primary/90"
+              aria-label="Go to GovSource home"
+            >
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 ring-1 ring-primary/20">
+                <Landmark className="h-4 w-4 text-primary" />
+              </span>
+              <span className="text-xl font-semibold tracking-tight">
+                Gov<span className="font-bold">Source</span>
+              </span>
             </Link>
           </div>
 
