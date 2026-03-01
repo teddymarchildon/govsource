@@ -25,6 +25,7 @@ import CourtCaseCard from '../components/CourtCaseCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 function HomeContent() {
   const router = useRouter();
@@ -436,59 +437,27 @@ function HomeContent() {
           )}
         </div>
 
-        {/* Your Saved Items */}
+        {/* Watching */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold">Your Saved Items</h2>
+          <h2 className="text-2xl font-bold">Watching</h2>
 
-          {/* Tabs */}
-          <div className="mb-4 border-b border-border/80">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('bills')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'bills'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
-                }`}
-              >
-                Bills ({savedBills.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('congressmen')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'congressmen'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
-                }`}
-              >
-                Congress members ({savedCongressmen.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('judges')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'judges'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
-                }`}
-              >
-                Judges ({savedJudges.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('agencies')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'agencies'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
-                }`}
-              >
-                Agencies ({savedAgencies.length})
-              </button>
-            </nav>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
+            <TabsList className="mb-4">
+              <TabsTrigger value="bills">
+                Bills <Badge variant="outline" className="ml-1 h-5 text-xs">{savedBills.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="congressmen">
+                Congress members <Badge variant="outline" className="ml-1 h-5 text-xs">{savedCongressmen.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="judges">
+                Judges <Badge variant="outline" className="ml-1 h-5 text-xs">{savedJudges.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="agencies">
+                Agencies <Badge variant="outline" className="ml-1 h-5 text-xs">{savedAgencies.length}</Badge>
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Tab Content */}
-          <div>
-            {activeTab === 'bills' && (
+            <TabsContent value="bills" className="mt-0">
               <>
                 {savedBills.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -505,9 +474,9 @@ function HomeContent() {
                   </div>
                 )}
               </>
-            )}
+            </TabsContent>
 
-            {activeTab === 'congressmen' && (
+            <TabsContent value="congressmen" className="mt-0">
               <>
                 {savedCongressmen.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -544,9 +513,9 @@ function HomeContent() {
                   </div>
                 )}
               </>
-            )}
+            </TabsContent>
 
-            {activeTab === 'judges' && (
+            <TabsContent value="judges" className="mt-0">
               <>
                 {savedJudges.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -576,9 +545,9 @@ function HomeContent() {
                   </div>
                 )}
               </>
-            )}
+            </TabsContent>
 
-            {activeTab === 'agencies' && (
+            <TabsContent value="agencies" className="mt-0">
               <>
                 {savedAgencies.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -613,8 +582,8 @@ function HomeContent() {
                   </div>
                 )}
               </>
-            )}
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Recent Executive Orders */}
