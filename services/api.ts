@@ -40,7 +40,7 @@ export const getBills = async (params: any = {}) => {
 
   // If sponsor_id is provided, filter bills by sponsor
   if (params.sponsor_id) {
-    // We need to get the bill IDs sponsored by this congressman first
+    // We need to get the bill IDs sponsored by this Congress member first
     const { data: sponsoredBills, error: sponsorError } = await supabase
       .from('sponsored_bills')
       .select('bill_id')
@@ -53,7 +53,7 @@ export const getBills = async (params: any = {}) => {
       const billIds = sponsoredBills.map(item => item.bill_id);
       query = query.in('id', billIds);
     } else {
-      // If no bills are sponsored by this congressman, return empty array
+      // If no bills are sponsored by this Congress member, return empty array
       return [];
     }
   }
@@ -151,7 +151,7 @@ export const getBillCosponsors = async (billId: string): Promise<Congressman[]> 
   return data.map(item => item.congressman) as unknown as Congressman[];
 };
 
-// Congressmen API
+// Congress Members API
 export const getCongressmen = async (params: any = {}) => {
   let query = supabase.from('congressman').select('*');
 
@@ -176,9 +176,9 @@ export const getCongressmen = async (params: any = {}) => {
     query = query.ilike('full_name', `%${params.search}%`);
   }
 
-  // Filter for current congressmen if requested
+  // Filter for current Congress members if requested
   if (params.current === true) {
-    // Get the IDs of current congressmen (those with null end_year in their most recent term)
+    // Get the IDs of current Congress members (those with null end_year in their most recent term)
     const { data: currentCongressmenIds, error: currentError } = await supabase
       .from('congressman_term')
       .select('congressman_id')
@@ -186,7 +186,7 @@ export const getCongressmen = async (params: any = {}) => {
 
     if (currentError) throw currentError;
 
-    // If we have current congressmen IDs, filter the main query
+    // If we have current Congress member IDs, filter the main query
     if (currentCongressmenIds && currentCongressmenIds.length > 0) {
       const ids = currentCongressmenIds.map(item => item.congressman_id);
       query = query.in('id', ids);
@@ -288,7 +288,7 @@ export const getCongressmanTerms = async (congressmanId: string): Promise<Congre
   return data as CongressmanTerm[];
 };
 
-// Save/Unsave Congressmen
+// Save/Unsave Congress Members
 export const saveCongressman = async (userId: string, congressmanId: string) => {
   try {
     
@@ -1108,7 +1108,7 @@ export const globalSearch = async (query: string, limit = 5) => {
     congressmen: congressmen.data?.map(congressman => ({
       ...congressman,
       type: 'congressman',
-      url: `/congressmen/${congressman.id}`,
+      url: `/congress-members/${congressman.id}`,
       displayText: `${congressman.full_name} (${congressman.party}-${congressman.state})`
     })) || [],
 

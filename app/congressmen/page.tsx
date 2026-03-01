@@ -21,7 +21,7 @@ export default function CongressmenPage() {
   const [chamber, setChamber] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [states, setStates] = useState<string[]>([]);
-  const [currentOnly, setCurrentOnly] = useState(true); // Default to true for showing only current congressmen
+  const [currentOnly, setCurrentOnly] = useState(true); // Default to true for showing only current Congress members
 
   // Define party options
   const parties = ['Democrat', 'Republican', 'Independent'];
@@ -33,7 +33,7 @@ export default function CongressmenPage() {
     const fetchInitialData = async () => {
       setLoading(true);
       try {
-        // Fetch all congressmen initially to populate states dropdown
+        // Fetch all Congress members initially to populate states dropdown
         const allCongressmen = await getCongressmen({ limit: 1000, current: true });
         const uniqueStates = allCongressmen.reduce((acc: string[], congressman: Congressman) => {
           if (congressman.state && !acc.includes(congressman.state)) {
@@ -53,7 +53,7 @@ export default function CongressmenPage() {
         const filteredData = await getCongressmen(params);
         setCongressmen(filteredData);
       } catch (error) {
-        console.error('Error fetching congressmen:', error);
+        console.error('Error fetching Congress members:', error);
       } finally {
         setLoading(false);
       }
@@ -202,7 +202,7 @@ export default function CongressmenPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Members of Congress</h1>
+      <h1 className="text-3xl font-bold mb-2">Congress members</h1>
       <p className="text-gray-600 text-sm mb-6">
         Browse lawmakers, then filter by chamber, party, state, or status to zero in on the people you need.
       </p>
@@ -210,7 +210,7 @@ export default function CongressmenPage() {
       <FilterToolbar
         searchValue={searchTerm}
         onSearchChange={handleSearchChange}
-        searchLabel="Search members of Congress"
+        searchLabel="Search Congress members"
         searchPlaceholder="Type a name or keyword..."
         helperText="Open filters to narrow by party, state, chamber, or show former members."
         actions={toolbarActions}
@@ -225,7 +225,7 @@ export default function CongressmenPage() {
         </div>
       ) : (
         <>
-          <p className="mb-4">Showing {congressmen.length} members of Congress</p>
+          <p className="mb-4">Showing {congressmen.length} Congress members</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {congressmen.map((congressman) => (
               <CongressmanCard key={congressman.id} congressman={congressman} />

@@ -42,7 +42,7 @@ export default function CongressmanCard({ congressman }: CongressmanCardProps) {
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-lg">
-            <Link href={`/congressmen/${congressman.id}`} className="transition-colors group-hover:text-primary">
+            <Link href={`/congress-members/${congressman.id}`} className="transition-colors group-hover:text-primary">
               {congressman.full_name}
             </Link>
           </CardTitle>

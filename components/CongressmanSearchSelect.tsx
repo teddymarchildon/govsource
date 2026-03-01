@@ -19,7 +19,7 @@ export interface CongressmanSearchSelectRef {
 const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, CongressmanSearchSelectProps>(({
   onSelect,
   selectedId,
-  placeholder = 'Search for a congressman...',
+  placeholder = 'Search for a Congress member...',
   className = '',
 }, ref) => {
   const [search, setSearch] = useState('');
@@ -39,7 +39,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
     }
   }));
 
-  // Fetch congressman by ID if selectedId is provided
+  // Fetch Congress member by ID if selectedId is provided
   useEffect(() => {
     const fetchSelectedCongressman = async () => {
         
@@ -56,7 +56,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
             setSelected({ id: found.id, full_name: found.full_name, party: found.party, state: found.state} as Congressman);
           }
         } catch (error) {
-          console.error('Error fetching selected congressman:', error);
+          console.error('Error fetching selected Congress member:', error);
         } finally {
           setLoading(false);
         }
@@ -68,7 +68,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
     fetchSelectedCongressman();
   }, [selectedId]);
 
-  // Search for congressmen when the search term changes
+  // Search for Congress members when the search term changes
   useEffect(() => {
     const fetchCongressmen = async () => {
         
@@ -87,7 +87,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
         if (error) throw error;
         setCongressmen(data as Congressman[]);
       } catch (error) {
-        console.error('Error searching congressmen:', error);
+        console.error('Error searching Congress members:', error);
         setCongressmen([]);
       } finally {
         setLoading(false);

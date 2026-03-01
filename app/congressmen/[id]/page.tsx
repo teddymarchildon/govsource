@@ -177,7 +177,7 @@ export default function CongressmanDetailPage() {
         setCosponsoredBills(cosponsoredData);
         setTerms(termsData);
       } catch (error) {
-        console.error('Error fetching congressman data:', error);
+        console.error('Error fetching Congress member data:', error);
       } finally {
         setLoading(false);
       }
@@ -200,7 +200,7 @@ export default function CongressmanDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          Congressman not found
+          Congress member not found
         </div>
       </div>
     );
@@ -260,7 +260,7 @@ export default function CongressmanDetailPage() {
       <Breadcrumbs
         steps={[
           { label: 'Home', href: '/' },
-          { label: 'Congress Members', href: '/congressmen' },
+          { label: 'Congress members', href: '/congress-members' },
           { label: congressman?.full_name || 'Loading...' }
         ]}
       />
@@ -540,7 +540,7 @@ export default function CongressmanDetailPage() {
         </div>
       ) : (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          Congressman not found
+          Congress member not found
         </div>
       )}
     </div>

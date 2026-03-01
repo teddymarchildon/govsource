@@ -24,27 +24,27 @@ interface CongressmanChatProps {
 const QUICK_ACTIONS: QuickAction[] = [
   {
     title: "Legislative Style",
-    prompt: "What is this congressman's legislative style and approach to lawmaking? Consider their success rate, policy focus, and collaboration patterns."
+    prompt: "What is this Congress member's legislative style and approach to lawmaking? Consider their success rate, policy focus, and collaboration patterns."
   },
   {
     title: "Key Achievements",
-    prompt: "What are this congressman's most significant legislative achievements? Focus on bills they sponsored that became law and their impact."
+    prompt: "What are this Congress member's most significant legislative achievements? Focus on bills they sponsored that became law and their impact."
   },
   {
     title: "Policy Focus",
-    prompt: "What are this congressman's main policy focus areas? Analyze their sponsored and cosponsored bills to identify patterns."
+    prompt: "What are this Congress member's main policy focus areas? Analyze their sponsored and cosponsored bills to identify patterns."
   },
   {
     title: "Bipartisan Work",
-    prompt: "How does this congressman work across party lines? Consider their cross-party collaboration patterns and success rates."
+    prompt: "How does this Congress member work across party lines? Consider their cross-party collaboration patterns and success rates."
   },
   {
     title: "Committee Impact",
-    prompt: "What committees has this congressman served on, and how has that influenced their legislative work?"
+    prompt: "What committees has this Congress member served on, and how has that influenced their legislative work?"
   },
   {
     title: "Constituency Focus",
-    prompt: "How does this congressman's legislative work reflect their constituency's interests? Consider their district/state focus."
+    prompt: "How does this Congress member's legislative work reflect their constituency's interests? Consider their district/state focus."
   }
 ];
 
@@ -298,7 +298,7 @@ const CongressmanChat: React.FC<CongressmanChatProps> = ({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about this congressman..."
+            placeholder="Ask about this Congress member..."
             className="flex-1 border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans text-sm bg-gray-50 hover:bg-white focus:bg-white transition-colors"
           />
           <button

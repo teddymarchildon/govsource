@@ -79,7 +79,7 @@ export default function BillCard({ bill }: BillCardProps) {
             <div className="text-muted-foreground">
               <span className="font-medium">Sponsored by:</span>{' '}
               <Link
-                href={`/congressmen/${sponsor.id}`}
+                href={`/congress-members/${sponsor.id}`}
                 className="text-primary hover:underline"
               >
                 {sponsor.full_name}

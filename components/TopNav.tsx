@@ -41,7 +41,7 @@ export default function TopNav() {
     { label: 'Executive Orders', href: '/executive-orders', icon: PenSquare, group: 'legislation' },
     { label: 'Supreme Court Cases', href: '/supreme-court-cases', icon: Scale, group: 'legislation' },
     { label: 'Agency Documents', href: '/agency-rules', icon: ClipboardList, group: 'legislation' },
-    { label: 'Congress Members', href: '/congressmen', icon: Users, group: 'bodies' },
+    { label: 'Congress Members', href: '/congress-members', icon: Users, group: 'bodies' },
     { label: 'Agencies', href: '/agencies', icon: Building, group: 'bodies' },
     { label: 'Supreme Court', href: '/judges', icon: Briefcase, group: 'bodies' },
   ] as const;
@@ -188,7 +188,7 @@ export default function TopNav() {
       type === 'bill'
         ? 'bills'
         : type === 'congressman'
-          ? 'congressmen'
+          ? 'congress-members'
           : type === 'agency'
             ? 'agencies'
             : type === 'judge'

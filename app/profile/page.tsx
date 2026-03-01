@@ -105,7 +105,7 @@ export default function ProfilePage() {
       await unsaveCongressman(user.id, savedCongressman.congressman_id);
       setSavedCongressmen(savedCongressmen.filter(congressman => congressman.id !== savedCongressman.id));
     } catch (error) {
-      console.error('Error deleting saved congressman:', error);
+      console.error('Error deleting saved Congress member:', error);
     }
   };
 
@@ -334,7 +334,7 @@ export default function ProfilePage() {
                     handleDeleteSavedCongressman(savedCongressman);
                   }}
                   className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-white/50 hover:bg-red-500 hover:text-white"
-                  aria-label="Unsave this congressmember"
+                  aria-label="Unsave this Congress member"
                 >
                   <BookmarkMinus className="h-4 w-4" />
                 </Button>
@@ -344,8 +344,8 @@ export default function ProfilePage() {
         ) : (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <p className="text-lg text-gray-600 mb-4">You haven&apos;t saved any congress members yet.</p>
-            <Link href="/congressmen" className="text-blue-600 hover:underline">
-              Browse members of congress
+            <Link href="/congress-members" className="text-blue-600 hover:underline">
+              Browse Congress members
             </Link>
           </div>
         )}

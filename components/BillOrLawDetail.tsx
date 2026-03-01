@@ -251,7 +251,7 @@ export default function BillOrLawDetail({
                             {sponsors.map((sponsor) => (
                               <div key={sponsor.id} className="mb-3 last:mb-0">
                                 <Link
-                                  href={`/congressmen/${sponsor.id}`}
+                                  href={`/congress-members/${sponsor.id}`}
                                   className="font-medium hover:underline"
                                 >
                                   {sponsor.full_name}
@@ -278,7 +278,7 @@ export default function BillOrLawDetail({
                               {cosponsors.map((cosponsor) => (
                                 <div key={cosponsor.id} className="mb-2">
                                   <Link
-                                    href={`/congressmen/${cosponsor.id}`}
+                                    href={`/congress-members/${cosponsor.id}`}
                                     className="font-medium hover:underline text-sm"
                                   >
                                     {cosponsor.full_name}

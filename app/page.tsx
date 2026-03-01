@@ -357,15 +357,15 @@ function HomeContent() {
 
         {/* SEO Content Section for Logged-in Users */}
         <div className="mb-8 rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Track Congress Members and Legislative Activities</h2>
+          <h2 className="text-xl font-semibold mb-4">Track Congress members and legislative activities</h2>
           <div className="grid grid-cols-1 gap-6 text-sm text-muted-foreground md:grid-cols-2">
             <div>
-              <h3 className="font-medium mb-2">Members of Congress</h3>
+              <h3 className="font-medium mb-2">Congress members</h3>
               <p className="mb-3">
-                Discover and track congress members from all states. 
+                Discover and track Congress members from all states. 
                 Monitor their voting records, sponsored bills, and legislative activities.
               </p>
-              <Link href="/congressmen" className="text-primary hover:underline font-medium">
+              <Link href="/congress-members" className="text-primary hover:underline font-medium">
                 Browse all Congress members →
               </Link>
             </div>
@@ -373,7 +373,7 @@ function HomeContent() {
               <h3 className="font-medium mb-2">Legislative Tracking</h3>
               <p className="mb-3">
                 Stay informed about the latest bills, laws, and government activities. 
-                Track how congress members vote and influence policy decisions.
+                Track how Congress members vote and influence policy decisions.
               </p>
               <Link href="/bills" className="text-primary hover:underline font-medium">
                 View recent legislation →
@@ -485,7 +485,7 @@ function HomeContent() {
                         <div key={saved.id} className="h-full overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm transition-shadow duration-200 hover:shadow-md">
                           <div className="p-4 h-full flex flex-col">
                             <Link
-                              href={`/congressmen/${saved.congressman.id}`}
+                              href={`/congress-members/${saved.congressman.id}`}
                               className="block mb-2 hover:text-primary transition-colors"
                             >
                               <h3 className="text-lg font-medium text-foreground">
@@ -506,9 +506,9 @@ function HomeContent() {
                   </div>
                 ) : (
                   <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-                    <p className="text-muted-foreground">You haven&apos;t saved any congress members or congressman yet.</p>
-                    <Link href="/congressmen" className="text-primary hover:underline mt-2 inline-block">
-                      Browse members of Congress
+                    <p className="text-muted-foreground">You haven&apos;t saved any Congress members yet.</p>
+                    <Link href="/congress-members" className="text-primary hover:underline mt-2 inline-block">
+                      Browse Congress members
                     </Link>
                   </div>
                 )}
@@ -653,7 +653,7 @@ function HomeContent() {
         </CardHeader>
         <CardContent>
           <p className="max-w-3xl text-primary-foreground/90 md:text-base">
-            See the source of US federal legislation, executive orders, court cases, and more. Track members of congress, congressman activities, and legislative developments.
+            See the source of US federal legislation, executive orders, court cases, and more. Track Congress member activities and legislative developments.
           </p>
           <div className="mt-6">
             <Link href={getLoginUrl(pathname)}>
@@ -712,7 +712,7 @@ function HomeContent() {
           <ul className="space-y-2 text-muted-foreground">
             <li className="flex items-start">
               <span className="mr-2">•</span>
-              <span>Save and track government information including congress members and their activities</span>
+              <span>Save and track government information including Congress members and their activities</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2">•</span>
@@ -720,7 +720,7 @@ function HomeContent() {
             </li>
             <li className="flex items-start">
               <span className="mr-2">•</span>
-              <span>Track congress members voting records and legislative history</span>
+              <span>Track Congress members voting records and legislative history</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2">•</span>
@@ -782,15 +782,15 @@ function HomeContent() {
 
       {/* SEO Content Section */}
       <div className="mb-8 rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Track congress members and legislative activities</h2>
+        <h2 className="text-xl font-semibold mb-4">Track Congress members and legislative activities</h2>
         <div className="grid grid-cols-1 gap-6 text-sm text-muted-foreground md:grid-cols-2">
           <div>
-            <h3 className="font-medium mb-2">Members of Congress</h3>
+            <h3 className="font-medium mb-2">Congress members</h3>
             <p className="mb-3">
-              Discover and track congress members from all states. 
+              Discover and track Congress members from all states. 
               Monitor their voting records, sponsored bills, and legislative activities.
             </p>
-            <Link href="/congressmen" className="text-primary hover:underline font-medium">
+            <Link href="/congress-members" className="text-primary hover:underline font-medium">
               Browse all Congress members →
             </Link>
           </div>
@@ -798,7 +798,7 @@ function HomeContent() {
             <h3 className="font-medium mb-2">Legislative Tracking</h3>
             <p className="mb-3">
               Stay informed about the latest bills, laws, and government activities. 
-              Track how congress members vote and influence policy decisions.
+              Track how Congress members vote and influence policy decisions.
             </p>
             <Link href="/bills" className="text-primary hover:underline font-medium">
               View recent legislation →
