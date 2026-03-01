@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { useSidebar } from '../contexts/SidebarContext';
+import { useNavigationMenu } from '../contexts/NavigationContext';
 import { Landmark, Menu } from 'lucide-react';
 
 export default function Header() {
@@ -21,7 +21,7 @@ export default function Header() {
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { isMobileOpen, setIsMobileOpen } = useSidebar();
+  const { isMobileNavOpen, setIsMobileNavOpen } = useNavigationMenu();
 
   // Use our custom search hook
   const {
@@ -107,14 +107,14 @@ export default function Header() {
       <div className="w-full pl-6 pr-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            {/* Hamburger sidebar toggle on mobile using shadcn Button */}
+            {/* Hamburger navigation toggle on mobile */}
             <Button
-              id="sidebar-toggle"
+              id="nav-toggle"
               variant="ghost"
               size="icon"
-              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
               className="md:hidden mr-2"
-              aria-label="Toggle sidebar"
+              aria-label="Toggle navigation menu"
             >
               <Menu className="h-6 w-6 text-primary" />
             </Button>
