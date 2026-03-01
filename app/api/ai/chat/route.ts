@@ -37,8 +37,29 @@ type StreamPayload =
   | { type: 'phase'; id: string; label: string; status: ActivityStatus; detail?: string }
   | { type: 'tool'; id: string; label: string; status: ActivityStatus; detail?: string }
   | { type: 'text_delta'; delta: string }
+  | { type: 'citations'; citations: CitationPayload[] }
   | { type: 'stream_end' }
   | { type: 'error'; message: string };
+
+type CitationPayload = {
+  label: string;
+  section: number;
+  page: number;
+  searchText: string;
+};
+
+function getToolDisplayLabel(toolName: string): string {
+  switch (toolName) {
+    case 'search_relevant_sections':
+      return 'Finding relevant sections';
+    case 'fetch_more_content':
+      return 'Reading source text';
+    case 'get_document_metadata':
+      return 'Checking document metadata';
+    default:
+      return 'Running analysis step';
+  }
+}
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export const maxDuration = 60;
@@ -77,11 +98,25 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return a2 && b2 ? dot / (Math.sqrt(a2) * Math.sqrt(b2)) : 0;
 }
 
+function extractSectionNumbers(content: string): number[] {
+  const matches = content.match(/\[Section\s+(\d+)\]/gi) || [];
+  const sections = matches
+    .map(m => {
+      const parsed = m.match(/\d+/)?.[0];
+      return parsed ? parseInt(parsed, 10) : NaN;
+    })
+    .filter(n => Number.isFinite(n) && n > 0) as number[];
+  return [...new Set(sections)];
+}
+
 // --- Main handler ---
 
 export async function POST(request: Request) {
   try {
-    const { messages, documentTitle, htmlFilePath, documentType, presetType = 'default', userId } = await request.json();
+    const { messages, documentTitle, htmlFilePath, documentType, presetType = 'default' } = await request.json();
+    const supabase = await createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const authenticatedUserId = authData.user?.id;
 
     // Validate messages
     const chatMessages: ChatMessage[] = (messages || [])
@@ -95,7 +130,7 @@ export async function POST(request: Request) {
     // Handle anonymous usage limits
     let aiUsage: number | undefined;
     let isAnonymous = false;
-    if (!userId) {
+    if (!authenticatedUserId) {
       const cookieStore = await cookies();
       aiUsage = parseInt(cookieStore.get('ai_usage')?.value || '0', 10) || 0;
       if (aiUsage >= 3) {
@@ -106,11 +141,10 @@ export async function POST(request: Request) {
     }
 
     // Handle authenticated user usage limits
-    if (userId) {
-      const supabase = await createClient();
+    if (authenticatedUserId) {
       const [{ data: subscription }, { data: usage }] = await Promise.all([
-        supabase.from('subscription').select('tier').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_usage').select('ai_interactions').eq('user_id', userId).maybeSingle()
+        supabase.from('subscription').select('tier').eq('user_id', authenticatedUserId).maybeSingle(),
+        supabase.from('user_usage').select('ai_interactions').eq('user_id', authenticatedUserId).maybeSingle()
       ]);
 
       const isPaid = subscription?.tier === 'paid';
@@ -120,7 +154,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'AI usage limit reached. Please upgrade to continue.' }, { status: 403 });
       }
 
-      await supabase.from('user_usage').update({ ai_interactions: interactions + 1 }).eq('user_id', userId);
+      const { error: usageWriteError } = await supabase
+        .from('user_usage')
+        .upsert(
+          { user_id: authenticatedUserId, ai_interactions: interactions + 1 },
+          { onConflict: 'user_id' }
+        );
+
+      if (usageWriteError) {
+        console.error('Failed to update user usage:', usageWriteError);
+        return NextResponse.json({ error: 'Failed to track AI usage' }, { status: 500 });
+      }
     }
 
     // Fetch and process document
@@ -149,6 +193,8 @@ export async function POST(request: Request) {
     const chunkEmbeddings = embeddingsResp.data.map(d => d.embedding);
 
     // Define tools
+    const referencedChunkIds = new Set<number>();
+
     const searchRelevantSections = tool({
       name: 'search_relevant_sections',
       description: 'Return top relevant sections by semantic similarity.',
@@ -188,7 +234,8 @@ export async function POST(request: Request) {
 
         if (!selected.length) return 'No matching sections found.';
 
-        const text = selected.map((c, i) => `[Section ${i + 1}]\n${c.content}`).join('\n\n---\n\n');
+        selected.forEach(c => referencedChunkIds.add(c.index));
+        const text = selected.map((c) => `[Section ${c.index + 1}]\n${c.content}`).join('\n\n---\n\n');
         return `Relevant sections from "${documentTitle}":\n\n${text}\n\n[Note: Partial content shown.]`;
       }
     });
@@ -219,7 +266,7 @@ export async function POST(request: Request) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
         };
 
-        send({ type: 'phase', id: 'thinking', label: 'Thinking', status: 'running', detail: 'analyzing...' });
+        send({ type: 'phase', id: 'understanding', label: 'Understanding request', status: 'running', detail: 'Analyzing your question' });
 
         try {
           const agentMessages: AgentInputItem[] = chatMessages.map(m =>
@@ -228,6 +275,9 @@ export async function POST(request: Request) {
 
           const streamResult = await run(agent, agentMessages, { stream: true });
           let hasStartedStreaming = false;
+          let finalContent = '';
+          let enteredEvidencePhase = false;
+          let enteredDraftingPhase = false;
 
           for await (const event of streamResult as AsyncIterable<any>) {
             if (!event) continue;
@@ -238,8 +288,14 @@ export async function POST(request: Request) {
               if (data?.type === 'output_text_delta' && typeof data.delta === 'string') {
                 if (!hasStartedStreaming) {
                   hasStartedStreaming = true;
-                  send({ type: 'phase', id: 'thinking', label: 'Thinking', status: 'completed' });
+                  send({ type: 'phase', id: 'understanding', label: 'Understanding request', status: 'completed' });
+                  if (enteredEvidencePhase) {
+                    send({ type: 'phase', id: 'evidence', label: 'Gathering evidence', status: 'completed' });
+                  }
+                  enteredDraftingPhase = true;
+                  send({ type: 'phase', id: 'drafting', label: 'Drafting response', status: 'running' });
                 }
+                finalContent += data.delta;
                 send({ type: 'text_delta', delta: data.delta });
               }
               continue;
@@ -253,16 +309,54 @@ export async function POST(request: Request) {
                 const { callId, name } = item.rawItem;
                 const toolName = name || 'tool';
                 toolCallMap.set(callId, toolName);
-                send({ type: 'tool', id: callId, label: `Running ${toolName}`, status: 'running' });
+                if (!enteredEvidencePhase && !hasStartedStreaming) {
+                  enteredEvidencePhase = true;
+                  send({ type: 'phase', id: 'understanding', label: 'Understanding request', status: 'completed' });
+                  send({ type: 'phase', id: 'evidence', label: 'Gathering evidence', status: 'running', detail: 'Reviewing source sections' });
+                }
+                send({ type: 'tool', id: callId, label: getToolDisplayLabel(toolName), status: 'running' });
               } else if (itemName === 'tool_output' && item?.rawItem) {
                 const { callId } = item.rawItem;
                 const toolName = toolCallMap.get(callId) || 'tool';
-                send({ type: 'tool', id: callId, label: `Running ${toolName}`, status: 'completed' });
+                send({ type: 'tool', id: callId, label: getToolDisplayLabel(toolName), status: 'completed' });
               }
             }
           }
 
           await (streamResult as any).completed;
+          if (!hasStartedStreaming) {
+            send({ type: 'phase', id: 'understanding', label: 'Understanding request', status: 'completed' });
+            if (enteredEvidencePhase) {
+              send({ type: 'phase', id: 'evidence', label: 'Gathering evidence', status: 'completed' });
+            }
+            enteredDraftingPhase = true;
+            send({ type: 'phase', id: 'drafting', label: 'Drafting response', status: 'running' });
+          }
+          if (finalContent.trim()) {
+            const sectionNumbers = extractSectionNumbers(finalContent);
+            const citations: CitationPayload[] = sectionNumbers
+              .map(section => {
+                const chunkIndex = section - 1;
+                const chunk = chunks[chunkIndex];
+                if (!chunk) return null;
+                if (referencedChunkIds.size > 0 && !referencedChunkIds.has(chunkIndex)) return null;
+                return {
+                  label: `Section ${section}`,
+                  section,
+                  // This is an estimate used for PDF jump hints.
+                  page: Math.max(1, section),
+                  searchText: chunk.content.slice(0, 120).trim(),
+                };
+              })
+              .filter((citation): citation is CitationPayload => Boolean(citation));
+
+            if (citations.length > 0) {
+              send({ type: 'citations', citations });
+            }
+          }
+          if (enteredDraftingPhase) {
+            send({ type: 'phase', id: 'drafting', label: 'Drafting response', status: 'completed' });
+          }
           send({ type: 'stream_end' });
         } catch (err) {
           console.error('Error streaming AI response:', err);

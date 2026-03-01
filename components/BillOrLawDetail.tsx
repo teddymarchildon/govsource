@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { formatDate } from '@/utils/utils';
 import SaveButton from './SaveButton';
-import PdfViewer from './PdfViewer';
+import PdfViewer, { type PdfJumpTarget } from './PdfViewer';
 import Breadcrumbs from './Breadcrumbs';
 import AiChatWrapper from './AiChatWrapper';
 import { BillText, Congressman, BillSummary } from '@/types/types';
@@ -64,6 +64,8 @@ export default function BillOrLawDetail({
   isLaw = false
 }: BillOrLawDetailProps) {
   const [showFullSummary, setShowFullSummary] = useState(false);
+  const [pdfJumpTarget, setPdfJumpTarget] = useState<PdfJumpTarget | undefined>(undefined);
+  const [activeTab, setActiveTab] = useState('text');
   const latestText = texts.length > 0 ? texts[0] : null;
 
   const itemType = isLaw ? 'law' : 'bill';
@@ -86,6 +88,37 @@ export default function BillOrLawDetail({
 
   // Check if summary text needs truncation
   const needsTruncation = summary?.text && summary.text.length > 1000;
+  const sortedTexts = useMemo(() => {
+    return [...texts].sort((a, b) => {
+      // Always show 'Enrolled Bill' at the top
+      const aIsEnrolled = a.type?.toLowerCase() === 'enrolled bill';
+      const bIsEnrolled = b.type?.toLowerCase() === 'enrolled bill';
+
+      if (aIsEnrolled && !bIsEnrolled) return -1;
+      if (!aIsEnrolled && bIsEnrolled) return 1;
+
+      // For non-enrolled bills or when both are enrolled, sort by date descending
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return dateB - dateA;
+    });
+  }, [texts]);
+  const topTextId = sortedTexts[0]?.id?.toString();
+  const [openTextIds, setOpenTextIds] = useState<string[]>(topTextId ? [topTextId] : []);
+  const validOpenTextIds = openTextIds.filter((id) => sortedTexts.some((t) => t.id.toString() === id));
+  const resolvedOpenTextIds = validOpenTextIds.length > 0 ? validOpenTextIds : (topTextId ? [topTextId] : []);
+
+  const handleCitationJump = (citation: { page?: number; searchText?: string }) => {
+    setActiveTab('text');
+    if (topTextId) setOpenTextIds([topTextId]);
+    setPdfJumpTarget({
+      page: citation.page,
+      searchText: citation.searchText,
+      token: Date.now(),
+    });
+  };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -134,7 +167,7 @@ export default function BillOrLawDetail({
         <div className="grid grid-cols-1 md:grid-cols-[1fr_500px] lg:grid-cols-[1fr_550px] xl:grid-cols-[1fr_600px] 2xl:grid-cols-[1fr_700px] gap-4 md:gap-6 flex-1 overflow-hidden">
           {/* Left: Tabs - full width on mobile */}
           <div className="h-full overflow-hidden flex flex-col md:col-span-1">
-            <Tabs defaultValue="text" className="w-full h-full flex flex-col">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
               <TabsList className="mb-3 flex-shrink-0">
                 <TabsTrigger value="text">
                   Text <Badge variant="outline" className="ml-1 h-5 text-xs">{texts?.length || 0}</Badge>
@@ -187,54 +220,40 @@ export default function BillOrLawDetail({
                 <TabsContent value="text" className="mt-0 h-full">
                   <Card className="h-full flex flex-col">
                     <CardContent className="p-4 md:p-5 pt-3 flex-1 overflow-y-auto">
-                      {(() => {
-                        const sortedTexts = [...texts].sort((a, b) => {
-                          // Always show 'Enrolled Bill' at the top
-                          const aIsEnrolled = a.type?.toLowerCase() === 'enrolled bill';
-                          const bIsEnrolled = b.type?.toLowerCase() === 'enrolled bill';
-                          
-                          if (aIsEnrolled && !bIsEnrolled) return -1;
-                          if (!aIsEnrolled && bIsEnrolled) return 1;
-                          
-                          // For non-enrolled bills or when both are enrolled, sort by date descending
-                          const dateA = a.date ? new Date(a.date).getTime() : 0;
-                          const dateB = b.date ? new Date(b.date).getTime() : 0;
-                          if (!a.date) return 1;
-                          if (!b.date) return -1;
-                          return dateB - dateA;
-                        });
-                        return (
-                          <Accordion type="multiple" className="w-full" defaultValue={sortedTexts.length > 0 ? [sortedTexts[0].id.toString()] : []}>
-                            {sortedTexts.map((text) => (
-                              <AccordionItem key={text.id} value={text.id.toString()}>
-                                <AccordionTrigger>
-                                  <div className="flex flex-col items-start">
-                                    <span className="font-medium">
-                                      {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
-                                    </span>
-                                    {text.date && (
-                                      <span className="text-xs text-gray-500">
-                                        {formatDate(text.date)}
-                                      </span>
-                                    )}
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="h-[600px] md:h-[700px] border rounded">
-                                    {text.pdf_file_path ? (
-                                      <PdfViewer storagePath={text.pdf_file_path} storageBucket="bill-pdfs" className="h-full" />
-                                    ) : (
-                                      <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
-                                        No PDF available for this version.
-                                      </CardDescription>
-                                    )}
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            ))}
-                          </Accordion>
-                        );
-                      })()}
+                      <Accordion type="multiple" className="w-full" value={resolvedOpenTextIds} onValueChange={setOpenTextIds}>
+                        {sortedTexts.map((text) => (
+                          <AccordionItem key={text.id} value={text.id.toString()}>
+                            <AccordionTrigger>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">
+                                  {typeof text.type === 'string' && text.type.trim() !== '' ? text.type : null}
+                                </span>
+                                {text.date && (
+                                  <span className="text-xs text-gray-500">
+                                    {formatDate(text.date)}
+                                  </span>
+                                )}
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="h-[600px] md:h-[700px] border rounded">
+                                {text.pdf_file_path ? (
+                                  <PdfViewer
+                                    storagePath={text.pdf_file_path}
+                                    storageBucket="bill-pdfs"
+                                    className="h-full"
+                                    jumpTo={text.id.toString() === topTextId ? pdfJumpTarget : undefined}
+                                  />
+                                ) : (
+                                  <CardDescription className="bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto h-full">
+                                    No PDF available for this version.
+                                  </CardDescription>
+                                )}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -338,6 +357,7 @@ export default function BillOrLawDetail({
               documentId={item.id}
               documentTitle={title}
               htmlFilePath={latestText?.html_file_path}
+              onCitationClick={handleCitationJump}
               diffHtmlFilePaths={
                 texts.length > 1
                   ? [...texts]
@@ -365,6 +385,7 @@ export default function BillOrLawDetail({
           documentId={item.id}
           documentTitle={title}
           htmlFilePath={latestText?.html_file_path}
+          onCitationClick={handleCitationJump}
           diffHtmlFilePaths={
             texts.length > 1
               ? [...texts]

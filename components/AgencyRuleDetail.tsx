@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { formatDate } from '@/utils/utils';
 import SaveButton from '@/components/SaveButton';
-import PdfViewer from '@/components/PdfViewer';
+import PdfViewer, { type PdfJumpTarget } from '@/components/PdfViewer';
 import Breadcrumbs from './Breadcrumbs';
 import { AgencyDocument } from '@/types/types';
 import Link from 'next/link';
@@ -15,6 +16,7 @@ interface AgencyRuleDetailProps {
 }
 
 export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
+  const [pdfJumpTarget, setPdfJumpTarget] = useState<PdfJumpTarget | undefined>(undefined);
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <div className="container mx-auto px-4 py-4 flex flex-col flex-1 overflow-hidden">
@@ -103,9 +105,9 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
                     <CardContent className="p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
                       <div className="flex-1 min-h-0">
                         {rule.pdf_file_path ? (
-                          <PdfViewer storagePath={rule.pdf_file_path} storageBucket="agency-docs" className="h-full" />
+                          <PdfViewer storagePath={rule.pdf_file_path} storageBucket="agency-docs" className="h-full" jumpTo={pdfJumpTarget} />
                         ) : rule.pdf_url ? (
-                          <PdfViewer pdfUrl={rule.pdf_url} className="h-full" />
+                          <PdfViewer pdfUrl={rule.pdf_url} className="h-full" jumpTo={pdfJumpTarget} />
                         ) : (
                           <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
                         )}
@@ -124,6 +126,13 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
               documentId={rule.id}
               documentTitle={rule.title}
               htmlFilePath={rule.html_file_path}
+              onCitationClick={(citation) =>
+                setPdfJumpTarget({
+                  page: citation.page,
+                  searchText: citation.searchText,
+                  token: Date.now(),
+                })
+              }
               height="100%"
             />
           </div>
@@ -137,6 +146,13 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           documentId={rule.id}
           documentTitle={rule.title}
           htmlFilePath={rule.html_file_path}
+          onCitationClick={(citation) =>
+            setPdfJumpTarget({
+              page: citation.page,
+              searchText: citation.searchText,
+              token: Date.now(),
+            })
+          }
         />
       </div>
     </div>

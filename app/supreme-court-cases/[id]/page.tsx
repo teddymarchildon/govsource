@@ -7,7 +7,7 @@ import { supabase } from '../../../utils/supabase/client';
 import { Cluster } from '../../../types/types';
 import SaveButton from '../../../components/SaveButton';
 import Breadcrumbs from '../../../components/Breadcrumbs';
-import PdfViewer from '../../../components/PdfViewer';
+import PdfViewer, { type PdfJumpTarget } from '../../../components/PdfViewer';
 import AiChatWrapper from '../../../components/AiChatWrapper';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +19,7 @@ export default function SupremeCourtCaseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [_activeTab, setActiveTab] = useState(0);
+  const [pdfJumpTarget, setPdfJumpTarget] = useState<PdfJumpTarget | undefined>(undefined);
     
   useEffect(() => {
     const fetchCluster = async () => {
@@ -191,7 +192,7 @@ export default function SupremeCourtCaseDetailPage() {
                         </div>
                         {opinion.pdf_file_path ? (
                           <div className="flex-1 min-h-0">
-                            <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" />
+                            <PdfViewer storagePath={opinion.pdf_file_path} storageBucket="opinions" className="h-full" jumpTo={pdfJumpTarget} />
                           </div>
                         ) : (
                           <div className="flex items-center justify-center h-32 text-gray-500 bg-gray-50 rounded-lg">
@@ -223,6 +224,13 @@ export default function SupremeCourtCaseDetailPage() {
               documentTitle={cluster.case_name}
               height="100%"
               htmlFilePath={mostRecentHtmlFilePath}
+              onCitationClick={(citation) =>
+                setPdfJumpTarget({
+                  page: citation.page,
+                  searchText: citation.searchText,
+                  token: Date.now(),
+                })
+              }
             />
           </div>
         </div>
@@ -235,6 +243,13 @@ export default function SupremeCourtCaseDetailPage() {
           documentId={String(cluster.id)}
           documentTitle={cluster.case_name}
           htmlFilePath={mostRecentHtmlFilePath}
+          onCitationClick={(citation) =>
+            setPdfJumpTarget({
+              page: citation.page,
+              searchText: citation.searchText,
+              token: Date.now(),
+            })
+          }
         />
       </div>
     </div>

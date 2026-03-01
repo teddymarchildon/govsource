@@ -9,9 +9,36 @@ interface PdfViewerProps {
   storagePath?: string;
   storageBucket?: string;
   className?: string;
+  jumpTo?: PdfJumpTarget;
 }
 
-const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucket, className }) => {
+export interface PdfJumpTarget {
+  page?: number;
+  searchText?: string;
+  token?: number;
+}
+
+function withPdfHash(baseUrl: string, options?: { page?: number; searchText?: string; toolbar?: number; navpanes?: number; scrollbar?: number; view?: string; zoom?: string; jumpToken?: number }) {
+  try {
+    const url = new URL(baseUrl);
+    const hashParams = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : '');
+    if (options?.page && options.page > 0) hashParams.set('page', String(options.page));
+    if (options?.searchText) hashParams.set('search', options.searchText);
+    if (options?.toolbar !== undefined) hashParams.set('toolbar', String(options.toolbar));
+    if (options?.navpanes !== undefined) hashParams.set('navpanes', String(options.navpanes));
+    if (options?.scrollbar !== undefined) hashParams.set('scrollbar', String(options.scrollbar));
+    if (options?.view) hashParams.set('view', options.view);
+    if (options?.zoom) hashParams.set('zoom', options.zoom);
+    if (options?.jumpToken) hashParams.set('jump', String(options.jumpToken));
+    const hash = hashParams.toString();
+    url.hash = hash ? `#${hash}` : '';
+    return url.toString();
+  } catch {
+    return baseUrl;
+  }
+}
+
+const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucket, className, jumpTo }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [storageUrl, setStorageUrl] = useState<string | null>(null);
@@ -55,6 +82,10 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
   }, [pdfUrl, storagePath, storageBucket]);
 
   const url = pdfUrl || storageUrl;
+  const effectiveSearchText = jumpTo?.searchText?.slice(0, 80) || undefined;
+  const desktopIframeSrc = url ? withPdfHash(url, { page: jumpTo?.page, searchText: effectiveSearchText, jumpToken: jumpTo?.token }) : '';
+  const mobileIframeSrc = url ? withPdfHash(url, { page: jumpTo?.page, searchText: effectiveSearchText, toolbar: 0, navpanes: 0, scrollbar: 0, view: 'FitH', zoom: 'page-fit', jumpToken: jumpTo?.token }) : '';
+  const iframeKey = `${jumpTo?.token ?? 'base'}:${jumpTo?.page ?? 1}:${effectiveSearchText ?? ''}`;
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -144,7 +175,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
           <div className="flex-1 relative">
             {viewMode === 'iframe' && (
               <iframe
-                src={`${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH&page=1&zoom=page-fit`}
+                key={`mobile-${iframeKey}`}
+                src={mobileIframeSrc}
                 className="w-full h-full border-0"
                 title="PDF Viewer"
                 onLoad={handleLoad}
@@ -217,7 +249,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
         </div>
       )}
       <iframe
-        src={url}
+        key={`desktop-${iframeKey}`}
+        src={desktopIframeSrc}
         className="w-full h-full border-0 rounded-lg"
         title="PDF Viewer"
         onLoad={handleLoad}

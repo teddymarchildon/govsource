@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase/client';
-import PdfViewer from '@/components/PdfViewer';
+import PdfViewer, { type PdfJumpTarget } from '@/components/PdfViewer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import SaveButton from '@/components/SaveButton';
 import AiChatWrapper from '@/components/AiChatWrapper';
@@ -33,6 +33,7 @@ export default function ExecutiveOrderDetailPage() {
   const executiveOrderId = params.id
   const [order, setOrder] = useState<ExecutiveOrder | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pdfJumpTarget, setPdfJumpTarget] = useState<PdfJumpTarget | undefined>(undefined);
     
 
   useEffect(() => {
@@ -159,9 +160,9 @@ export default function ExecutiveOrderDetailPage() {
                     <CardContent className="p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
                       <div className="flex-1 min-h-0">
                         {order.pdf_file_path ? (
-                          <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" />
+                          <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" jumpTo={pdfJumpTarget} />
                         ) : order.pdf_url ? (
-                          <PdfViewer pdfUrl={order.pdf_url} className="h-full" />
+                          <PdfViewer pdfUrl={order.pdf_url} className="h-full" jumpTo={pdfJumpTarget} />
                         ) : (
                           <CardDescription className="flex items-center justify-center h-full">No PDF available</CardDescription>
                         )}
@@ -180,6 +181,13 @@ export default function ExecutiveOrderDetailPage() {
               documentId={order.id}
               documentTitle={order.title}
               htmlFilePath={order.html_file_path}
+              onCitationClick={(citation) =>
+                setPdfJumpTarget({
+                  page: citation.page,
+                  searchText: citation.searchText,
+                  token: Date.now(),
+                })
+              }
               height="100%"
             />
           </div>
@@ -193,6 +201,13 @@ export default function ExecutiveOrderDetailPage() {
           documentId={order.id}
           documentTitle={order.title}
           htmlFilePath={order.html_file_path}
+          onCitationClick={(citation) =>
+            setPdfJumpTarget({
+              page: citation.page,
+              searchText: citation.searchText,
+              token: Date.now(),
+            })
+          }
         />
       </div>
     </div>
