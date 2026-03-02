@@ -2,7 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
+import { ADMIN_EMAIL, getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 type RankedItemType = 'bill' | 'law' | 'agency_document' | 'cluster' | 'executive_order';
@@ -251,24 +251,14 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
   return resolved;
 }
 
-async function ensureUserIsAuthenticated() {
-  const authClient = await createClient();
-  const {
-    data: { user },
-  } = await authClient.auth.getUser();
-
-  if (!user) {
-    return false;
-  }
-
-  return true;
-}
-
 export async function GET() {
   try {
-    const isAuthenticated = await ensureUserIsAuthenticated();
-    if (!isAuthenticated) {
+    const { user, isAdmin } = await getCurrentUserAndAdminStatus();
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
     }
 
     const { data, error } = await supabaseAdmin
@@ -324,9 +314,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const isAuthenticated = await ensureUserIsAuthenticated();
-    if (!isAuthenticated) {
+    const { user, isAdmin } = await getCurrentUserAndAdminStatus();
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
     }
 
     const payload = await request.json();
@@ -366,9 +359,12 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const isAuthenticated = await ensureUserIsAuthenticated();
-    if (!isAuthenticated) {
+    const { user, isAdmin } = await getCurrentUserAndAdminStatus();
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
     }
 
     const payload = await request.json();

@@ -3,8 +3,8 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
 import { fetchHtmlContent, processDocumentContent } from '@/utils/documentUtils';
+import { ADMIN_EMAIL, getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
 import {
   Agent,
   run,
@@ -651,13 +651,12 @@ function sanitizeLimit(value: string | null, fallback = 25) {
 
 export async function GET(request: Request) {
   try {
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-
+    const { user, isAdmin } = await getCurrentUserAndAdminStatus();
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
     }
 
     const url = new URL(request.url);
@@ -796,13 +795,12 @@ function normalizeUpdatePayload(updates: Record<string, unknown>) {
 
 export async function PATCH(request: Request) {
   try {
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-
+    const { user, isAdmin } = await getCurrentUserAndAdminStatus();
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
     }
 
     const body = await request.json();
@@ -858,13 +856,12 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-
+    const { user, isAdmin } = await getCurrentUserAndAdminStatus();
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
     }
 
     const body = await request.json();
