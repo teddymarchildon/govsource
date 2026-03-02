@@ -200,12 +200,20 @@ export default async function AdminPage() {
             Review the most recently updated bills, enacted laws, executive orders, and Supreme Court cases.
           </p>
         </div>
-        <Link
-          href="/admin/articles"
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
-          Manage Articles
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/popular"
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Configure Popular Now
+          </Link>
+          <Link
+            href="/admin/articles"
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Manage Articles
+          </Link>
+        </div>
       </div>
       <AdminRecentActivity items={items} />
     </div>
