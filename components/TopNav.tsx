@@ -202,28 +202,42 @@ export default function TopNav() {
   return (
     <>
       <nav className="fixed left-0 right-0 top-16 z-[9] hidden border-b border-border/70 bg-background/95 backdrop-blur md:block">
-        <div className="relative mx-auto flex h-14 w-full items-center px-6">
-          <div className="mx-auto flex h-full max-w-full items-center justify-center gap-2 overflow-x-auto">
-            {navItems.map((item, index) => {
-              const Icon = item.icon;
-              const prevItem = navItems[index - 1];
-              const shouldShowDivider = prevItem && prevItem.group !== item.group;
-              return (
-                <div key={item.href} className="flex shrink-0 items-center gap-2">
-                  {shouldShowDivider && <div className="mx-1 h-5 w-px bg-border/80" aria-hidden="true" />}
-                  <Link
-                    href={item.href}
-                    className={`inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-sm font-medium transition-colors ${isActive(item.href)}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="whitespace-nowrap">{item.label}</span>
-                  </Link>
-                </div>
-              );
-            })}
+        <div className="mx-auto grid min-h-14 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1 lg:px-6">
+          <div className="invisible pointer-events-none">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-3 py-1.5 text-sm font-medium"
+              tabIndex={-1}
+              aria-hidden="true"
+            >
+              Watching
+              <ChevronDown className="h-4 w-4" />
+            </button>
           </div>
 
-          <div className="absolute right-6 top-1/2 -translate-y-1/2" ref={desktopWatchingRef}>
+          <div className="min-w-0 overflow-x-auto">
+            <div className="mx-auto flex w-max items-center justify-center gap-1 px-1">
+              {navItems.map((item, index) => {
+                const Icon = item.icon;
+                const prevItem = navItems[index - 1];
+                const shouldShowDivider = prevItem && prevItem.group !== item.group;
+                return (
+                  <div key={item.href} className="flex shrink-0 items-center gap-1.5">
+                    {shouldShowDivider && <div className="mx-0.5 h-5 w-px bg-border/80" aria-hidden="true" />}
+                    <Link
+                      href={item.href}
+                      className={`inline-flex items-center gap-1.5 rounded-full border border-transparent px-2.5 py-1.5 text-sm font-medium transition-colors ${isActive(item.href)}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="whitespace-nowrap">{item.label}</span>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="relative shrink-0 justify-self-end" ref={desktopWatchingRef}>
             <button
               type="button"
               onClick={() => setDesktopWatchingOpen((prev) => !prev)}
