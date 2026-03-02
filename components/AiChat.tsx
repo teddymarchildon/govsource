@@ -402,7 +402,7 @@ export default function AiChat({
 
       {/* Preset buttons */}
       <div className="px-2.5 py-2 bg-card border-b border-border">
-        <div className="flex gap-1.5 overflow-x-auto whitespace-nowrap">
+        <div className="flex flex-wrap justify-center gap-1.5">
         {presets.map(preset => (
           <Button
             key={preset.type}
