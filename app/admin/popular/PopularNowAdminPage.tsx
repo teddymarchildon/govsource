@@ -42,6 +42,7 @@ interface RankedItemMutationRow {
   rank: number;
   effectively_ranked_at: string | null;
   ranking_ended_at: string | null;
+  item: RankedItemSummary | null;
 }
 
 interface EditableRow {
@@ -89,6 +90,14 @@ function toEditableRow(item: RankedItemRow): EditableRow {
     rank: String(item.rank),
     effectivelyRankedAt: toInputDateTime(item.effectively_ranked_at),
   };
+}
+
+function getRankingStatus(row: Pick<RankedItemRow, 'effectively_ranked_at' | 'ranking_ended_at'>) {
+  if (row.ranking_ended_at) return 'ended';
+  if (!row.effectively_ranked_at) return 'live';
+  const effectiveAt = new Date(row.effectively_ranked_at).getTime();
+  if (Number.isNaN(effectiveAt)) return 'live';
+  return effectiveAt <= Date.now() ? 'live' : 'scheduled';
 }
 
 export default function PopularNowAdminPage() {
@@ -150,13 +159,19 @@ export default function PopularNowAdminPage() {
     () => [...activeItems].sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.id - b.id)),
     [activeItems],
   );
+  const liveItemCount = useMemo(
+    () => activeSorted.filter((item) => getRankingStatus(item) === 'live').length,
+    [activeSorted],
+  );
+  const scheduledItemCount = activeSorted.length - liveItemCount;
 
   const applyRowMutation = useCallback((serverRow: RankedItemMutationRow) => {
     const existing = [...activeItems, ...endedItems].find((row) => row.id === serverRow.id);
     const itemSummary =
-      existing && existing.item_type === serverRow.item_type && existing.item_id === serverRow.item_id
+      serverRow.item ??
+      (existing && existing.item_type === serverRow.item_type && existing.item_id === serverRow.item_id
         ? existing.item
-        : null;
+        : null);
 
     const nextRow: RankedItemRow = {
       ...serverRow,
@@ -431,7 +446,7 @@ export default function PopularNowAdminPage() {
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">Popular now configuration</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Control which items appear on homepage &ldquo;Popular now&rdquo; cards by editing `ranked_item`.
+            Control which items appear on homepage &ldquo;Popular now&rdquo; cards by editing ranked items.
           </p>
           {selectionNote ? <p className="mt-1 text-xs text-gray-500">{selectionNote}</p> : null}
         </div>
@@ -500,8 +515,10 @@ export default function PopularNowAdminPage() {
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-600">Active rankings</h2>
-          <p className="mt-1 text-xs text-gray-500">Homepage displays the top 8 active rows by ascending rank.</p>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-600">Active and scheduled rankings</h2>
+          <p className="mt-1 text-xs text-gray-500">
+            {liveItemCount} live, {scheduledItemCount} scheduled. Homepage displays the top 8 live rows by ascending rank.
+          </p>
         </div>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -568,8 +585,21 @@ export default function PopularNowAdminPage() {
                       />
                     </td>
                     <td className="max-w-md px-4 py-3 text-sm text-gray-900">
-                      <div className="font-medium">{row.item?.title ?? `Item ${row.item_id}`}</div>
-                      {row.item?.subtitle ? <div className="mt-1 text-xs text-gray-500">{row.item.subtitle}</div> : null}
+                      <div className="flex items-start gap-2">
+                        <div>
+                          <div className="font-medium">{row.item?.title ?? `Item ${row.item_id}`}</div>
+                          {row.item?.subtitle ? <div className="mt-1 text-xs text-gray-500">{row.item.subtitle}</div> : null}
+                        </div>
+                        {getRankingStatus(row) === 'scheduled' ? (
+                          <span className="whitespace-nowrap rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            Scheduled
+                          </span>
+                        ) : (
+                          <span className="whitespace-nowrap rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                            Live
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <select

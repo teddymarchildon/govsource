@@ -24,6 +24,10 @@ interface ResolvedItemSummary {
   href: string;
 }
 
+type RankedItemWithSummary = RankedItemRow & {
+  item: ResolvedItemSummary | null;
+};
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -92,6 +96,88 @@ function normalizeDate(value: string | null | undefined) {
   if (value === null) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+async function hydrateRankedRows(rows: RankedItemRow[]): Promise<RankedItemWithSummary[]> {
+  const itemSummaries = await resolveItemSummaries(rows);
+  return rows.map((row) => ({
+    ...row,
+    item: itemSummaries.get(`${row.item_type}:${row.item_id}`) ?? null,
+  }));
+}
+
+async function validateRankedItemTarget(itemType: RankedItemType, itemId: number): Promise<string | null> {
+  if (itemType === 'bill' || itemType === 'law') {
+    const { data, error } = await supabaseAdmin
+      .from('bill')
+      .select('id, law_enacted_date')
+      .eq('id', itemId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[ranked-item-admin] Failed to validate bill target', error);
+      return 'Could not validate bill target';
+    }
+    if (!data) return `${itemType === 'law' ? 'Law' : 'Bill'} #${itemId} does not exist`;
+    if (itemType === 'bill' && data.law_enacted_date) return `Bill #${itemId} is an enacted law. Add it as a Law instead.`;
+    if (itemType === 'law' && !data.law_enacted_date) return `Bill #${itemId} is not an enacted law yet. Add it as a Bill instead.`;
+    return null;
+  }
+
+  if (itemType === 'agency_document' || itemType === 'executive_order') {
+    const { data, error } = await supabaseAdmin
+      .from('agency_document')
+      .select('id, subtype')
+      .eq('id', itemId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[ranked-item-admin] Failed to validate agency document target', error);
+      return 'Could not validate agency document target';
+    }
+    if (!data) return `${itemType === 'executive_order' ? 'Executive Order' : 'Agency document'} #${itemId} does not exist`;
+    const isExecutiveOrder = data.subtype === 'Executive Order';
+    if (itemType === 'executive_order' && !isExecutiveOrder) {
+      return `Agency document #${itemId} is not an Executive Order`;
+    }
+    if (itemType === 'agency_document' && isExecutiveOrder) {
+      return `Agency document #${itemId} is an Executive Order. Add it as an Executive Order instead.`;
+    }
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('cluster')
+    .select('id')
+    .eq('id', itemId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[ranked-item-admin] Failed to validate cluster target', error);
+    return 'Could not validate Supreme Court case target';
+  }
+  return data ? null : `Supreme Court case #${itemId} does not exist`;
+}
+
+async function validateNoActiveDuplicate(itemType: RankedItemType, itemId: number, currentRowId?: number): Promise<string | null> {
+  let query = supabaseAdmin
+    .from('ranked_item')
+    .select('id')
+    .eq('item_type', itemType)
+    .eq('item_id', itemId)
+    .is('ranking_ended_at', null)
+    .limit(1);
+
+  if (currentRowId) {
+    query = query.neq('id', currentRowId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('[ranked-item-admin] Failed to check duplicate ranked item', error);
+    return 'Could not check for duplicate active rankings';
+  }
+  return data && data.length > 0 ? 'This item is already active in Popular now' : null;
 }
 
 async function resolveItemSummaries(rows: RankedItemRow[]) {
@@ -273,12 +359,7 @@ export async function GET() {
     }
 
     const rows = (data ?? []) as RankedItemRow[];
-    const itemSummaries = await resolveItemSummaries(rows);
-
-    const withSummary = rows.map((row) => ({
-      ...row,
-      item: itemSummaries.get(`${row.item_type}:${row.item_id}`) ?? null,
-    }));
+    const withSummary = await hydrateRankedRows(rows);
 
     const active = withSummary
       .filter((row) => row.ranking_ended_at === null)
@@ -300,7 +381,7 @@ export async function GET() {
         active,
         ended,
         notes: {
-          homepageSelection: 'Homepage selects rows where ranking_ended_at is null, then orders by rank asc and takes top 8.',
+          homepageSelection: 'Homepage selects rows where ranking_ended_at is null and effectively_ranked_at is blank or in the past, then orders by rank asc and takes top 8.',
         },
       },
       { status: 200 },
@@ -329,6 +410,15 @@ export async function POST(request: Request) {
     }
 
     const values = parsed.data;
+    const targetError = await validateRankedItemTarget(values.itemType, values.itemId);
+    if (targetError) {
+      return NextResponse.json({ error: targetError }, { status: 400 });
+    }
+    const duplicateError = await validateNoActiveDuplicate(values.itemType, values.itemId);
+    if (duplicateError) {
+      return NextResponse.json({ error: duplicateError }, { status: 409 });
+    }
+
     const now = new Date().toISOString();
     const insertValues = {
       item_type: values.itemType,
@@ -349,7 +439,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create ranked item' }, { status: 500 });
     }
 
-    return NextResponse.json({ rankedItem: data }, { status: 201 });
+    const [rankedItem] = await hydrateRankedRows([data as RankedItemRow]);
+    return NextResponse.json({ rankedItem }, { status: 201 });
   } catch (error) {
     console.error('[ranked-item-admin] Unexpected POST error', error);
     const message = error instanceof Error ? error.message : 'Failed to create ranked item';
@@ -374,6 +465,37 @@ export async function PATCH(request: Request) {
     }
 
     const { id, updates } = parsed.data;
+    const { data: currentRow, error: currentError } = await supabaseAdmin
+      .from('ranked_item')
+      .select('id, item_type, item_id, ranking_ended_at')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (currentError) {
+      console.error('[ranked-item-admin] Failed to fetch current ranked item', currentError);
+      return NextResponse.json({ error: 'Failed to fetch ranked item' }, { status: 500 });
+    }
+    if (!currentRow) {
+      return NextResponse.json({ error: 'Ranked item not found' }, { status: 404 });
+    }
+
+    const nextItemType = updates.itemType ?? (currentRow.item_type as RankedItemType);
+    const nextItemId = updates.itemId ?? Number(currentRow.item_id);
+    const willBeActive = updates.rankingEndedAt === null || (updates.rankingEndedAt === undefined && currentRow.ranking_ended_at === null);
+
+    if (updates.itemType !== undefined || updates.itemId !== undefined) {
+      const targetError = await validateRankedItemTarget(nextItemType, nextItemId);
+      if (targetError) {
+        return NextResponse.json({ error: targetError }, { status: 400 });
+      }
+    }
+    if (willBeActive) {
+      const duplicateError = await validateNoActiveDuplicate(nextItemType, nextItemId, id);
+      if (duplicateError) {
+        return NextResponse.json({ error: duplicateError }, { status: 409 });
+      }
+    }
+
     const normalizedUpdates: Record<string, unknown> = {};
     if (updates.itemType !== undefined) normalizedUpdates.item_type = updates.itemType;
     if (updates.itemId !== undefined) normalizedUpdates.item_id = updates.itemId;
@@ -398,7 +520,8 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Failed to update ranked item' }, { status: 500 });
     }
 
-    return NextResponse.json({ rankedItem: data }, { status: 200 });
+    const [rankedItem] = await hydrateRankedRows([data as RankedItemRow]);
+    return NextResponse.json({ rankedItem }, { status: 200 });
   } catch (error) {
     console.error('[ranked-item-admin] Unexpected PATCH error', error);
     const message = error instanceof Error ? error.message : 'Failed to update ranked item';

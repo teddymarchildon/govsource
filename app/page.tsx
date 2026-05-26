@@ -219,13 +219,15 @@ function HomeContent() {
     const fetchPopularItems = async () => {
       setPopularLoading(true);
       try {
-        // 1. Fetch top 8 ranked items (where ranking_ended_at is null)
+        const now = new Date().toISOString();
+        // 1. Fetch eligible ranked items. Pull extra rows so stale/missing targets do not shrink the section.
         const { data: ranked, error: rankedError } = await supabase
           .from('ranked_item')
           .select('*')
           .is('ranking_ended_at', null)
+          .or(`effectively_ranked_at.is.null,effectively_ranked_at.lte.${now}`)
           .order('rank', { ascending: true })
-          .limit(8);
+          .limit(24);
         if (rankedError) throw rankedError;
         if (!ranked || ranked.length === 0) {
           setPopularItems([]);
@@ -305,7 +307,7 @@ function HomeContent() {
 
         const itemsWithData = await Promise.all(ranked.map(fetchItem));
         // Filter out nulls and items with missing data
-        setPopularItems(itemsWithData.filter(Boolean));
+        setPopularItems(itemsWithData.filter(Boolean).slice(0, 8));
       } catch (err) {
         console.error('Error fetching popular items:', err);
         setPopularItems([]);
