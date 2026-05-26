@@ -14,14 +14,16 @@ import {
   type AgentInputItem,
 } from '@openai/agents';
 
-type PresetType = 'default' | 'summarizeKeyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
+type PresetType = 'default' | 'summarizeKeyPoints' | 'documentContext' | 'prosAndCons' | 'diff' | 'deadlines' | 'affectedParties';
 
 const PRESET_PROMPTS: Record<PresetType, string> = {
   default: 'Answer questions based on the document content. Be objective and factual.',
   summarizeKeyPoints: 'Provide a concise summary highlighting main purpose, key points, and potential impact.',
-  historicalContext: 'Provide historical context explaining how it relates to previous legislation and broader legislative history.',
+  documentContext: 'Explain the context available inside this document, including stated background, findings, purposes, authorities, and cross-references. Do not imply outside historical research.',
   prosAndCons: 'Analyze potential benefits and drawbacks with a balanced view considering different stakeholder perspectives.',
-  diff: 'Compare the two versions and explain differences in content, structure, and meaning.'
+  diff: 'Compare the two versions and explain differences in content, structure, and meaning.',
+  deadlines: 'Identify dates, deadlines, effective dates, reporting timelines, comment periods, and implementation milestones stated in the document.',
+  affectedParties: 'Identify agencies, regulated entities, beneficiaries, officials, jurisdictions, or other parties affected by the document.'
 };
 
 const STORAGE_BUCKETS: Record<string, string> = {
@@ -42,6 +44,11 @@ type DocumentChunk = {
   content: string;
   index: number;
   sourceLabel: string;
+};
+type ResolvedDocument = {
+  title: string;
+  sources: DocumentSource[];
+  metadata: Record<string, unknown>;
 };
 type ActivityStatus = 'running' | 'completed' | 'error';
 type StreamPayload =
@@ -67,6 +74,14 @@ function getToolDisplayLabel(toolName: string): string {
       return 'Reading source text';
     case 'get_document_metadata':
       return 'Checking document metadata';
+    case 'find_defined_terms':
+      return 'Finding definitions';
+    case 'find_dates_and_deadlines':
+      return 'Finding dates and deadlines';
+    case 'find_affected_parties':
+      return 'Finding affected parties';
+    case 'compare_versions':
+      return 'Comparing versions';
     default:
       return 'Running analysis step';
   }
@@ -88,7 +103,9 @@ const ChatRequestSchema = z.object({
   // resolves authoritative source paths from documentId instead of trusting it.
   htmlFilePath: z.string().optional(),
   documentType: z.enum(['bill', 'law', 'agencyDocument', 'executiveOrder', 'opinion']),
-  presetType: z.enum(['default', 'summarizeKeyPoints', 'historicalContext', 'prosAndCons', 'diff']).default('default'),
+  presetType: z.enum(['default', 'summarizeKeyPoints', 'documentContext', 'historicalContext', 'prosAndCons', 'diff', 'deadlines', 'affectedParties'])
+    .default('default')
+    .transform((preset) => preset === 'historicalContext' ? 'documentContext' : preset),
   diffHtmlFilePaths: z.array(z.string().optional()).optional(),
 });
 
@@ -147,7 +164,7 @@ class RouteResponseError extends Error {
 async function resolveDocumentSources(
   supabase: Awaited<ReturnType<typeof createClient>>,
   params: z.infer<typeof ChatRequestSchema>
-): Promise<{ title: string; sources: DocumentSource[] }> {
+): Promise<ResolvedDocument> {
   const documentId = Number(params.documentId);
   if (!Number.isFinite(documentId)) {
     throw new RouteResponseError('Invalid document id', 400);
@@ -156,7 +173,7 @@ async function resolveDocumentSources(
   if (params.documentType === 'bill' || params.documentType === 'law') {
     const { data: bill, error: billError } = await supabase
       .from('bill')
-      .select('id, title, law_title')
+      .select('id, title, law_title, congress, number, type, introduced_date, policy_area, law_enacted_date, law_number, law_type')
       .eq('id', documentId)
       .maybeSingle();
 
@@ -175,6 +192,26 @@ async function resolveDocumentSources(
     if (textError) throw textError;
     if (!textRows?.length) throw new RouteResponseError('No document content available', 404);
 
+    const [{ data: actionsData }, { data: summaryData }, { data: sponsorData }] = await Promise.all([
+      supabase
+        .from('bill_action')
+        .select('date, text, type')
+        .eq('bill_id', documentId)
+        .order('date', { ascending: false, nullsFirst: false })
+        .limit(5),
+      supabase
+        .from('bill_summary')
+        .select('text')
+        .eq('bill', documentId)
+        .order('date', { ascending: false, nullsFirst: false })
+        .limit(1),
+      supabase
+        .from('sponsored_bills')
+        .select('congressman:congressman(full_name, party, state, chamber)')
+        .eq('bill_id', documentId)
+        .limit(1),
+    ]);
+
     return {
       title: (params.documentType === 'law' ? bill.law_title : bill.title) || params.documentTitle || 'Untitled document',
       sources: textRows.map((row, idx) => ({
@@ -184,13 +221,35 @@ async function resolveDocumentSources(
         bucket: STORAGE_BUCKETS[params.documentType],
         htmlFilePath: row.html_file_path,
       })),
+      metadata: {
+        id: bill.id,
+        documentType: params.documentType,
+        congress: bill.congress,
+        number: bill.number,
+        billType: bill.type,
+        introducedDate: bill.introduced_date,
+        policyArea: bill.policy_area,
+        lawEnactedDate: bill.law_enacted_date,
+        lawNumber: bill.law_number,
+        lawType: bill.law_type,
+        sponsor: sponsorData?.[0]?.congressman ?? null,
+        latestActions: actionsData ?? [],
+        summary: summaryData?.[0]?.text ?? null,
+        sourceVersions: textRows.map((row, idx) => ({
+          label: params.presetType === 'diff'
+            ? `${idx === 0 ? 'Newer version' : 'Older version'}${row.date ? ` (${row.date})` : ''}`
+            : 'Current version',
+          date: row.date,
+          type: row.type,
+        })),
+      },
     };
   }
 
   if (params.documentType === 'agencyDocument' || params.documentType === 'executiveOrder') {
     const { data: document, error } = await supabase
       .from('agency_document')
-      .select('id, title, subtype, html_file_path')
+      .select('id, title, type, subtype, publication_date, signing_date, president, remote_document_number, abstract, html_url, pdf_url, html_file_path')
       .eq('id', documentId)
       .maybeSingle();
 
@@ -201,6 +260,12 @@ async function resolveDocumentSources(
       throw new RouteResponseError('Document type mismatch', 400);
     }
 
+    const { data: agencyLinks } = await supabase
+      .from('agency_agencydocument')
+      .select('agency:agency(id, name, short_name, slug)')
+      .eq('agency_document_id', documentId)
+      .limit(5);
+
     return {
       title: document.title || params.documentTitle || 'Untitled document',
       sources: [{
@@ -208,12 +273,26 @@ async function resolveDocumentSources(
         bucket: STORAGE_BUCKETS[params.documentType],
         htmlFilePath: document.html_file_path,
       }],
+      metadata: {
+        id: document.id,
+        documentType: params.documentType,
+        type: document.type,
+        subtype: document.subtype,
+        publicationDate: document.publication_date,
+        signingDate: document.signing_date,
+        president: document.president,
+        remoteDocumentNumber: document.remote_document_number,
+        abstract: document.abstract,
+        htmlUrl: document.html_url,
+        pdfUrl: document.pdf_url,
+        agencies: agencyLinks?.map((link) => link.agency).filter(Boolean) ?? [],
+      },
     };
   }
 
   const { data: cluster, error: clusterError } = await supabase
     .from('cluster')
-    .select('id, case_name')
+    .select('id, case_name, case_name_short, date_filed, judges, court:court(full_name, short_name)')
     .eq('id', documentId)
     .maybeSingle();
 
@@ -238,6 +317,19 @@ async function resolveDocumentSources(
       bucket: STORAGE_BUCKETS.opinion,
       htmlFilePath: opinions[0].html_file_path,
     }],
+    metadata: {
+      id: cluster.id,
+      documentType: params.documentType,
+      caseName: cluster.case_name,
+      caseNameShort: cluster.case_name_short,
+      dateFiled: cluster.date_filed,
+      judges: cluster.judges,
+      court: cluster.court,
+      opinion: {
+        type: opinions[0].type,
+        date: opinions[0].date,
+      },
+    },
   };
 }
 
@@ -252,6 +344,41 @@ async function buildChunksForSources(sources: DocumentSource[]): Promise<Documen
   }
 
   return chunks;
+}
+
+function matchesSourceFilter(chunk: DocumentChunk, sourceFilter?: string | null): boolean {
+  if (!sourceFilter?.trim()) return true;
+  return chunk.sourceLabel.toLowerCase().includes(sourceFilter.trim().toLowerCase());
+}
+
+function formatChunksForTool(title: string, selected: DocumentChunk[], intro = 'Relevant sections'): string {
+  if (!selected.length) return 'No matching sections found.';
+  const text = selected
+    .map((c) => `[Section ${c.index + 1}] ${c.sourceLabel}\n${c.content}`)
+    .join('\n\n---\n\n');
+  return `${intro} from "${title}":\n\n${text}\n\n[Note: Partial content shown.]`;
+}
+
+function findChunksByTerms(chunks: DocumentChunk[], terms: string[], max: number, sourceFilter?: string | null): DocumentChunk[] {
+  const normalizedTerms = terms.map(term => term.trim().toLowerCase()).filter(Boolean);
+  if (!normalizedTerms.length) return [];
+
+  return chunks
+    .filter(chunk => matchesSourceFilter(chunk, sourceFilter))
+    .map(chunk => {
+      const text = chunk.content.toLowerCase();
+      const score = normalizedTerms.reduce((sum, term) => sum + (text.match(new RegExp(escapeRegExp(term), 'g'))?.length ?? 0), 0);
+      return { chunk, score };
+    })
+    .filter(entry => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, max)
+    .map(entry => entry.chunk)
+    .sort((a, b) => a.index - b.index);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function incrementAuthenticatedUsage(
@@ -348,18 +475,20 @@ export async function POST(request: Request) {
 
     const searchRelevantSections = tool({
       name: 'search_relevant_sections',
-      description: 'Return top relevant sections by semantic similarity.',
+      description: 'Return top relevant sections by semantic similarity. Use source_filter for diff questions such as "newer" or "older".',
       parameters: z.object({
         query: z.string(),
-        limit: z.number().int().min(1).max(8).nullable()
+        limit: z.number().int().min(1).max(8).nullable(),
+        source_filter: z.string().nullable(),
       }),
-      execute: async ({ query, limit }) => {
+      execute: async ({ query, limit, source_filter }) => {
         const k = limit ?? 5;
         const qEmbed = await openai.embeddings.create({ model: 'text-embedding-3-small', input: query });
         const qVec = qEmbed.data[0].embedding;
 
         const scored = chunkEmbeddings
           .map((vec, i) => ({ id: i, score: cosineSimilarity(qVec, vec) }))
+          .filter(s => matchesSourceFilter(chunks[s.id], source_filter))
           .sort((a, b) => b.score - a.score)
           .slice(0, k)
           .map(s => ({
@@ -375,24 +504,128 @@ export async function POST(request: Request) {
 
     const fetchMoreContent = tool({
       name: 'fetch_more_content',
-      description: 'Fetch full text for specific sections by ids.',
+      description: 'Fetch full text for specific sections by ids or by a fuzzy phrase query. Use source_filter for diff questions such as "newer" or "older".',
       parameters: z.object({
         chunk_ids: z.array(z.number()).nullable(),
-        max_sections: z.number().int().min(1).max(8).nullable()
+        section_query: z.string().nullable(),
+        max_sections: z.number().int().min(1).max(8).nullable(),
+        source_filter: z.string().nullable(),
       }),
-      execute: async ({ chunk_ids, max_sections }) => {
+      execute: async ({ chunk_ids, section_query, max_sections, source_filter }) => {
         const max = max_sections ?? 6;
-        const selected = (chunk_ids || [])
-          .map(id => chunks[id])
-          .filter(Boolean)
-          .slice(0, max)
-          .sort((a, b) => a.index - b.index);
+        let selected: DocumentChunk[] = [];
 
-        if (!selected.length) return 'No matching sections found.';
+        if (chunk_ids?.length) {
+          selected = chunk_ids
+            .map(id => chunks[id])
+            .filter(Boolean)
+            .filter(chunk => matchesSourceFilter(chunk, source_filter))
+            .slice(0, max)
+            .sort((a, b) => a.index - b.index);
+        } else if (section_query?.trim()) {
+          selected = findChunksByTerms(chunks, section_query.split(/\s+/), max, source_filter);
+        }
 
         selected.forEach(c => referencedChunkIds.add(c.index));
-        const text = selected.map((c) => `[Section ${c.index + 1}] ${c.sourceLabel}\n${c.content}`).join('\n\n---\n\n');
-        return `Relevant sections from "${resolvedDocument.title}":\n\n${text}\n\n[Note: Partial content shown.]`;
+        return formatChunksForTool(resolvedDocument.title, selected);
+      }
+    });
+
+    const findDefinedTerms = tool({
+      name: 'find_defined_terms',
+      description: 'Find passages that define important terms. Use when the user asks what a term means or asks for definitions.',
+      parameters: z.object({
+        term: z.string().nullable(),
+        max_sections: z.number().int().min(1).max(8).nullable(),
+        source_filter: z.string().nullable(),
+      }),
+      execute: async ({ term, max_sections, source_filter }) => {
+        const max = max_sections ?? 6;
+        const definitionTerms = term?.trim()
+          ? [term, 'means', 'defined', 'definition', 'term']
+          : ['means', 'defined', 'definition', 'term', 'shall mean', 'includes'];
+        const selected = findChunksByTerms(chunks, definitionTerms, max, source_filter);
+        selected.forEach(c => referencedChunkIds.add(c.index));
+        return formatChunksForTool(resolvedDocument.title, selected, 'Definition-related sections');
+      }
+    });
+
+    const findDatesAndDeadlines = tool({
+      name: 'find_dates_and_deadlines',
+      description: 'Find dates, deadlines, effective dates, comment periods, reporting timelines, and implementation milestones.',
+      parameters: z.object({
+        topic: z.string().nullable(),
+        max_sections: z.number().int().min(1).max(8).nullable(),
+        source_filter: z.string().nullable(),
+      }),
+      execute: async ({ topic, max_sections, source_filter }) => {
+        const max = max_sections ?? 6;
+        const selected = chunks
+          .filter(chunk => matchesSourceFilter(chunk, source_filter))
+          .map(chunk => {
+            const text = chunk.content.toLowerCase();
+            const keywordScore = ['date', 'deadline', 'effective', 'expires', 'within', 'not later than', 'days after', 'comment period', 'report', 'implementation']
+              .reduce((sum, term) => sum + (text.includes(term) ? 1 : 0), 0);
+            const dateScore = (chunk.content.match(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4}\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d+\s+days?\b/gi) || []).length;
+            const topicScore = topic?.trim() && text.includes(topic.trim().toLowerCase()) ? 2 : 0;
+            return { chunk, score: keywordScore + dateScore + topicScore };
+          })
+          .filter(entry => entry.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, max)
+          .map(entry => entry.chunk)
+          .sort((a, b) => a.index - b.index);
+
+        selected.forEach(c => referencedChunkIds.add(c.index));
+        return formatChunksForTool(resolvedDocument.title, selected, 'Date and deadline sections');
+      }
+    });
+
+    const findAffectedParties = tool({
+      name: 'find_affected_parties',
+      description: 'Find passages identifying agencies, regulated entities, beneficiaries, officials, jurisdictions, or other affected parties.',
+      parameters: z.object({
+        party_query: z.string().nullable(),
+        max_sections: z.number().int().min(1).max(8).nullable(),
+        source_filter: z.string().nullable(),
+      }),
+      execute: async ({ party_query, max_sections, source_filter }) => {
+        const max = max_sections ?? 6;
+        const terms = party_query?.trim()
+          ? party_query.split(/\s+/)
+          : ['agency', 'secretary', 'administrator', 'state', 'local', 'tribal', 'person', 'entity', 'recipient', 'applicant', 'contractor', 'employee', 'consumer', 'beneficiary', 'regulated'];
+        const selected = findChunksByTerms(chunks, terms, max, source_filter);
+        selected.forEach(c => referencedChunkIds.add(c.index));
+        return formatChunksForTool(resolvedDocument.title, selected, 'Affected-party sections');
+      }
+    });
+
+    const compareVersions = tool({
+      name: 'compare_versions',
+      description: 'For diff mode, fetch comparable high-relevance passages from each available source for a query.',
+      parameters: z.object({
+        query: z.string(),
+        max_sections_per_source: z.number().int().min(1).max(4).nullable(),
+      }),
+      execute: async ({ query, max_sections_per_source }) => {
+        if (resolvedDocument.sources.length < 2) {
+          return 'Only one source version is available, so version comparison is unavailable.';
+        }
+
+        const max = max_sections_per_source ?? 3;
+        const qEmbed = await openai.embeddings.create({ model: 'text-embedding-3-small', input: query });
+        const qVec = qEmbed.data[0].embedding;
+        const selected = resolvedDocument.sources.flatMap(source => {
+          return chunkEmbeddings
+            .map((vec, i) => ({ id: i, score: cosineSimilarity(qVec, vec) }))
+            .filter(s => chunks[s.id].sourceLabel === source.label)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, max)
+            .map(s => chunks[s.id]);
+        }).sort((a, b) => a.index - b.index);
+
+        selected.forEach(c => referencedChunkIds.add(c.index));
+        return formatChunksForTool(resolvedDocument.title, selected, 'Comparable version sections');
       }
     });
 
@@ -405,6 +638,7 @@ export async function POST(request: Request) {
         type: documentType,
         presetType,
         sources: resolvedDocument.sources.map(source => source.label),
+        metadata: resolvedDocument.metadata,
       })
     });
 
@@ -412,8 +646,16 @@ export async function POST(request: Request) {
     const preset = PRESET_PROMPTS[(presetType as PresetType)] || PRESET_PROMPTS.default;
     const agent = new Agent({
       name: 'DocumentAssistant',
-      instructions: `You are an objective government document analysis assistant. Document: "${resolvedDocument.title}".\n\n${preset}\n\nUse tools to search first, then fetch content. Ground answers in fetched text and cite [Section N]. Never cite a section unless it was returned by fetch_more_content.`,
-      tools: [searchRelevantSections, fetchMoreContent, getDocumentMetadata],
+      instructions: `You are an objective government document analysis assistant. Document: "${resolvedDocument.title}".\n\n${preset}\n\nUse tools to search first, then fetch content. For definitions, deadlines, affected parties, or version comparisons, prefer the specialized tool for that task. Ground answers in fetched text and cite [Section N]. Never cite a section unless it was returned by a content-fetching tool. Do not use outside knowledge or imply research beyond the available document and metadata.`,
+      tools: [
+        searchRelevantSections,
+        fetchMoreContent,
+        findDefinedTerms,
+        findDatesAndDeadlines,
+        findAffectedParties,
+        compareVersions,
+        getDocumentMetadata,
+      ],
       model: 'gpt-4o-mini'
     });
 

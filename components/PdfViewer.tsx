@@ -98,14 +98,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-4 bg-gray-100 rounded-lg">
-        <p className="text-red-500">{error}</p>
+      <div className="flex h-full flex-col items-center justify-center rounded-lg bg-muted p-4">
+        <p className="text-red-600">{error}</p>
         {url && (
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="mt-4 rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
           >
             Open PDF in new tab
           </a>
@@ -116,8 +116,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
 
   if (!url) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-4 bg-gray-100 rounded-lg">
-        <p className="text-gray-500">No PDF document available</p>
+      <div className="flex h-full flex-col items-center justify-center rounded-lg bg-muted p-4">
+        <p className="text-muted-foreground">No PDF document available</p>
       </div>
     );
   }
@@ -127,7 +127,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
     return (
       <div className={`h-full ${className || ''} relative`}>
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted">
             <LoadingIndicator size="large" />
           </div>
         )}
@@ -135,35 +135,35 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
         {/* Mobile-optimized PDF viewer */}
         <div className="w-full h-full flex flex-col">
           {/* Header with view mode options */}
-          <div className="flex justify-between items-center p-3 bg-gray-50 border-b">
-            <span className="text-sm text-gray-600">PDF Document</span>
+          <div className="flex items-center justify-between border-b bg-card p-3">
+            <span className="text-sm font-medium text-muted-foreground">PDF Document</span>
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode('iframe')}
-                className={`px-2 py-1 text-xs rounded ${
+                className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'iframe' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'
+                    ? 'border-primary bg-primary text-primary-foreground' 
+                    : 'border-border bg-muted text-muted-foreground hover:text-foreground'
                 }`}
               >
                 View
               </button>
               <button
                 onClick={() => setViewMode('browser')}
-                className={`px-2 py-1 text-xs rounded ${
+                className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'browser' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'
+                    ? 'border-primary bg-primary text-primary-foreground' 
+                    : 'border-border bg-muted text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Browser
               </button>
               <button
                 onClick={() => setViewMode('download')}
-                className={`px-2 py-1 text-xs rounded ${
+                className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'download' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'
+                    ? 'border-primary bg-primary text-primary-foreground' 
+                    : 'border-border bg-muted text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Download
@@ -190,18 +190,18 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
             )}
             
             {viewMode === 'browser' && (
-              <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-gray-50">
+              <div className="flex h-full w-full flex-col items-center justify-center bg-muted/50 p-4">
                 <div className="text-center">
-                  <p className="text-gray-600 mb-4">Open PDF in your browser for full functionality</p>
+                  <p className="mb-4 text-muted-foreground">Open PDF in your browser for full functionality</p>
                   <a
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    className="rounded-md bg-primary px-6 py-3 font-medium text-primary-foreground hover:bg-primary/90"
                   >
                     Open PDF in Browser
                   </a>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     This will open the PDF in a new tab where you can view all pages
                   </p>
                 </div>
@@ -209,17 +209,17 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
             )}
             
             {viewMode === 'download' && (
-              <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-gray-50">
+              <div className="flex h-full w-full flex-col items-center justify-center bg-muted/50 p-4">
                 <div className="text-center">
-                  <p className="text-gray-600 mb-4">Download the PDF to view on your device</p>
+                  <p className="mb-4 text-muted-foreground">Download the PDF to view on your device</p>
                   <a
                     href={url}
                     download
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                    className="rounded-md bg-primary px-6 py-3 font-medium text-primary-foreground hover:bg-primary/90"
                   >
                     Download PDF
                   </a>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     Use your device&#39;s PDF viewer for the best experience
                   </p>
                 </div>
@@ -228,8 +228,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
           </div>
           
           {/* Mobile navigation hint */}
-          <div className="p-2 bg-gray-50 border-t text-center">
-            <p className="text-xs text-gray-500">
+          <div className="border-t bg-card p-2 text-center">
+            <p className="text-xs text-muted-foreground">
               {viewMode === 'iframe' && 'Swipe or scroll to navigate through all pages'}
               {viewMode === 'browser' && 'Browser view provides full PDF functionality'}
               {viewMode === 'download' && 'Download for offline viewing'}
@@ -244,7 +244,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ pdfUrl, storagePath, storageBucke
   return (
     <div className={`h-full ${className || ''} relative`}>
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted">
           <LoadingIndicator size="large" />
         </div>
       )}

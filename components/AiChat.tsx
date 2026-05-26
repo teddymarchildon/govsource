@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FileText, Sparkles, Clock, Scale, Loader, CheckCircle2, XCircle, Copy, Check, ArrowUp, Square } from 'lucide-react';
+import { FileText, Sparkles, BookOpenText, Scale, Loader, CheckCircle2, XCircle, Copy, Check, ArrowUp, Square, CalendarDays, Users } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
@@ -34,7 +34,7 @@ interface CitationMeta {
   searchText?: string;
 }
 
-type PresetType = 'default' | 'summarizeKeyPoints' | 'historicalContext' | 'prosAndCons' | 'diff';
+type PresetType = 'default' | 'summarizeKeyPoints' | 'documentContext' | 'prosAndCons' | 'diff' | 'deadlines' | 'affectedParties';
 
 interface Preset {
   type: PresetType;
@@ -58,8 +58,10 @@ function upsertActivity(list: Activity[], activity: Activity): Activity[] {
 
 const PRESETS: Preset[] = [
   { type: 'summarizeKeyPoints', label: 'Key points', icon: Sparkles, getMessage: n => `Please summarize the key points of this ${n}.` },
-  { type: 'historicalContext', label: 'Historical Context', icon: Clock, getMessage: n => `What is the historical context of this ${n}?` },
+  { type: 'documentContext', label: 'Document context', icon: BookOpenText, getMessage: n => `What context, background, findings, purposes, or authorities does this ${n} state?` },
   { type: 'prosAndCons', label: 'Pros & Cons', icon: Scale, getMessage: n => `What are the pros and cons of this ${n}?` },
+  { type: 'deadlines', label: 'Deadlines', icon: CalendarDays, getMessage: n => `What dates, deadlines, effective dates, or reporting timelines does this ${n} include?` },
+  { type: 'affectedParties', label: 'Who is affected', icon: Users, getMessage: n => `Who is affected by this ${n}, and how?` },
 ];
 
 const DOCUMENT_NOUNS: Record<string, string> = {
@@ -127,6 +129,9 @@ export default function AiChat({
   const noun = DOCUMENT_NOUNS[documentType] || 'document';
   const aiLocked = user ? aiLimitReached : anonLimitReached;
   const sourceUnavailable = !htmlFilePath;
+  const usageLabel = user
+    ? (!isPaidSubscriber ? `${aiInteractions}/${AI_FREE_USAGE_LIMIT} free uses` : 'Pro')
+    : (!authLoading ? `${anonUsage}/${ANON_LIMIT} trial uses` : null);
 
   // Build presets list, adding diff preset if applicable
   const presets = [...PRESETS];
@@ -315,8 +320,8 @@ export default function AiChat({
             type="button"
             onClick={() => onCitationClick?.(citation)}
             disabled={!onCitationClick}
-            className={`inline-flex items-center rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary ${
-              onCitationClick ? 'hover:bg-primary/10' : 'cursor-default'
+            className={`inline-flex items-center rounded-md border border-border bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground ${
+              onCitationClick ? 'hover:border-primary/30 hover:bg-primary/5 hover:text-primary' : 'cursor-default'
             }`}
             title={onCitationClick ? `Jump to ${citation.label}` : citation.label}
           >
@@ -373,72 +378,80 @@ export default function AiChat({
 
   return (
     <div
-      className={`w-full flex flex-col bg-card rounded-2xl shadow-lg border border-border overflow-hidden ${!height ? 'flex-1' : ''}`}
+      className={`w-full flex flex-col bg-card/95 rounded-lg border border-border overflow-hidden ${!height ? 'flex-1' : ''}`}
       style={height ? { height } : {}}
     >
       {/* Header */}
-      <div className="px-3 py-2.5 bg-card/95 border-b border-border flex justify-between items-center">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">GovSource Assistant</h2>
-        {!isPaidSubscriber && user && (
-          <span className="ml-2 text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
-            {aiInteractions}/{AI_FREE_USAGE_LIMIT} free uses
-          </span>
-        )}
-        {!user && !authLoading && (
-          <span className="ml-2 text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
-            {anonUsage}/{ANON_LIMIT} uses before sign up
-          </span>
-        )}
-      </div>
-
-      {/* Document info banner */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/60 text-muted-foreground text-[11px] border-b border-border">
-        <span>
-          {htmlFilePath
-            ? 'The assistant will objectively analyze the text and information here. No other sources are considered.'
-            : 'The assistant cannot process this document because source text is unavailable.'}
-        </span>
+      <div className="px-3 py-2.5 bg-card border-b border-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">Assistant</h2>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 ${
+                htmlFilePath ? 'border-border bg-muted/50' : 'border-red-200 bg-red-50 text-red-700'
+              }`}>
+                {htmlFilePath ? 'Grounded in this document' : 'Source unavailable'}
+              </span>
+              {usageLabel && (
+                <span className="inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5">
+                  {usageLabel}
+                </span>
+              )}
+            </div>
+          </div>
+          {isLoading && (
+            <button
+              type="button"
+              onClick={handleStopGenerating}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Stop generating"
+              title="Stop generating"
+            >
+              <Square className="h-3 w-3 fill-current" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Preset buttons */}
-      <div className="px-2.5 py-2 bg-card border-b border-border">
-        <div className="flex flex-wrap justify-center gap-1.5">
+      <div className="bg-card border-b border-border">
+        <div className="flex gap-1.5 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {presets.map(preset => (
-          <Button
+          <button
             key={preset.type}
+            type="button"
             onClick={() => handlePresetClick(preset)}
             disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
-            variant="outline"
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] flex items-center gap-1 border-border bg-card hover:bg-muted/80 ${(aiLocked || sourceUnavailable) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background/70 px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${(aiLocked || sourceUnavailable) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <preset.icon className="h-3.5 w-3.5" />
             {preset.label}
-          </Button>
+          </button>
         ))}
         </div>
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 bg-muted/30" ref={scrollContainerRef}>
+      <div className="flex-1 min-h-0 overflow-y-auto bg-background/40 p-3" ref={scrollContainerRef}>
         {sourceUnavailable ? (
-          <div className="p-4 text-center">
-            <p className="text-sm text-muted-foreground">AI Assistant is unavailable for this document because no source text is attached.</p>
+          <div className="flex h-full items-center justify-center p-4 text-center">
+            <p className="max-w-xs text-sm text-muted-foreground">AI Assistant is unavailable for this document because no source text is attached.</p>
           </div>
         ) : !user && !authLoading && anonLimitReached ? (
-          <div className="p-4 text-center">
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
             <p className="text-sm text-muted-foreground mb-2">Sign in to continue using the AI Assistant</p>
             <a
               href={getLoginUrl(pathname)}
-              className="inline-block px-3 py-1.5 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition text-sm rounded-full"
+              className="inline-block rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
             >
               Sign in
             </a>
           </div>
         ) : aiLocked ? (
-          <div className="p-4 text-center">
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
             <p className="text-sm text-muted-foreground mb-2">You have reached your free AI usage limit.</p>
             <Button
-              className="text-sm rounded-full"
+              className="text-sm rounded-md"
               variant="default"
               disabled={subscribing || !user}
               onClick={handleUpgrade}
@@ -447,14 +460,41 @@ export default function AiChat({
             </Button>
           </div>
         ) : (
-          <>
+          <div className="space-y-3">
+            {messages.length === 0 && !streamingContent && (
+              <div className="flex h-full min-h-[260px] flex-col justify-center">
+                <div className="mx-auto max-w-sm text-center">
+                  <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">Ask grounded questions</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Answers use this document and cite the sections reviewed.
+                  </p>
+                  <div className="mt-4 grid grid-cols-1 gap-1.5 text-left">
+                    {presets.slice(0, 3).map(preset => (
+                      <button
+                        key={`empty-${preset.type}`}
+                        type="button"
+                        onClick={() => handlePresetClick(preset)}
+                        disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
+                        className="flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                      >
+                        <preset.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             {messages.map((message, i) => (
               <div key={i} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`group max-w-[88%] rounded-2xl p-2.5 ${
+                  className={`group max-w-[90%] rounded-lg px-3 py-2 ${
                     message.role === 'user'
-                      ? 'bg-primary text-primary-foreground border border-primary/20'
-                      : 'bg-card text-foreground border border-border shadow-sm'
+                      ? 'border border-border bg-muted/70 text-foreground'
+                      : 'border border-border bg-card text-foreground'
                   }`}
                 >
                   {message.role === 'assistant' && (
@@ -462,7 +502,7 @@ export default function AiChat({
                       <button
                         type="button"
                         onClick={() => handleCopyMessage(message.content, `message-${i}`)}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 group-focus-within:opacity-100"
                         title={copiedMessageId === `message-${i}` ? 'Copied' : 'Copy text'}
                         aria-label={copiedMessageId === `message-${i}` ? 'Copied' : 'Copy text'}
                       >
@@ -479,19 +519,19 @@ export default function AiChat({
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   ) : (
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-primary-foreground">
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                       {message.content}
                     </div>
                   )}
                   {message.role === 'assistant' && renderCitations(message.citations, message.content)}
                   {message.role === 'assistant' && message.runLog && message.runLog.length > 0 && (
-                    <div className="mt-2 rounded-xl border border-border bg-muted/40 p-2">
+                    <div className="mt-2 border-t border-border/70 pt-2">
                       <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-medium text-muted-foreground">Agent steps ({message.runLog.length})</span>
+                        <span className="text-[11px] font-medium text-muted-foreground">Reviewed {message.runLog.length} steps</span>
                         {renderRunStateBadge(message.runState)}
                       </div>
                       <details>
-                        <summary className="cursor-pointer text-[11px] text-primary">View steps</summary>
+                        <summary className="cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">Details</summary>
                         <div className="mt-1 space-y-1">
                           {message.runLog.map((step) => (
                             <div key={step.id} className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -516,7 +556,7 @@ export default function AiChat({
             {/* Streaming content - show as it arrives */}
             {streamingContent && (
               <div className="flex justify-start">
-                <div className="max-w-[88%] rounded-2xl p-2.5 bg-card text-foreground border border-border shadow-sm">
+                <div className="max-w-[90%] rounded-lg border border-border bg-card px-3 py-2 text-foreground">
                   <div className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted">
                     <ReactMarkdown>{streamingContent}</ReactMarkdown>
                   </div>
@@ -528,11 +568,12 @@ export default function AiChat({
             {/* Activity indicators while generating */}
             {activities.length > 0 && isLoading && (
               <div className="flex justify-start">
-                <div className="max-w-[88%] rounded-xl border border-border bg-card/80 p-2 text-muted-foreground">
-                  <div className="mb-1 text-xs font-medium">
+                <div className="max-w-[90%] rounded-lg border border-border bg-card/80 px-3 py-2 text-muted-foreground">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-medium">
+                    <Loader className="h-3 w-3 animate-spin text-primary/70" />
                     {activities.find(a => a.status === 'running')?.label || 'Working on your request...'}
                   </div>
-                  <div className="mt-1 space-y-1">
+                  <div className="mt-1 space-y-0.5">
                     {activities.map(activity => (
                       <div key={activity.id} className="flex items-center gap-2 text-[11px]">
                         {activity.status === 'completed' ? (
@@ -552,30 +593,30 @@ export default function AiChat({
 
             {error && (
               <div className="flex justify-center">
-                <div className="max-w-[88%] rounded-xl p-2 bg-red-100 text-red-800 text-sm border border-red-200">{error}</div>
+                <div className="max-w-[90%] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>
               </div>
             )}
             <div ref={messagesEndRef} />
-          </>
+          </div>
         )}
       </div>
 
       {/* Input form */}
-      <form onSubmit={handleSubmit} className="p-3 bg-card border-t border-border">
+      <form onSubmit={handleSubmit} className="border-t border-border bg-card p-3">
         <div className="flex items-center gap-2">
           <Input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder={`Ask about ${documentTitle || 'this document'}...`}
+            placeholder="Ask about this document..."
             disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
-            className="h-10 rounded-full border-border bg-muted/50 focus-visible:bg-card"
+            className="h-10 rounded-lg border-border bg-background/80 focus-visible:bg-card"
           />
           {isLoading ? (
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-10 rounded-full p-0 shadow-sm border-border bg-card hover:bg-muted"
+              className="h-10 w-10 rounded-lg border-border bg-card p-0 shadow-none hover:bg-muted"
               onClick={handleStopGenerating}
               aria-label="Stop generating"
               title="Stop generating"
@@ -585,7 +626,7 @@ export default function AiChat({
           ) : (
             <Button
               type="submit"
-              className="h-10 w-10 rounded-full p-0 shadow-sm transition-all hover:shadow disabled:opacity-40"
+              className="h-10 w-10 rounded-lg p-0 shadow-none transition-all disabled:opacity-40"
               disabled={!input.trim() || aiLocked || authLoading || sourceUnavailable}
               aria-label="Send message"
               title="Send message"
