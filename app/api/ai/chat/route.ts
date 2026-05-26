@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { fetchHtmlContent, processDocumentContent } from '@/utils/documentUtils';
 import { createClient } from '@/utils/supabase/server';
+import { AI_FREE_USAGE_LIMIT, ANON_LIMIT } from '@/constants/onboarding';
 import {
   Agent,
   run,
@@ -32,6 +33,16 @@ const STORAGE_BUCKETS: Record<string, string> = {
 };
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
+type DocumentSource = {
+  label: string;
+  bucket: string;
+  htmlFilePath: string;
+};
+type DocumentChunk = {
+  content: string;
+  index: number;
+  sourceLabel: string;
+};
 type ActivityStatus = 'running' | 'completed' | 'error';
 type StreamPayload =
   | { type: 'phase'; id: string; label: string; status: ActivityStatus; detail?: string }
@@ -44,7 +55,7 @@ type StreamPayload =
 type CitationPayload = {
   label: string;
   section: number;
-  page: number;
+  page?: number;
   searchText: string;
 };
 
@@ -66,15 +77,30 @@ export const maxDuration = 60;
 
 // --- Utility functions ---
 
+const ChatRequestSchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string().min(1),
+  })).min(1),
+  documentId: z.union([z.string(), z.number()]).transform(String),
+  documentTitle: z.string().optional(),
+  // Accepted for backwards compatibility with the current client. The route
+  // resolves authoritative source paths from documentId instead of trusting it.
+  htmlFilePath: z.string().optional(),
+  documentType: z.enum(['bill', 'law', 'agencyDocument', 'executiveOrder', 'opinion']),
+  presetType: z.enum(['default', 'summarizeKeyPoints', 'historicalContext', 'prosAndCons', 'diff']).default('default'),
+  diffHtmlFilePaths: z.array(z.string().optional()).optional(),
+});
+
 function cleanHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/&[^;]+;/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function chunkDocument(content: string, chunkSize = 3000, overlap = 200): { content: string; index: number }[] {
+function chunkDocument(content: string, sourceLabel: string, startIndex = 0, chunkSize = 3000, overlap = 200): DocumentChunk[] {
   const text = cleanHtml(content);
-  const chunks: { content: string; index: number }[] = [];
+  const chunks: DocumentChunk[] = [];
   let start = 0;
-  let index = 0;
+  let index = startIndex;
 
   while (start < text.length) {
     let end = Math.min(start + chunkSize, text.length);
@@ -82,7 +108,7 @@ function chunkDocument(content: string, chunkSize = 3000, overlap = 200): { cont
       const sentenceEnd = text.lastIndexOf('. ', end);
       if (sentenceEnd > start + chunkSize * 0.8) end = sentenceEnd + 1;
     }
-    chunks.push({ content: text.slice(start, end), index: index++ });
+    chunks.push({ content: text.slice(start, end), index: index++, sourceLabel });
     start = end - (end < text.length ? overlap : 0);
   }
   return chunks;
@@ -109,19 +135,161 @@ function extractSectionNumbers(content: string): number[] {
   return [...new Set(sections)];
 }
 
+class RouteResponseError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function resolveDocumentSources(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  params: z.infer<typeof ChatRequestSchema>
+): Promise<{ title: string; sources: DocumentSource[] }> {
+  const documentId = Number(params.documentId);
+  if (!Number.isFinite(documentId)) {
+    throw new RouteResponseError('Invalid document id', 400);
+  }
+
+  if (params.documentType === 'bill' || params.documentType === 'law') {
+    const { data: bill, error: billError } = await supabase
+      .from('bill')
+      .select('id, title, law_title')
+      .eq('id', documentId)
+      .maybeSingle();
+
+    if (billError) throw billError;
+    if (!bill) throw new RouteResponseError('Document not found', 404);
+
+    const textLimit = params.presetType === 'diff' ? 2 : 1;
+    const { data: textRows, error: textError } = await supabase
+      .from('bill_text')
+      .select('html_file_path, date, type')
+      .eq('bill_id', documentId)
+      .not('html_file_path', 'is', null)
+      .order('date', { ascending: false, nullsFirst: false })
+      .limit(textLimit);
+
+    if (textError) throw textError;
+    if (!textRows?.length) throw new RouteResponseError('No document content available', 404);
+
+    return {
+      title: (params.documentType === 'law' ? bill.law_title : bill.title) || params.documentTitle || 'Untitled document',
+      sources: textRows.map((row, idx) => ({
+        label: params.presetType === 'diff'
+          ? `${idx === 0 ? 'Newer version' : 'Older version'}${row.date ? ` (${row.date})` : ''}`
+          : 'Current version',
+        bucket: STORAGE_BUCKETS[params.documentType],
+        htmlFilePath: row.html_file_path,
+      })),
+    };
+  }
+
+  if (params.documentType === 'agencyDocument' || params.documentType === 'executiveOrder') {
+    const { data: document, error } = await supabase
+      .from('agency_document')
+      .select('id, title, subtype, html_file_path')
+      .eq('id', documentId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!document?.html_file_path) throw new RouteResponseError('No document content available', 404);
+
+    if (params.documentType === 'executiveOrder' && document.subtype !== 'Executive Order') {
+      throw new RouteResponseError('Document type mismatch', 400);
+    }
+
+    return {
+      title: document.title || params.documentTitle || 'Untitled document',
+      sources: [{
+        label: params.documentType === 'executiveOrder' ? 'Executive order' : 'Agency document',
+        bucket: STORAGE_BUCKETS[params.documentType],
+        htmlFilePath: document.html_file_path,
+      }],
+    };
+  }
+
+  const { data: cluster, error: clusterError } = await supabase
+    .from('cluster')
+    .select('id, case_name')
+    .eq('id', documentId)
+    .maybeSingle();
+
+  if (clusterError) throw clusterError;
+  if (!cluster) throw new RouteResponseError('Document not found', 404);
+
+  const { data: opinions, error: opinionsError } = await supabase
+    .from('court_opinion')
+    .select('html_file_path, date, type')
+    .eq('cluster_id', documentId)
+    .not('html_file_path', 'is', null)
+    .order('date', { ascending: false, nullsFirst: false })
+    .limit(1);
+
+  if (opinionsError) throw opinionsError;
+  if (!opinions?.length) throw new RouteResponseError('No document content available', 404);
+
+  return {
+    title: cluster.case_name || params.documentTitle || 'Untitled opinion',
+    sources: [{
+      label: opinions[0].type ? `${opinions[0].type} opinion` : 'Opinion',
+      bucket: STORAGE_BUCKETS.opinion,
+      htmlFilePath: opinions[0].html_file_path,
+    }],
+  };
+}
+
+async function buildChunksForSources(sources: DocumentSource[]): Promise<DocumentChunk[]> {
+  const chunks: DocumentChunk[] = [];
+
+  for (const source of sources) {
+    const rawHtml = await fetchHtmlContent(source.bucket, source.htmlFilePath);
+    const processed = rawHtml ? processDocumentContent(rawHtml) : null;
+    if (!processed) continue;
+    chunks.push(...chunkDocument(processed, source.label, chunks.length));
+  }
+
+  return chunks;
+}
+
+async function incrementAuthenticatedUsage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  currentInteractions: number
+) {
+  const { error } = await supabase
+    .from('user_usage')
+    .upsert(
+      { user_id: userId, ai_interactions: currentInteractions + 1 },
+      { onConflict: 'user_id' }
+    );
+
+  if (error) {
+    console.error('Failed to update user usage:', error);
+  }
+}
+
 // --- Main handler ---
 
 export async function POST(request: Request) {
   try {
-    const { messages, documentTitle, htmlFilePath, documentType, presetType = 'default' } = await request.json();
+    const parsedRequest = ChatRequestSchema.safeParse(await request.json());
+    if (!parsedRequest.success) {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    }
+
+    const requestBody = parsedRequest.data;
+    const { presetType, documentType } = requestBody;
     const supabase = await createClient();
     const { data: authData } = await supabase.auth.getUser();
     const authenticatedUserId = authData.user?.id;
 
     // Validate messages
-    const chatMessages: ChatMessage[] = (messages || [])
-      .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
-      .map((m: any) => ({ role: m.role, content: m.content }));
+    const chatMessages: ChatMessage[] = requestBody.messages
+      .filter((m) => m.content.trim())
+      .map((m) => ({ role: m.role, content: m.content }));
 
     if (!chatMessages.length || chatMessages[chatMessages.length - 1].role !== 'user') {
       return NextResponse.json({ error: 'A user message is required' }, { status: 400 });
@@ -133,7 +301,7 @@ export async function POST(request: Request) {
     if (!authenticatedUserId) {
       const cookieStore = await cookies();
       aiUsage = parseInt(cookieStore.get('ai_usage')?.value || '0', 10) || 0;
-      if (aiUsage >= 3) {
+      if (aiUsage >= ANON_LIMIT) {
         return NextResponse.json({ error: 'AI usage limit reached. Please log in to continue.' }, { status: 403 });
       }
       aiUsage += 1;
@@ -141,6 +309,7 @@ export async function POST(request: Request) {
     }
 
     // Handle authenticated user usage limits
+    let authenticatedUsageCount: number | undefined;
     if (authenticatedUserId) {
       const [{ data: subscription }, { data: usage }] = await Promise.all([
         supabase.from('subscription').select('tier').eq('user_id', authenticatedUserId).maybeSingle(),
@@ -149,38 +318,20 @@ export async function POST(request: Request) {
 
       const isPaid = subscription?.tier === 'paid';
       const interactions = usage?.ai_interactions ?? 0;
+      authenticatedUsageCount = interactions;
 
-      if (!isPaid && interactions >= 5) {
+      if (!isPaid && interactions >= AI_FREE_USAGE_LIMIT) {
         return NextResponse.json({ error: 'AI usage limit reached. Please upgrade to continue.' }, { status: 403 });
-      }
-
-      const { error: usageWriteError } = await supabase
-        .from('user_usage')
-        .upsert(
-          { user_id: authenticatedUserId, ai_interactions: interactions + 1 },
-          { onConflict: 'user_id' }
-        );
-
-      if (usageWriteError) {
-        console.error('Failed to update user usage:', usageWriteError);
-        return NextResponse.json({ error: 'Failed to track AI usage' }, { status: 500 });
       }
     }
 
     // Fetch and process document
-    if (!htmlFilePath) {
+    const resolvedDocument = await resolveDocumentSources(supabase, requestBody);
+    if (presetType === 'diff' && resolvedDocument.sources.length < 2) {
       return NextResponse.json({ error: 'No document content available' }, { status: 404 });
     }
 
-    const bucket = STORAGE_BUCKETS[documentType] || 'bill-htmls';
-    const rawHtml = await fetchHtmlContent(bucket, htmlFilePath);
-    const processed = rawHtml ? processDocumentContent(rawHtml) : null;
-
-    if (!processed) {
-      return NextResponse.json({ error: 'No document content available' }, { status: 404 });
-    }
-
-    const chunks = chunkDocument(processed);
+    const chunks = await buildChunksForSources(resolvedDocument.sources);
     if (!chunks.length) {
       return NextResponse.json({ error: 'Document contains no extractable text' }, { status: 404 });
     }
@@ -211,7 +362,12 @@ export async function POST(request: Request) {
           .map((vec, i) => ({ id: i, score: cosineSimilarity(qVec, vec) }))
           .sort((a, b) => b.score - a.score)
           .slice(0, k)
-          .map(s => ({ id: s.id, score: s.score, preview: chunks[s.id].content.slice(0, 400) }));
+          .map(s => ({
+            id: s.id,
+            score: s.score,
+            source: chunks[s.id].sourceLabel,
+            preview: chunks[s.id].content.slice(0, 400),
+          }));
 
         return JSON.stringify(scored);
       }
@@ -235,8 +391,8 @@ export async function POST(request: Request) {
         if (!selected.length) return 'No matching sections found.';
 
         selected.forEach(c => referencedChunkIds.add(c.index));
-        const text = selected.map((c) => `[Section ${c.index + 1}]\n${c.content}`).join('\n\n---\n\n');
-        return `Relevant sections from "${documentTitle}":\n\n${text}\n\n[Note: Partial content shown.]`;
+        const text = selected.map((c) => `[Section ${c.index + 1}] ${c.sourceLabel}\n${c.content}`).join('\n\n---\n\n');
+        return `Relevant sections from "${resolvedDocument.title}":\n\n${text}\n\n[Note: Partial content shown.]`;
       }
     });
 
@@ -244,14 +400,19 @@ export async function POST(request: Request) {
       name: 'get_document_metadata',
       description: 'Return basic document metadata.',
       parameters: z.object({}),
-      execute: async () => JSON.stringify({ title: documentTitle, type: documentType, presetType })
+      execute: async () => JSON.stringify({
+        title: resolvedDocument.title,
+        type: documentType,
+        presetType,
+        sources: resolvedDocument.sources.map(source => source.label),
+      })
     });
 
     // Create agent
     const preset = PRESET_PROMPTS[(presetType as PresetType)] || PRESET_PROMPTS.default;
     const agent = new Agent({
       name: 'DocumentAssistant',
-      instructions: `You are an objective government document analysis assistant. Document: "${documentTitle}".\n\n${preset}\n\nUse tools to search first, then fetch content. Ground answers in fetched text and cite [Section N].`,
+      instructions: `You are an objective government document analysis assistant. Document: "${resolvedDocument.title}".\n\n${preset}\n\nUse tools to search first, then fetch content. Ground answers in fetched text and cite [Section N]. Never cite a section unless it was returned by fetch_more_content.`,
       tools: [searchRelevantSections, fetchMoreContent, getDocumentMetadata],
       model: 'gpt-4o-mini'
     });
@@ -341,10 +502,8 @@ export async function POST(request: Request) {
                 if (!chunk) return null;
                 if (referencedChunkIds.size > 0 && !referencedChunkIds.has(chunkIndex)) return null;
                 return {
-                  label: `Section ${section}`,
+                  label: `${chunk.sourceLabel}, Section ${section}`,
                   section,
-                  // This is an estimate used for PDF jump hints.
-                  page: Math.max(1, section),
                   searchText: chunk.content.slice(0, 120).trim(),
                 };
               })
@@ -356,6 +515,9 @@ export async function POST(request: Request) {
           }
           if (enteredDraftingPhase) {
             send({ type: 'phase', id: 'drafting', label: 'Drafting response', status: 'completed' });
+          }
+          if (authenticatedUserId && authenticatedUsageCount !== undefined && finalContent.trim()) {
+            await incrementAuthenticatedUsage(supabase, authenticatedUserId, authenticatedUsageCount);
           }
           send({ type: 'stream_end' });
         } catch (err) {
@@ -381,6 +543,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    if (error instanceof RouteResponseError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error processing AI chat request:', error);
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
