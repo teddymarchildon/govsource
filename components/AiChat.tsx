@@ -26,6 +26,8 @@ interface Activity {
 }
 
 type RunState = 'completed' | 'stopped' | 'error' | 'partial';
+type RailStageId = 'understand' | 'retrieve' | 'draft';
+type RailStageStatus = 'pending' | 'running' | 'completed' | 'error';
 
 interface CitationMeta {
   label: string;
@@ -54,6 +56,60 @@ function upsertActivity(list: Activity[], activity: Activity): Activity[] {
   const updated = [...list];
   updated[idx] = { ...updated[idx], ...activity };
   return updated;
+}
+
+const RAIL_STAGES: { id: RailStageId; label: string }[] = [
+  { id: 'understand', label: 'Understand' },
+  { id: 'retrieve', label: 'Retrieve' },
+  { id: 'draft', label: 'Draft' },
+];
+
+const RAIL_STAGE_ORDER: RailStageId[] = ['understand', 'retrieve', 'draft'];
+
+const RAIL_STAGE_COPY: Record<RailStageId, string> = {
+  understand: 'Analyzing your question',
+  retrieve: 'Reviewing relevant document sections',
+  draft: 'Drafting the answer',
+};
+
+function getActivityStage(activity: Activity): RailStageId {
+  if (activity.id === 'understanding') return 'understand';
+  if (activity.id === 'drafting') return 'draft';
+  return 'retrieve';
+}
+
+function getRailStageStatuses(activities: Activity[], isRunning: boolean): Record<RailStageId, RailStageStatus> {
+  const statuses: Record<RailStageId, RailStageStatus> = {
+    understand: 'pending',
+    retrieve: 'pending',
+    draft: 'pending',
+  };
+
+  for (const activity of activities) {
+    const stage = getActivityStage(activity);
+    if (activity.status === 'error') {
+      statuses[stage] = 'error';
+    } else if (activity.status === 'running' && statuses[stage] !== 'error') {
+      statuses[stage] = 'running';
+    } else if (activity.status === 'completed' && statuses[stage] === 'pending') {
+      statuses[stage] = 'completed';
+    }
+  }
+
+  const activeIndex = RAIL_STAGE_ORDER.findIndex(stage => statuses[stage] === 'running');
+  if (activeIndex > 0) {
+    RAIL_STAGE_ORDER.slice(0, activeIndex).forEach(stage => {
+      if (statuses[stage] === 'pending') statuses[stage] = 'completed';
+    });
+  }
+
+  if (!isRunning && activities.length > 0) {
+    RAIL_STAGE_ORDER.forEach(stage => {
+      if (statuses[stage] === 'pending') statuses[stage] = 'completed';
+    });
+  }
+
+  return statuses;
 }
 
 const PRESETS: Preset[] = [
@@ -357,6 +413,133 @@ export default function AiChat({
     return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${entry.className}`}>{entry.label}</span>;
   };
 
+  const renderProgressRail = (runLog: Activity[], isRunning: boolean) => {
+    if (!runLog.length) return null;
+    const statuses = getRailStageStatuses(runLog, isRunning);
+    const activeStageId =
+      RAIL_STAGE_ORDER.find(stage => statuses[stage] === 'running') ||
+      RAIL_STAGE_ORDER.find(stage => statuses[stage] === 'error') ||
+      [...RAIL_STAGE_ORDER].reverse().find(stage => statuses[stage] === 'completed') ||
+      'understand';
+    const activeActivity = runLog.find(activity => activity.status === 'running');
+    const activeIndex = RAIL_STAGE_ORDER.indexOf(activeStageId);
+    const activeLabel = activeActivity?.detail || RAIL_STAGE_COPY[activeStageId];
+    const hasError = RAIL_STAGE_ORDER.some(stage => statuses[stage] === 'error');
+    const isCompleted = !isRunning && !hasError;
+
+    return (
+      <div className="w-full max-w-full rounded-md border border-border bg-muted/30 px-3 py-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2">
+            <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
+              {hasError ? (
+                <XCircle className="h-4 w-4 text-red-500" />
+              ) : isCompleted ? (
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+              ) : (
+                <Loader className="h-4 w-4 animate-spin text-primary/70" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-medium leading-5 text-foreground">
+                {hasError ? 'Something needs attention' : isCompleted ? 'Answer ready' : activeLabel}
+              </div>
+              <div className="text-[11px] leading-4 text-muted-foreground">
+                Step {Math.min(activeIndex + 1, RAIL_STAGE_ORDER.length)} of {RAIL_STAGE_ORDER.length}
+              </div>
+            </div>
+          </div>
+          <div className="mt-1 flex shrink-0 items-center gap-1" aria-label="Agent progress">
+            {RAIL_STAGES.map((stage) => {
+              const status = statuses[stage.id];
+              return (
+                <span
+                  key={stage.id}
+                  aria-label={`${stage.label}: ${status}`}
+                  title={`${stage.label}: ${status}`}
+                  className={`h-1.5 rounded-full transition-all ${
+                    status === 'running'
+                      ? 'w-5 bg-primary'
+                      : status === 'completed'
+                        ? 'w-1.5 bg-primary/50'
+                        : status === 'error'
+                          ? 'w-1.5 bg-red-500'
+                          : 'w-1.5 bg-border'
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+        {!isRunning && runLog.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {RAIL_STAGES.map((stage) => {
+              const status = statuses[stage.id];
+              const isComplete = status === 'completed';
+              const isError = status === 'error';
+
+              return (
+                <div
+                  key={stage.id}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] ${
+                    isError
+                      ? 'border-red-300 bg-red-50 text-red-600'
+                      : isComplete
+                        ? 'border-primary/20 bg-primary/10 text-primary'
+                        : 'border-border bg-background text-muted-foreground'
+                  }`}
+                >
+                  {isComplete ? (
+                    <Check className="h-2.5 w-2.5" />
+                  ) : isError ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                  )}
+                  <span>{stage.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderReviewedSources = (runLog: Activity[], runState: RunState | undefined) => {
+    if (!runLog.length) return null;
+    const reviewedCount = runLog.filter(step => step.id !== 'understanding' && step.id !== 'drafting').length;
+    const label = reviewedCount > 0 ? `Reviewed ${reviewedCount} source steps` : 'Reviewed document';
+
+    return (
+      <div className="mt-2 border-t border-border/70 pt-2">
+        <details>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] text-muted-foreground hover:text-foreground">
+            <span>{label}</span>
+            {renderRunStateBadge(runState)}
+          </summary>
+          <div className="mt-2 space-y-2">
+            {renderProgressRail(runLog, false)}
+            <div className="space-y-1">
+              {runLog.map((step) => (
+                <div key={step.id} className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  {step.status === 'completed' ? (
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  ) : step.status === 'error' ? (
+                    <XCircle className="h-3 w-3 text-red-500" />
+                  ) : (
+                    <Loader className="h-3 w-3 text-primary/60" />
+                  )}
+                  <span>{step.detail ? `${step.label}: ${step.detail}` : step.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
+      </div>
+    );
+  };
+
   const handleUpgrade = async () => {
     if (!user) return;
     setSubscribing(true);
@@ -525,29 +708,7 @@ export default function AiChat({
                   )}
                   {message.role === 'assistant' && renderCitations(message.citations, message.content)}
                   {message.role === 'assistant' && message.runLog && message.runLog.length > 0 && (
-                    <div className="mt-2 border-t border-border/70 pt-2">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-medium text-muted-foreground">Reviewed {message.runLog.length} steps</span>
-                        {renderRunStateBadge(message.runState)}
-                      </div>
-                      <details>
-                        <summary className="cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">Details</summary>
-                        <div className="mt-1 space-y-1">
-                          {message.runLog.map((step) => (
-                            <div key={step.id} className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                              {step.status === 'completed' ? (
-                                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                              ) : step.status === 'error' ? (
-                                <XCircle className="h-3 w-3 text-red-500" />
-                              ) : (
-                                <Loader className="h-3 w-3 text-primary/60 animate-spin" />
-                              )}
-                              <span>{step.detail ? `${step.label}: ${step.detail}` : step.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    </div>
+                    renderReviewedSources(message.runLog, message.runState)
                   )}
                 </div>
               </div>
@@ -557,6 +718,11 @@ export default function AiChat({
             {streamingContent && (
               <div className="flex justify-start">
                 <div className="max-w-[90%] rounded-lg border border-border bg-card px-3 py-2 text-foreground">
+                  {activities.length > 0 && isLoading && (
+                    <div className="mb-2">
+                      {renderProgressRail(activities, true)}
+                    </div>
+                  )}
                   <div className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted">
                     <ReactMarkdown>{streamingContent}</ReactMarkdown>
                   </div>
@@ -566,27 +732,10 @@ export default function AiChat({
             )}
 
             {/* Activity indicators while generating */}
-            {activities.length > 0 && isLoading && (
+            {activities.length > 0 && isLoading && !streamingContent && (
               <div className="flex justify-start">
-                <div className="max-w-[90%] rounded-lg border border-border bg-card/80 px-3 py-2 text-muted-foreground">
-                  <div className="mb-1 flex items-center gap-2 text-xs font-medium">
-                    <Loader className="h-3 w-3 animate-spin text-primary/70" />
-                    {activities.find(a => a.status === 'running')?.label || 'Working on your request...'}
-                  </div>
-                  <div className="mt-1 space-y-0.5">
-                    {activities.map(activity => (
-                      <div key={activity.id} className="flex items-center gap-2 text-[11px]">
-                        {activity.status === 'completed' ? (
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                        ) : activity.status === 'error' ? (
-                          <XCircle className="h-3 w-3 text-red-500" />
-                        ) : (
-                          <Loader className="h-3 w-3 text-primary/60 animate-spin" />
-                        )}
-                        <span className="truncate">{activity.detail ? `${activity.label}: ${activity.detail}` : activity.label}</span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="max-w-[90%] rounded-lg border border-border bg-card px-3 py-2 text-muted-foreground">
+                  {renderProgressRail(activities, true)}
                 </div>
               </div>
             )}
