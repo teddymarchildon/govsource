@@ -759,13 +759,13 @@ export default function AiChat({
             onChange={e => setInput(e.target.value)}
             placeholder="Ask about this document..."
             disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
-            className="h-10 rounded-lg border-border bg-background/80 focus-visible:bg-card"
+            className="h-10 rounded-lg border-transparent bg-muted/55 shadow-none transition-colors placeholder:text-muted-foreground/75 hover:bg-muted/75 focus-visible:bg-card focus-visible:ring-1 focus-visible:ring-primary/25 focus-visible:ring-offset-0"
           />
           {isLoading ? (
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-10 rounded-lg border-border bg-card p-0 shadow-none hover:bg-muted"
+              className="h-10 w-10 rounded-lg border-transparent bg-muted/55 p-0 text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/25 focus-visible:ring-offset-0"
               onClick={handleStopGenerating}
               aria-label="Stop generating"
               title="Stop generating"
@@ -775,12 +775,12 @@ export default function AiChat({
           ) : (
             <Button
               type="submit"
-              className="h-10 w-10 rounded-lg p-0 shadow-none transition-all disabled:opacity-40"
+              className="h-10 w-10 rounded-lg border border-primary/15 bg-primary/10 p-0 text-primary shadow-none transition-all hover:border-primary/25 hover:bg-primary/15 hover:text-primary disabled:border-transparent disabled:bg-muted/55 disabled:text-muted-foreground/45 disabled:opacity-100 focus-visible:ring-1 focus-visible:ring-primary/25 focus-visible:ring-offset-0"
               disabled={!input.trim() || aiLocked || authLoading || sourceUnavailable}
               aria-label="Send message"
               title="Send message"
             >
-              <ArrowUp className="h-4.5 w-4.5" />
+              <ArrowUp className="h-4 w-4" strokeWidth={2.25} />
             </Button>
           )}
         </div>
