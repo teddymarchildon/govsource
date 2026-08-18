@@ -1,57 +1,24 @@
-'use server'
-
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { createClient } from '@/utils/supabase/server';
-import { Law } from '@/types/types';
-import { POLICY_AREAS } from '@/constants/policyAreas';
-import type { PolicyArea } from '@/types/types';
 import LawsClient from './LawsClient';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { POLICY_AREAS } from '@/constants/policyAreas';
+import { getRecentLaws } from '@/lib/repositories/legislation';
+import type { PolicyArea } from '@/types/types';
 
-// Server Component
-async function fetchInitialLaws() {
-  const supabase = await createClient()
-  try {
-    const { data, error } = await supabase
-      .from('bill')
-      .select(`
-        *,
-        sponsor:sponsored_bills(
-          congressman:congressman(*)
-        )
-      `)
-      .not('law_enacted_date', 'is', null)
-      .order('law_enacted_date', { ascending: false })
-      .range(0, 49);
+export const dynamic = 'force-dynamic';
 
-    if (error) {
-      console.error('Error fetching laws:', error);
-      return [] as Law[];
-    }
-
-    // Transform the data to match our Law interface
-    return data?.map((law: any) => ({
-      ...law,
-      sponsor: law.sponsor?.[0]?.congressman || null
-    })) as Law[];
-  } catch (error) {
-    console.error('Error fetching laws:', error);
-    return [] as Law[];
-  }
-}
+export const metadata: Metadata = {
+  title: 'Laws',
+  description: 'Explore enacted federal legislation and its authoritative source material.',
+};
 
 export default async function LawsPage() {
-  // Fetch initial data on the server
-  const initialLaws = await fetchInitialLaws();
+  const initialLaws = await getRecentLaws();
 
   return (
-    <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <LoadingIndicator size="large" />
-    </div>}>
-      <LawsClient
-        initialLaws={initialLaws}
-        policyAreas={POLICY_AREAS as PolicyArea[]}
-      />
+    <Suspense fallback={<div className="flex h-64 items-center justify-center"><LoadingIndicator size="large" /></div>}>
+      <LawsClient initialLaws={initialLaws} policyAreas={POLICY_AREAS as PolicyArea[]} />
     </Suspense>
   );
 }

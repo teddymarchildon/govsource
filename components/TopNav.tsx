@@ -17,6 +17,7 @@ import {
   Building,
   Briefcase,
   ChevronDown,
+  Newspaper,
 } from 'lucide-react';
 import LoadingIndicator from './ui/LoadingIndicator';
 
@@ -36,6 +37,7 @@ export default function TopNav() {
   const desktopWatchingRef = useRef<HTMLDivElement>(null);
   const navItems = [
     { label: 'Home', href: '/', icon: Home, group: 'home' },
+    { label: 'Briefings', href: '/articles', icon: Newspaper, group: 'home' },
     { label: 'Laws', href: '/laws', icon: Gavel, group: 'legislation' },
     { label: 'Bills', href: '/bills', icon: FileText, group: 'legislation' },
     { label: 'Executive Orders', href: '/executive-orders', icon: PenSquare, group: 'legislation' },

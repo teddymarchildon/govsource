@@ -8,7 +8,7 @@ import SaveButton from './SaveButton';
 import PdfViewer, { type PdfJumpTarget } from './PdfViewer';
 import Breadcrumbs from './Breadcrumbs';
 import AiChatWrapper from './AiChatWrapper';
-import { BillText, Congressman, BillSummary } from '@/types/types';
+import type { LegislationDetail } from '@/types/legislation';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -16,41 +16,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from './ui/
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getPolicyAreaColors } from '@/utils/policyColors';
 
-interface BillAction {
-  id: string;
-  bill_id: string;
-  date: string;
-  text: string;
-  type: string;
-}
-
-interface DetailItem {
-  id: string;
-  congress: number;
-  type: string;
-  number: string;
-  title: string;
-  policy_area: string;
-  introduced_date: string;
-  law_enacted_date?: string;
-  law_number?: string;
-  law_type?: string;
-  law_unique_id?: string;
-  law_title?: string;
-}
-
-// Patch BillText type to include 'type' for UI use
-export interface BillTextWithType extends BillText {
-  type?: string;
-}
-
-interface BillOrLawDetailProps {
-  item: DetailItem;
-  texts: BillTextWithType[];
-  sponsors: Congressman[];
-  cosponsors: Congressman[];
-  actions: BillAction[];
-  summary?: BillSummary | null;
+interface BillOrLawDetailProps extends LegislationDetail {
   isLaw?: boolean;
 }
 

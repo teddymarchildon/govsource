@@ -76,7 +76,7 @@ export default function ProfilePage() {
 
     setCheckoutLoading(true);
     try {
-      const url = await createCheckoutSession(user.id, window.location.href);
+      const url = await createCheckoutSession();
       if (url) {
         window.open(url, '_blank');
       }

@@ -980,167 +980,15 @@ export const getJudgeById = async (judgeId: string) => {
   return data;
 };
 
-export interface BillSearchResult {
-  id: number;
-  title: string | null;
-  type: string | null;
-  number: number | null;
-  congress: number | null;
-  bill_unique_id?: string | null;
-  updated_at: string | null;
-  created_at: string;
-  law_enacted_date?: string | null;
-  law_number?: string | null;
-  law_title?: string | null;
-}
-
-export interface ExecutiveOrderSearchResult {
-  id: number;
-  title: string | null;
-  remote_document_number: string | null;
-  signing_date: string | null;
-  president: string | null;
-  updated_at: string | null;
-  created_at: string;
-  subtype: string | null;
-}
-
-export const searchBillsAndExecutiveOrders = async (query: string, limit = 25) => {
-  if (!query || query.trim() === '') {
-    return {
-      bills: [] as BillSearchResult[],
-      executiveOrders: [] as ExecutiveOrderSearchResult[],
-    };
-  }
-
-  const trimmed = query.trim();
-  const sanitized = trimmed.replace(/[%_]/g, (match) => `\\${match}`);
-  const likePattern = `%${sanitized}%`;
-
-  const [bills, executiveOrders] = await Promise.all([
-    supabase
-      .from('bill')
-      .select(
-        'id, title, type, number, congress, bill_unique_id, updated_at, created_at, law_enacted_date, law_number, law_title'
-      )
-      .or(`title.ilike.${likePattern},bill_unique_id.ilike.${likePattern},law_title.ilike.${likePattern}`)
-      .order('updated_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false })
-      .limit(limit),
-    supabase
-      .from('agency_document')
-      .select('id, title, remote_document_number, signing_date, president, updated_at, created_at, subtype')
-      .eq('subtype', 'Executive Order')
-      .or(`title.ilike.${likePattern},remote_document_number.ilike.${likePattern}`)
-      .order('updated_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false })
-      .limit(limit),
-  ]);
-
-  if (bills.error) {
-    throw bills.error;
-  }
-  if (executiveOrders.error) {
-    throw executiveOrders.error;
-  }
-
-  return {
-    bills: (bills.data ?? []) as BillSearchResult[],
-    executiveOrders: (executiveOrders.data ?? []) as ExecutiveOrderSearchResult[],
-  };
-};
-
-// Global Search
-export const globalSearch = async (query: string, limit = 5) => {
-  
-  if (!query || query.trim() === '') return { bills: [], congressmen: [], agencies: [], cases: [], judges: [], agencyDocuments: [] };
-
-  const searchTerm = query.trim();
-
-  // Run parallel searches across different entities
-  const [bills, congressmen, agencies, clusters, judges, agencyDocs] = await Promise.all([
-    // Bills search
-    supabase.from('bill')
-      .select('id, title, congress, number, type, bill_unique_id')
-      .or(`title.ilike.%${searchTerm}%,bill_unique_id.ilike.%${searchTerm}%`)
-      .limit(limit),
-
-    // Congressmen search
-    supabase.from('congressman')
-      .select('id, full_name, party, state, chamber, bioguide_id')
-      .or(`full_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%`)
-      .limit(limit),
-
-    // Agencies search
-    supabase.from('agency')
-      .select('id, name, short_name')
-      .or(`name.ilike.%${searchTerm}%,short_name.ilike.%${searchTerm}%`)
-      .limit(limit),
-
-    // Court cases search
-    supabase.from('cluster')
-      .select('id, case_name, case_name_short')
-      .or(`case_name.ilike.%${searchTerm}%,case_name_short.ilike.%${searchTerm}%`)
-      .limit(limit),
-
-    // Judges search
-    supabase.from('judge')
-      .select('id, full_name')
-      .or(`full_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%`)
-      .limit(limit),
-
-    // Agency documents search
-    supabase.from('agency_document')
-      .select('id, title, type')
-      .or(`title.ilike.%${searchTerm}%,abstract.ilike.%${searchTerm}%`)
-      .limit(limit)
-  ]);
-
-  // Format and combine results
-  return {
-    bills: bills.data?.map(bill => ({
-      ...bill,
-      type: 'bill',
-      url: `/bills/${bill.id}`,
-      displayText: bill.title
-    })) || [],
-
-    congressmen: congressmen.data?.map(congressman => ({
-      ...congressman,
-      type: 'congressman',
-      url: `/congress-members/${congressman.id}`,
-      displayText: `${congressman.full_name} (${congressman.party}-${congressman.state})`
-    })) || [],
-
-    agencies: agencies.data?.map(agency => ({
-      ...agency,
-      type: 'agency',
-      url: `/agencies/${agency.id}`,
-      displayText: agency.name
-    })) || [],
-
-    cases: clusters.data?.map(cluster => ({
-      ...cluster,
-      type: 'case',
-      url: `/supreme-court-cases/${cluster.id}`,
-      displayText: cluster.case_name
-    })) || [],
-
-    judges: judges.data?.map(judge => ({
-      ...judge,
-      type: 'judge',
-      url: `/judges/${judge.id}`,
-      displayText: judge.full_name
-    })) || [],
-
-    agencyDocuments: agencyDocs.data?.map(doc => ({
-      ...doc,
-      type: 'agency-rule',
-      url: `/agency-rules/${doc.id}`,
-      displayText: doc.title
-    })) || []
-  };
-};
+export {
+  globalSearch,
+  searchBillsAndExecutiveOrders,
+} from './search';
+export type {
+  BillSearchResult,
+  ExecutiveOrderSearchResult,
+  GlobalSearchResults,
+} from './search';
 
 // Save/Unsave Judge
 export const saveJudge = async (userId: string, judgeId: string) => {
@@ -1432,63 +1280,10 @@ export const getBillSummary = async (billId: string): Promise<BillSummary | null
   return data && data.length > 0 ? data[0] as BillSummary : null;
 };
 
-// Subscription & Payment API
-export const getUserSubscription = async (userId: string) => {
-  
-  const { data, error } = await supabase
-    .from('subscription')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1);
-  if (error) throw error;
-  return data && data.length > 0 ? data[0] : null;
-};
-
-// Upsert a free subscription - creates if doesn't exist, does nothing if it exists
-export const upsertSubscription = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('subscription')
-      .upsert({ user_id: userId, status: 'active'}, { onConflict: 'user_id' });
-  
-    if (error) throw error;
-    return data;
-};
-
-export const createCheckoutSession = async (userId: string, redirectUrl: string) => {
-  const response = await fetch('/api/create-checkout-session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userId, redirectUrl }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create checkout session');
-  }
-
-  const session = await response.json();
-  return session.url;
-};
-
-// Upsert a user_usage row - creates if doesn't exist, does nothing if it exists
-export const upsertUserUsage = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('user_usage')
-    .upsert({ user_id: userId }, { onConflict: 'user_id' });
-  if (error) throw error;
-  return data;
-};
-
-// Get user_usage row for a user
-export const getUserUsage = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('user_usage')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-};
+export {
+  createCheckoutSession,
+  getUserSubscription,
+  getUserUsage,
+  upsertSubscription,
+  upsertUserUsage,
+} from './account';

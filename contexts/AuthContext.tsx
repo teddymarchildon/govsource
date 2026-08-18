@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPaid = tier === 'paid';
         setIsPaidSubscriber(isPaid);
       } else {
-        await upsertSubscription(userId);
+        await upsertSubscription();
         setIsPaidSubscriber(false);
       }
       // Fetch aiInteractions from user_usage

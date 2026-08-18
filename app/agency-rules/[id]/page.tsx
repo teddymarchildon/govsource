@@ -1,79 +1,33 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { supabase } from '@/utils/supabase/client';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import AgencyRuleDetail from '@/components/AgencyRuleDetail';
-import { AgencyDocument } from '@/types/types';
-import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { getAgencyDocument } from '@/lib/repositories/agencyDocuments';
 
-export default function AgencyRuleDetailPage() {
-  const { id } = useParams();
-  const [rule, setRule] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
+export const dynamic = 'force-dynamic';
 
-  useEffect(() => {
-    const fetchRule = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('agency_document')
-        .select(`
-          id,
-          title,
-          remote_document_number,
-          publication_date,
-          abstract,
-          pdf_url,
-          pdf_file_path,
-          html_url,
-          html_file_path,
-          xml_url,
-          xml_file_path,
-          type,
-          subtype,
-          agencies:agency_agencydocument!agency_document_id(
-            agency:agency(id, name, short_name)
-          )
-        `)
-        .eq('id', id)
-        .single();
+type AgencyDocumentPageProps = {
+  params: Promise<{ id: string }>;
+};
 
-      if (error) {
-        console.error('Error fetching agency rule:', error);
-        setLoading(false);
-        return;
-      }
+export async function generateMetadata({ params }: AgencyDocumentPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const document = await getAgencyDocument(id);
 
-      // Transform the data to match our interface
-      const transformedData = data ? {
-        ...data,
-        agency: data.agencies?.[0]?.agency || null
-      } : null;
-
-      setRule(transformedData);
-      setLoading(false);
-    };
-
-    fetchRule();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <LoadingIndicator size="large" />
-      </div>
-    );
+  if (!document || document.subtype === 'Executive Order') {
+    return { title: 'Agency document not found' };
   }
 
-  if (!rule) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
-          <p className="text-red-700">Agency rule not found</p>
-        </div>
-      </div>
-    );
-  }
+  return {
+    title: document.title,
+    description: document.abstract?.replace(/<[^>]+>/g, '').slice(0, 160) ?? 'Federal agency document.',
+  };
+}
 
-  return <AgencyRuleDetail rule={rule as AgencyDocument} />;
+export default async function AgencyDocumentDetailPage({ params }: AgencyDocumentPageProps) {
+  const { id } = await params;
+  const document = await getAgencyDocument(id);
+
+  if (!document || document.subtype === 'Executive Order') notFound();
+
+  return <AgencyRuleDetail rule={document} />;
 }

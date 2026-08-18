@@ -1,57 +1,24 @@
-export const dynamic = 'force-dynamic';
-
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { createClient } from '@/utils/supabase/server';
-import { Bill } from '@/types/types';
-import { POLICY_AREAS } from '@/constants/policyAreas';
-import type { PolicyArea } from '@/types/types';
 import BillsClient from './BillsClient';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { POLICY_AREAS } from '@/constants/policyAreas';
+import { getRecentBills } from '@/lib/repositories/legislation';
+import type { PolicyArea } from '@/types/types';
 
-// Server Component
-async function fetchInitialBills() {
-  const supabase = await createClient()
-  try {
-    const { data, error } = await supabase
-      .from('bill')
-      .select(`
-        *,
-        sponsor:sponsored_bills(
-          congressman:congressman(*)
-        )
-      `)
-      .is('law_enacted_date', null)
-      .order('introduced_date', { ascending: false })
-      .range(0, 49);
+export const dynamic = 'force-dynamic';
 
-    if (error) {
-      console.error('Error fetching bills:', error);
-      return [] as Bill[];
-    }
-
-    // Transform the data to match our Bill interface
-    return data?.map((bill: any) => ({
-      ...bill,
-      sponsor: bill.sponsor?.[0]?.congressman || null
-    })) as Bill[];
-  } catch (error) {
-    console.error('Error fetching bills:', error);
-    return [] as Bill[];
-  }
-}
+export const metadata: Metadata = {
+  title: 'Bills',
+  description: 'Browse congressional bills, sponsors, actions, policy areas, and source text.',
+};
 
 export default async function BillsPage() {
-  // Fetch initial data on the server
-  const initialBills = await fetchInitialBills();
+  const initialBills = await getRecentBills();
 
   return (
-    <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <LoadingIndicator size="large" />
-    </div>}>
-      <BillsClient
-        initialBills={initialBills}
-        policyAreas={POLICY_AREAS as PolicyArea[]}
-      />
+    <Suspense fallback={<div className="flex h-64 items-center justify-center"><LoadingIndicator size="large" /></div>}>
+      <BillsClient initialBills={initialBills} policyAreas={POLICY_AREAS as PolicyArea[]} />
     </Suspense>
   );
 }

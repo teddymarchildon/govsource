@@ -1,72 +1,31 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { getBillById, getBillTexts, getBillSponsors, getBillCosponsors, getBillActions, getBillSummary } from '../../../services/api';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import BillOrLawDetail from '@/components/BillOrLawDetail';
-import { useParams } from 'next/navigation';
-import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { getLegislationDetail } from '@/lib/repositories/legislation';
 
-export default function BillDetailPage() {
-  const params = useParams();
-  const billId = params.id as string;
-  const [bill, setBill] = useState<any>(null);
-  const [texts, setTexts] = useState<any[]>([]);
-  const [sponsors, setSponsors] = useState<any[]>([]);
-  const [cosponsors, setCosponsors] = useState<any[]>([]);
-  const [actions, setActions] = useState<any[]>([]);
-  const [summary, setSummary] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export const dynamic = 'force-dynamic';
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const billData = await getBillById(billId);
-        const textsData = await getBillTexts(billId);
-        const sponsorsData = await getBillSponsors(billId);
-        const cosponsorsData = await getBillCosponsors(billId);
-        const actionsData = await getBillActions(billId);
-        const summaryData = await getBillSummary(billId);
+type BillDetailPageProps = {
+  params: Promise<{ id: string }>;
+};
 
-        setBill(billData);
-        setTexts(textsData);
-        setSponsors(sponsorsData);
-        setCosponsors(cosponsorsData);
-        setActions(actionsData);
-        setSummary(summaryData);
-      } catch (error) {
-        console.error('Error fetching bill data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+export async function generateMetadata({ params }: BillDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const detail = await getLegislationDetail(id, 'bill');
 
-    fetchData();
-  }, [billId]);
+  if (!detail) return { title: 'Bill not found' };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center h-64">
-          <LoadingIndicator size="large" />
-        </div>
-      </div>
-    );
-  }
+  return {
+    title: `${detail.item.type.toUpperCase()}. ${detail.item.number}: ${detail.item.title}`,
+    description: detail.summary?.text?.slice(0, 160) ?? `Read and analyze ${detail.item.title}.`,
+  };
+}
 
-  if (!bill) {
-    return <div>Bill not found</div>;
-  }
+export default async function BillDetailPage({ params }: BillDetailPageProps) {
+  const { id } = await params;
+  const detail = await getLegislationDetail(id, 'bill');
 
-  return (
-    <BillOrLawDetail
-      item={bill}
-      texts={texts}
-      sponsors={sponsors}
-      cosponsors={cosponsors}
-      actions={actions}
-      summary={summary}
-      isLaw={false}
-    />
-  );
+  if (!detail) notFound();
+
+  return <BillOrLawDetail {...detail} isLaw={false} />;
 }

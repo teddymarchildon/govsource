@@ -17,7 +17,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'GovSource - AI-Powered Legislative Insights | Track Congress members',
+  title: {
+    default: 'GovSource - AI-Powered Legislative Insights',
+    template: '%s | GovSource',
+  },
   description: 'Track US Congress members and legislative activities with AI-powered insights. Discover bills, laws, and government information.',
   keywords: 'congress members, us congress members, legislative tracking, government data, bills, laws',
   icons: {

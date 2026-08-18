@@ -1,77 +1,25 @@
+import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import AgencyRulesClient from './AgencyRulesClient';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { getRecentAgencyDocuments, getTopLevelAgencies } from '@/lib/repositories/agencyDocuments';
+
 export const dynamic = 'force-dynamic';
 
-import { Suspense } from 'react';
-import { createClient } from '@/utils/supabase/server';
-import AgencyRulesClient from './AgencyRulesClient';
-import { Agency, AgencyDocument } from '@/types/types';
-import LoadingIndicator from '@/components/ui/LoadingIndicator';
-
-// Server-side fetch for initial rules
-async function fetchInitialRules() {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('agency_document')
-      .select(`
-        *,
-        agencies:agency_agencydocument!agency_document_id(
-          agency:agency(*)
-        )
-      `)
-      .neq('subtype', 'Executive Order')
-      .order('publication_date', { ascending: false })
-      .limit(50);
-
-    if (error) {
-      console.error('Error fetching agency rules:', error);
-      return [] as AgencyDocument[];
-    }
-
-    return data?.map((doc: any) => ({
-      ...doc,
-      agency: doc.agencies?.[0]?.agency || null
-    })) as AgencyDocument[];
-  } catch (error) {
-    console.error('Error fetching agency rules:', error);
-    return [] as AgencyDocument[];
-  }
-}
-
-// Server-side fetch for top-level agencies
-async function fetchTopLevelAgencies() {
-  try { 
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('agency')
-      .select('*')
-      .is('parent_id', null)
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching agencies:', error);
-      return [] as Agency[];
-    }
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching agencies:', error);
-    return [] as Agency[];
-  }
-}
+export const metadata: Metadata = {
+  title: 'Agency Documents',
+  description: 'Review federal agency rules, notices, and regulatory source documents.',
+};
 
 export default async function AgencyRulesPage() {
   const [initialRules, agencies] = await Promise.all([
-    fetchInitialRules(),
-    fetchTopLevelAgencies()
+    getRecentAgencyDocuments(),
+    getTopLevelAgencies(),
   ]);
 
   return (
-    <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <LoadingIndicator size="large" />
-    </div>}>
-      <AgencyRulesClient
-        initialRules={initialRules}
-        agencies={agencies}
-      />
+    <Suspense fallback={<div className="flex h-64 items-center justify-center"><LoadingIndicator size="large" /></div>}>
+      <AgencyRulesClient initialRules={initialRules} agencies={agencies} />
     </Suspense>
   );
 }

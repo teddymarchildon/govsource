@@ -2,10 +2,12 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { ADMIN_EMAIL, getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
+import { createAdminClient } from '@/utils/supabase/admin';
+import type { ContentType } from '@/types/content';
+import { getContentHref } from '@/utils/contentReferences';
 
-type RankedItemType = 'bill' | 'law' | 'agency_document' | 'cluster' | 'executive_order';
+type RankedItemType = ContentType;
 
 interface RankedItemRow {
   id: number;
@@ -28,22 +30,7 @@ type RankedItemWithSummary = RankedItemRow & {
   item: ResolvedItemSummary | null;
 };
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
-}
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for ranked item admin');
-}
-
-const supabaseAdmin = createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
+const supabaseAdmin = createAdminClient();
 
 const RankedItemTypeSchema = z.enum(['bill', 'law', 'agency_document', 'cluster', 'executive_order']);
 
@@ -272,7 +259,7 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
         resolved.set(key, {
           title: `Missing ${row.item_type} #${row.item_id}`,
           subtitle: null,
-          href: row.item_type === 'law' ? `/laws/${row.item_id}` : `/bills/${row.item_id}`,
+          href: getContentHref({ type: row.item_type, id: String(row.item_id) }),
         });
         return;
       }
@@ -281,7 +268,7 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
         resolved.set(key, {
           title: bill.law_title || bill.title || `Law ${bill.law_number ?? row.item_id}`,
           subtitle: bill.law_number ? `Law ${bill.law_number}` : formatBillLabel(bill),
-          href: `/laws/${row.item_id}`,
+          href: getContentHref({ type: 'law', id: String(row.item_id) }),
         });
         return;
       }
@@ -289,7 +276,7 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
       resolved.set(key, {
         title: bill.title || `Bill ${row.item_id}`,
         subtitle: formatBillLabel(bill) || null,
-        href: `/bills/${row.item_id}`,
+        href: getContentHref({ type: 'bill', id: String(row.item_id) }),
       });
       return;
     }
@@ -300,7 +287,7 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
         resolved.set(key, {
           title: `Missing ${row.item_type} #${row.item_id}`,
           subtitle: null,
-          href: row.item_type === 'executive_order' ? `/executive-orders/${row.item_id}` : `/agency-rules/${row.item_id}`,
+          href: getContentHref({ type: row.item_type, id: String(row.item_id) }),
         });
         return;
       }
@@ -313,7 +300,7 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
         resolved.set(key, {
           title,
           subtitle: subtitle || null,
-          href: `/executive-orders/${row.item_id}`,
+          href: getContentHref({ type: 'executive_order', id: String(row.item_id) }),
         });
         return;
       }
@@ -321,7 +308,7 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
       resolved.set(key, {
         title: document.title || `Agency Rule ${row.item_id}`,
         subtitle: document.subtype || null,
-        href: `/agency-rules/${row.item_id}`,
+        href: getContentHref({ type: 'agency_document', id: String(row.item_id) }),
       });
       return;
     }
@@ -330,7 +317,7 @@ async function resolveItemSummaries(rows: RankedItemRow[]) {
     resolved.set(key, {
       title: cluster?.case_name || cluster?.case_name_short || `Case ${row.item_id}`,
       subtitle: cluster?.slug || null,
-      href: `/supreme-court-cases/${row.item_id}`,
+      href: getContentHref({ type: 'cluster', id: String(row.item_id) }),
     });
   });
 
@@ -344,7 +331,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     if (!isAdmin) {
-      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const { data, error } = await supabaseAdmin
@@ -400,7 +387,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     if (!isAdmin) {
-      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const payload = await request.json();
@@ -455,7 +442,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     if (!isAdmin) {
-      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const payload = await request.json();

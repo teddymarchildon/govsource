@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { fetchHtmlContent, processDocumentContent } from '@/utils/documentUtils';
-import { ADMIN_EMAIL, getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
+import { getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
 import {
   Agent,
   run,
@@ -12,7 +12,8 @@ import {
   user as createUserMessage,
   type AgentInputItem,
 } from '@openai/agents';
-import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 type PrimaryItemType = 'bill' | 'law' | 'executive_order' | 'cluster';
 
@@ -51,27 +52,14 @@ const ArticleModelSchema = z.object({
   source_urls: z.array(z.string().url()).length(1),
 });
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-if (!SUPABASE_URL) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
-}
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for admin article generation');
-}
 if (!OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY is required for admin article generation');
 }
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-const supabaseAdmin = createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
+const supabaseAdmin = createAdminClient();
 
 interface DocumentSource {
   label: string;
@@ -656,7 +644,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     if (!isAdmin) {
-      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const url = new URL(request.url);
@@ -800,7 +788,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     if (!isAdmin) {
-      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -861,7 +849,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     if (!isAdmin) {
-      return NextResponse.json({ error: `Admin access required (${ADMIN_EMAIL})` }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
