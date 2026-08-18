@@ -22,10 +22,9 @@ import { getLoginUrl } from '@/utils/utils';
 import ExecutiveOrderCard from '../components/ExecutiveOrderCard';
 import AgencyRuleCard from '../components/AgencyRuleCard';
 import CourtCaseCard from '../components/CourtCaseCard';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import PublicHome, { type PopularHomepageItem } from '@/components/home/PublicHome';
 
 function HomeContent() {
   const router = useRouter();
@@ -55,7 +54,7 @@ function HomeContent() {
   const [recentLegislationLoading, setRecentLegislationLoading] = useState(false);
 
   // Popular section state
-  const [popularItems, setPopularItems] = useState<any[]>([]);
+  const [popularItems, setPopularItems] = useState<PopularHomepageItem[]>([]);
   const [popularLoading, setPopularLoading] = useState(true);
 
   // Fetch user data when logged in
@@ -639,210 +638,16 @@ function HomeContent() {
 
   // Render logged-out experience
   return (
-    <div className="container mx-auto px-4 py-10">
-      {/* Welcome Section */}
-      <Card className="mb-8 border-0 bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg">
-        <CardHeader className="pb-4">
-          <div className="mb-3 flex flex-wrap gap-2">
-            <Badge className="border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">
-              Federal Source Data
-            </Badge>
-            <Badge className="border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">
-              AI-Powered Analysis
-            </Badge>
-          </div>
-          <CardTitle className="text-3xl md:text-4xl">Welcome to GovSource</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="max-w-3xl text-primary-foreground/90 md:text-base">
-            See the source of US federal legislation, executive orders, court cases, and more. Track Congress member activities and legislative developments.
-          </p>
-          <div className="mt-6">
-            <Link href={getLoginUrl(pathname)}>
-              <Button
-                variant="outline"
-                className="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
-              >
-                Start Tracking
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Popular Section (moved below Welcome) */}
-      <div className="mb-10">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Popular now</h2>
-        </div>
-        {popularLoading ? (
-          <div className="flex justify-center items-center h-32">
-            <LoadingIndicator size="large" />
-          </div>
-        ) : popularItems.length === 0 ? (
-          <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-            <p className="text-muted-foreground">No popular items found.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {popularItems.map((item) => {
-              switch (item.item_type) {
-                case 'bill':
-                  return <BillCard key={`popular-bill-${item.data.id}`} bill={item.data} />;
-                case 'law':
-                  return <LawCard key={`popular-law-${item.data.id}`} law={item.data} />;
-                case 'executive_order':
-                  return <ExecutiveOrderCard key={`popular-execorder-${item.data.id}`} order={item.data} />;
-                case 'agency_document':
-                  return <AgencyRuleCard key={`popular-agencydoc-${item.data.id}`} rule={item.data} />;
-                case 'cluster':
-                  return <CourtCaseCard key={`popular-cluster-${item.data.id}`} cluster={item.data} />;
-                default:
-                  return null;
-              }
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Why Sign Up Section */}
-      <Card className="mb-8 border-border/80 bg-card/95">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl">Sign in to:</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-muted-foreground">
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <span>Save and track government information including Congress members and their activities</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <span>Access advanced AI-powered analysis on laws, bills, executive orders, and more</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <span>Track Congress members voting records and legislative history</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <span>Get personalized legislative updates (coming soon)</span>
-            </li>
-          </ul>
-          <div className="mt-7">
-            <Link href={getLoginUrl(pathname)}>
-              <Button>Sign In</Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Executive Orders */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Recent Executive Orders</h2>
-          <Link href="/executive-orders" className="text-sm text-primary hover:underline">
-            View all
-          </Link>
-        </div>
-        {recentExecutiveOrders.length > 0 ? (
-          <div className="space-y-4">
-            {recentExecutiveOrders.map((order) => (
-              <div key={order.id} className="rounded-xl border border-border/80 bg-card/95 p-4 shadow-sm">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <Link
-                      href={`/executive-orders/${order.id}`}
-                      className="text-lg font-medium text-foreground transition-colors hover:text-primary"
-                    >
-                      {order.title}
-                    </Link>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {order.signing_date && (
-                        <span>Signed on {new Date(order.signing_date).toLocaleDateString()}</span>
-                      )}
-                      {order.president && (
-                        <span> by President {order.president}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="ml-4 flex-shrink-0">
-                    <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
-                      Executive Order
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-            <p className="text-muted-foreground">No recent executive orders found.</p>
-          </div>
-        )}
-      </div>
-
-      {/* SEO Content Section */}
-      <div className="mb-8 rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Track Congress members and legislative activities</h2>
-        <div className="grid grid-cols-1 gap-6 text-sm text-muted-foreground md:grid-cols-2">
-          <div>
-            <h3 className="font-medium mb-2">Congress members</h3>
-            <p className="mb-3">
-              Discover and track Congress members from all states. 
-              Monitor their voting records, sponsored bills, and legislative activities.
-            </p>
-            <Link href="/congress-members" className="text-primary hover:underline font-medium">
-              Browse all Congress members →
-            </Link>
-          </div>
-          <div>
-            <h3 className="font-medium mb-2">Legislative Tracking</h3>
-            <p className="mb-3">
-              Stay informed about the latest bills, laws, and government activities. 
-              Track how Congress members vote and influence policy decisions.
-            </p>
-            <Link href="/bills" className="text-primary hover:underline font-medium">
-              View recent legislation →
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Bills Filter/Search and Grid */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Recent Legislation</h2>
-          <Link href="/bills" className="text-sm text-primary hover:underline">
-            View all
-          </Link>
-        </div>
-      </div>
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <LoadingIndicator size="large" />
-        </div>
-      ) : (
-        <>
-          {bills.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {bills.map((bill) => (
-                <BillCard key={bill.id} bill={bill} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-              <p className="text-muted-foreground">
-                No bills found.
-              </p>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    <PublicHome
+      bills={bills}
+      billsLoading={loading}
+      loginUrl={getLoginUrl(pathname)}
+      popularItems={popularItems}
+      popularLoading={popularLoading}
+      recentExecutiveOrders={recentExecutiveOrders}
+    />
   );
 }
-
 export default function HomePage() {
   return (
     <Suspense fallback={<div className="flex justify-center items-center h-64">

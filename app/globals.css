@@ -6,26 +6,30 @@
 
 @layer base {
   :root {
-    --background: 220 23% 97%;
-    --foreground: 221 39% 14%;
-    --card: 0 0% 100%;
-    --card-foreground: 221 39% 14%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 221 39% 14%;
-    --primary: 216 60% 36%;
+    --background: 45 33% 95%;
+    --foreground: 216 49% 15%;
+    --card: 40 100% 99%;
+    --card-foreground: 216 49% 15%;
+    --popover: 40 100% 99%;
+    --popover-foreground: 216 49% 15%;
+    --primary: 209 59% 35%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 214 32% 93%;
-    --secondary-foreground: 221 39% 18%;
-    --muted: 214 28% 95%;
-    --muted-foreground: 219 16% 43%;
-    --accent: 214 40% 93%;
-    --accent-foreground: 221 39% 18%;
+    --secondary: 40 24% 92%;
+    --secondary-foreground: 216 42% 18%;
+    --muted: 42 22% 92%;
+    --muted-foreground: 211 12% 42%;
+    --accent: 174 22% 90%;
+    --accent-foreground: 174 42% 24%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 27% 86%;
-    --input: 214 27% 86%;
-    --ring: 216 60% 36%;
-    --radius: 0.8rem;
+    --border: 215 19% 87%;
+    --input: 215 19% 87%;
+    --ring: 209 59% 35%;
+    --ink: 216 49% 15%;
+    --ink-foreground: 40 33% 97%;
+    --trust: 174 42% 32%;
+    --highlight: 42 62% 53%;
+    --radius: 0.7rem;
   }
 
   .dark {
@@ -56,8 +60,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(circle at 10% -10%, hsl(var(--primary) / 0.1), transparent 30%),
-      radial-gradient(circle at 95% 5%, hsl(221 70% 60% / 0.08), transparent 26%);
+      radial-gradient(circle at 10% -10%, hsl(var(--primary) / 0.055), transparent 30%),
+      radial-gradient(circle at 95% 5%, hsl(var(--trust) / 0.045), transparent 26%);
     min-height: 100vh;
   }
   

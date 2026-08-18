@@ -18,17 +18,17 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'GovSource - AI-Powered Legislative Insights',
+    default: 'GovSource - Federal Public Records, Made Clear',
     template: '%s | GovSource',
   },
-  description: 'Track US Congress members and legislative activities with AI-powered insights. Discover bills, laws, and government information.',
+  description: 'Explore federal bills, laws, executive orders, agency actions, and court decisions with clear context and links to official sources.',
   keywords: 'congress members, us congress members, legislative tracking, government data, bills, laws',
   icons: {
     icon: '/favicon.png',
   },
   openGraph: {
-    title: 'GovSource - AI-Powered Legislative Insights | Track Congress members',
-    description: 'Track US Congress members and legislative activities with AI-powered insights. Discover bills, laws, and government information.',
+    title: 'GovSource - Federal Public Records, Made Clear',
+    description: 'Explore federal bills, laws, executive orders, agency actions, and court decisions with clear context and links to official sources.',
     url: 'https://www.govsrc.com',
     siteName: 'GovSource',
     type: 'website',
@@ -51,7 +51,7 @@ export default async function RootLayout({
       <body className={`${inter.className} font-sans`}>
         <AuthProvider>
           <NavigationProvider>
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-background">
               <Header />
               <TopNav />
               <main className="p-4 pt-16 md:p-6 md:pt-[7.5rem]">

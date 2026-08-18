@@ -189,7 +189,7 @@ export default function Header() {
             <div className="relative mr-4" ref={searchContainerRef}>
               <Input
                 type="text"
-                placeholder="Search the government..."
+                placeholder="Search public records..."
                 className="w-64 rounded-full border-border/80 bg-background/90 py-2 pl-10 pr-4 text-sm shadow-sm"
                 value={searchQuery}
                 onChange={handleSearchChange}
@@ -286,7 +286,7 @@ export default function Header() {
           <div className="relative" ref={searchContainerRef}>
             <Input
               type="text"
-              placeholder="Search the government..."
+              placeholder="Search public records..."
               className="w-full rounded-full border-border/80 bg-background/90 py-2 pl-10 pr-4 text-sm shadow-sm"
               value={searchQuery}
               onChange={handleSearchChange}
