@@ -1,0 +1,790 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { FileText, Sparkles, BookOpenText, Scale, Loader, CheckCircle2, XCircle, Copy, Check, ArrowUp, Square, CalendarDays, Users } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { usePathname } from 'next/navigation';
+import { getLoginUrl } from '@/utils/utils';
+import { AI_FREE_USAGE_LIMIT, ANON_LIMIT } from '@/constants/onboarding';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: CitationMeta[];
+  runLog?: Activity[];
+  runState?: RunState;
+}
+
+interface Activity {
+  id: string;
+  label: string;
+  status: 'running' | 'completed' | 'error';
+  detail?: string;
+}
+
+type RunState = 'completed' | 'stopped' | 'error' | 'partial';
+type RailStageId = 'understand' | 'retrieve' | 'draft';
+type RailStageStatus = 'pending' | 'running' | 'completed' | 'error';
+
+interface CitationMeta {
+  label: string;
+  section: number;
+  page?: number;
+  searchText?: string;
+}
+
+type PresetType = 'default' | 'summarizeKeyPoints' | 'documentContext' | 'prosAndCons' | 'diff' | 'deadlines' | 'affectedParties';
+
+interface Preset {
+  type: PresetType;
+  label: string;
+  icon: typeof FileText;
+  getMessage: (noun: string) => string;
+}
+
+function extractSectionCitations(content: string): string[] {
+  const matches = content.match(/\[Section\s+\d+\]/gi) || [];
+  return [...new Set(matches.map(citation => citation.replace(/\s+/g, ' ').trim()))];
+}
+
+function upsertActivity(list: Activity[], activity: Activity): Activity[] {
+  const idx = list.findIndex(a => a.id === activity.id);
+  if (idx === -1) return [...list, activity];
+  const updated = [...list];
+  updated[idx] = { ...updated[idx], ...activity };
+  return updated;
+}
+
+const RAIL_STAGES: { id: RailStageId; label: string }[] = [
+  { id: 'understand', label: 'Understand' },
+  { id: 'retrieve', label: 'Retrieve' },
+  { id: 'draft', label: 'Draft' },
+];
+
+const RAIL_STAGE_ORDER: RailStageId[] = ['understand', 'retrieve', 'draft'];
+
+const RAIL_STAGE_COPY: Record<RailStageId, string> = {
+  understand: 'Analyzing your question',
+  retrieve: 'Reviewing relevant document sections',
+  draft: 'Drafting the answer',
+};
+
+function getActivityStage(activity: Activity): RailStageId {
+  if (activity.id === 'understanding') return 'understand';
+  if (activity.id === 'drafting') return 'draft';
+  return 'retrieve';
+}
+
+function getRailStageStatuses(activities: Activity[], isRunning: boolean): Record<RailStageId, RailStageStatus> {
+  const statuses: Record<RailStageId, RailStageStatus> = {
+    understand: 'pending',
+    retrieve: 'pending',
+    draft: 'pending',
+  };
+
+  for (const activity of activities) {
+    const stage = getActivityStage(activity);
+    if (activity.status === 'error') {
+      statuses[stage] = 'error';
+    } else if (activity.status === 'running' && statuses[stage] !== 'error') {
+      statuses[stage] = 'running';
+    } else if (activity.status === 'completed' && statuses[stage] === 'pending') {
+      statuses[stage] = 'completed';
+    }
+  }
+
+  const activeIndex = RAIL_STAGE_ORDER.findIndex(stage => statuses[stage] === 'running');
+  if (activeIndex > 0) {
+    RAIL_STAGE_ORDER.slice(0, activeIndex).forEach(stage => {
+      if (statuses[stage] === 'pending') statuses[stage] = 'completed';
+    });
+  }
+
+  if (!isRunning && activities.length > 0) {
+    RAIL_STAGE_ORDER.forEach(stage => {
+      if (statuses[stage] === 'pending') statuses[stage] = 'completed';
+    });
+  }
+
+  return statuses;
+}
+
+const PRESETS: Preset[] = [
+  { type: 'summarizeKeyPoints', label: 'Key points', icon: Sparkles, getMessage: n => `Please summarize the key points of this ${n}.` },
+  { type: 'documentContext', label: 'Document context', icon: BookOpenText, getMessage: n => `What context, background, findings, purposes, or authorities does this ${n} state?` },
+  { type: 'prosAndCons', label: 'Pros & Cons', icon: Scale, getMessage: n => `What are the pros and cons of this ${n}?` },
+  { type: 'deadlines', label: 'Deadlines', icon: CalendarDays, getMessage: n => `What dates, deadlines, effective dates, or reporting timelines does this ${n} include?` },
+  { type: 'affectedParties', label: 'Who is affected', icon: Users, getMessage: n => `Who is affected by this ${n}, and how?` },
+];
+
+const DOCUMENT_NOUNS: Record<string, string> = {
+  bill: 'bill',
+  law: 'law',
+  agencyDocument: 'agency document',
+  opinion: 'opinion',
+  executiveOrder: 'executive order',
+};
+
+interface AiChatProps {
+  documentType: 'bill' | 'law' | 'agencyDocument' | 'opinion' | 'executiveOrder';
+  documentId: string;
+  documentTitle: string;
+  htmlFilePath?: string;
+  pdfFilePath?: string;
+  diffHtmlFilePaths?: (string | undefined)[];
+  height?: string;
+  onCitationClick?: (citation: CitationMeta) => void;
+}
+
+export default function AiChat({
+  documentType,
+  documentId,
+  documentTitle,
+  htmlFilePath,
+  diffHtmlFilePaths,
+  height = '600px',
+  onCitationClick
+}: AiChatProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [streamingCitations, setStreamingCitations] = useState<CitationMeta[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const { user, loading: authLoading, isPaidSubscriber, aiInteractions, aiLimitReached } = useAuth();
+  const pathname = usePathname();
+
+  // Anonymous usage tracking
+  const [anonUsage, setAnonUsage] = useState(0);
+  const anonLimitReached = anonUsage >= ANON_LIMIT;
+
+  useEffect(() => {
+    if (!user && !authLoading) {
+      const usage = parseInt(document.cookie.match(/ai_usage=(\d+)/)?.[1] || '0', 10);
+      setAnonUsage(isNaN(usage) ? 0 : usage);
+    }
+  }, [user, authLoading]);
+
+  useEffect(() => {
+    return () => abortControllerRef.current?.abort();
+  }, []);
+
+  // Auto-scroll when messages or streaming content changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamingContent]);
+
+  const noun = DOCUMENT_NOUNS[documentType] || 'document';
+  const aiLocked = user ? aiLimitReached : anonLimitReached;
+  const sourceUnavailable = !htmlFilePath;
+  const usageLabel = user
+    ? (!isPaidSubscriber ? `${aiInteractions}/${AI_FREE_USAGE_LIMIT} free uses` : 'Pro')
+    : (!authLoading ? `${anonUsage}/${ANON_LIMIT} trial uses` : null);
+
+  // Build presets list, adding diff preset if applicable
+  const presets = [...PRESETS];
+  if ((documentType === 'bill' || documentType === 'law') && diffHtmlFilePaths?.length === 2 && diffHtmlFilePaths[0] && diffHtmlFilePaths[1]) {
+    presets.unshift({
+      type: 'diff',
+      label: 'Difference between versions',
+      icon: FileText,
+      getMessage: n => `What are the differences between the two most recent versions of this ${n}?`
+    });
+  }
+
+  const sendMessage = async (messagesToSend: Message[], presetType: PresetType = 'default') => {
+    let accumulatedContent = '';
+    let pendingCitations: CitationMeta[] = [];
+    let didCommitMessage = false;
+    let runActivities: Activity[] = [{ id: 'understanding', label: 'Understanding request', status: 'running', detail: 'Analyzing your question' }];
+
+    const applyActivityUpdate = (activity: Activity) => {
+      runActivities = upsertActivity(runActivities, activity);
+      setActivities(runActivities);
+    };
+    const commitAssistantMessage = (content: string, runState: RunState) => {
+      setMessages(prev => [...prev, { role: 'assistant', content, citations: pendingCitations, runLog: runActivities, runState }]);
+      didCommitMessage = true;
+    };
+
+    setIsLoading(true);
+    setError(null);
+    setStreamingContent('');
+    setStreamingCitations([]);
+    setActivities(runActivities);
+
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const body: Record<string, any> = {
+        messages: messagesToSend,
+        documentType,
+        documentId,
+        documentTitle,
+        htmlFilePath,
+        presetType,
+      };
+
+      if (presetType === 'diff' && diffHtmlFilePaths?.length === 2) {
+        body.diffHtmlFilePaths = diffHtmlFilePaths;
+      }
+
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        if (!user && response.status === 403) setAnonUsage(ANON_LIMIT);
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Error: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('Content-Type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        const data = await response.json().catch(() => ({}));
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message || data.error || 'No response.' }]);
+        if (!user) setAnonUsage(u => u + 1);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf('\n\n');
+
+        while (boundary !== -1) {
+          const chunk = buffer.slice(0, boundary).trim();
+          buffer = buffer.slice(boundary + 2);
+
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data:')) continue;
+            try {
+              const payload = JSON.parse(line.slice(5).trim());
+
+              if (payload.type === 'phase' || payload.type === 'tool') {
+                applyActivityUpdate({ id: payload.id, label: payload.label, status: payload.status, detail: payload.detail });
+              } else if (payload.type === 'text_delta') {
+                accumulatedContent += payload.delta;
+                setStreamingContent(accumulatedContent);
+              } else if (payload.type === 'citations') {
+                const nextCitations = Array.isArray(payload.citations) ? payload.citations : [];
+                pendingCitations = nextCitations;
+                setStreamingCitations(nextCitations);
+              } else if (payload.type === 'stream_end') {
+                if (accumulatedContent.trim()) {
+                  commitAssistantMessage(accumulatedContent, 'completed');
+                  if (!user) setAnonUsage(u => u + 1);
+                }
+                setStreamingContent('');
+                setStreamingCitations([]);
+              } else if (payload.type === 'error') {
+                applyActivityUpdate({ id: 'run_error', label: 'Run failed', status: 'error', detail: payload.message });
+                setError(payload.message);
+              }
+            } catch {}
+          }
+          boundary = buffer.indexOf('\n\n');
+        }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        applyActivityUpdate({ id: 'run_stopped', label: 'Stopped by user', status: 'completed', detail: 'Generation stopped' });
+        if (!didCommitMessage) {
+          if (accumulatedContent.trim()) {
+            commitAssistantMessage(accumulatedContent, 'stopped');
+          } else {
+            commitAssistantMessage('Generation stopped.', 'stopped');
+          }
+        }
+      } else {
+        console.error('AI API error:', err);
+        applyActivityUpdate({ id: 'run_error', label: 'Run failed', status: 'error', detail: 'Failed to generate a full response' });
+        setError('Failed to get a response. Please try again.');
+        if (!didCommitMessage && accumulatedContent.trim()) {
+          commitAssistantMessage(accumulatedContent, 'partial');
+        }
+      }
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+        setIsLoading(false);
+        setStreamingContent('');
+        setStreamingCitations([]);
+        setActivities([]);
+      }
+    }
+  };
+
+  const handlePresetClick = (preset: Preset) => {
+    if (isLoading || aiLocked || sourceUnavailable) return;
+    const userMessage: Message = { role: 'user', content: preset.getMessage(noun) };
+    setMessages(prev => [...prev, userMessage]);
+    sendMessage([...messages, userMessage], preset.type);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading || aiLocked || sourceUnavailable) return;
+    const userMessage: Message = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    sendMessage([...messages, userMessage]);
+  };
+
+  const handleStopGenerating = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  const renderCitations = (citations: CitationMeta[] | undefined, fallbackContent: string) => {
+    const fallback = extractSectionCitations(fallbackContent).map((raw) => {
+      const section = parseInt(raw.match(/\d+/)?.[0] || '', 10);
+      return {
+        label: raw.replace('[', '').replace(']', ''),
+        section: Number.isFinite(section) ? section : -1,
+      };
+    }).filter(c => c.section > 0);
+
+    const resolved = citations && citations.length > 0 ? citations : fallback;
+    if (!resolved.length) return null;
+
+    return (
+      <div className="mt-2 flex flex-wrap gap-1">
+        {resolved.map((citation) => (
+          <button
+            key={`${citation.label}-${citation.section}`}
+            type="button"
+            onClick={() => onCitationClick?.(citation)}
+            disabled={!onCitationClick}
+            className={`inline-flex items-center rounded-md border border-border bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground ${
+              onCitationClick ? 'hover:border-primary/30 hover:bg-primary/5 hover:text-primary' : 'cursor-default'
+            }`}
+            title={onCitationClick ? `Jump to ${citation.label}` : citation.label}
+          >
+            {citation.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const [subscribing, setSubscribing] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
+  const handleCopyMessage = async (content: string, messageId: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      window.setTimeout(() => setCopiedMessageId(current => (current === messageId ? null : current)), 1500);
+    } catch (copyError) {
+      console.error('Failed to copy message:', copyError);
+    }
+  };
+
+  const renderRunStateBadge = (state: RunState | undefined) => {
+    if (!state) return null;
+    const config: Record<RunState, { label: string; className: string }> = {
+      completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+      stopped: { label: 'Stopped', className: 'bg-amber-100 text-amber-700 border-amber-300' },
+      error: { label: 'Failed', className: 'bg-red-100 text-red-700 border-red-300' },
+      partial: { label: 'Partial', className: 'bg-orange-100 text-orange-700 border-orange-300' },
+    };
+    const entry = config[state];
+    return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${entry.className}`}>{entry.label}</span>;
+  };
+
+  const renderProgressRail = (runLog: Activity[], isRunning: boolean) => {
+    if (!runLog.length) return null;
+    const statuses = getRailStageStatuses(runLog, isRunning);
+    const activeStageId =
+      RAIL_STAGE_ORDER.find(stage => statuses[stage] === 'running') ||
+      RAIL_STAGE_ORDER.find(stage => statuses[stage] === 'error') ||
+      [...RAIL_STAGE_ORDER].reverse().find(stage => statuses[stage] === 'completed') ||
+      'understand';
+    const activeActivity = runLog.find(activity => activity.status === 'running');
+    const activeIndex = RAIL_STAGE_ORDER.indexOf(activeStageId);
+    const activeLabel = activeActivity?.detail || RAIL_STAGE_COPY[activeStageId];
+    const hasError = RAIL_STAGE_ORDER.some(stage => statuses[stage] === 'error');
+    const isCompleted = !isRunning && !hasError;
+
+    return (
+      <div className="w-full max-w-full rounded-md border border-border bg-muted/30 px-3 py-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2">
+            <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
+              {hasError ? (
+                <XCircle className="h-4 w-4 text-red-500" />
+              ) : isCompleted ? (
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+              ) : (
+                <Loader className="h-4 w-4 animate-spin text-primary/70" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-medium leading-5 text-foreground">
+                {hasError ? 'Something needs attention' : isCompleted ? 'Answer ready' : activeLabel}
+              </div>
+              <div className="text-[11px] leading-4 text-muted-foreground">
+                Step {Math.min(activeIndex + 1, RAIL_STAGE_ORDER.length)} of {RAIL_STAGE_ORDER.length}
+              </div>
+            </div>
+          </div>
+          <div className="mt-1 flex shrink-0 items-center gap-1" aria-label="Agent progress">
+            {RAIL_STAGES.map((stage) => {
+              const status = statuses[stage.id];
+              return (
+                <span
+                  key={stage.id}
+                  aria-label={`${stage.label}: ${status}`}
+                  title={`${stage.label}: ${status}`}
+                  className={`h-1.5 rounded-full transition-all ${
+                    status === 'running'
+                      ? 'w-5 bg-primary'
+                      : status === 'completed'
+                        ? 'w-1.5 bg-primary/50'
+                        : status === 'error'
+                          ? 'w-1.5 bg-red-500'
+                          : 'w-1.5 bg-border'
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+        {!isRunning && runLog.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {RAIL_STAGES.map((stage) => {
+              const status = statuses[stage.id];
+              const isComplete = status === 'completed';
+              const isError = status === 'error';
+
+              return (
+                <div
+                  key={stage.id}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] ${
+                    isError
+                      ? 'border-red-300 bg-red-50 text-red-600'
+                      : isComplete
+                        ? 'border-primary/20 bg-primary/10 text-primary'
+                        : 'border-border bg-background text-muted-foreground'
+                  }`}
+                >
+                  {isComplete ? (
+                    <Check className="h-2.5 w-2.5" />
+                  ) : isError ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                  )}
+                  <span>{stage.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderReviewedSources = (runLog: Activity[], runState: RunState | undefined) => {
+    if (!runLog.length) return null;
+    const reviewedCount = runLog.filter(step => step.id !== 'understanding' && step.id !== 'drafting').length;
+    const label = reviewedCount > 0 ? `Reviewed ${reviewedCount} source steps` : 'Reviewed document';
+
+    return (
+      <div className="mt-2 border-t border-border/70 pt-2">
+        <details>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] text-muted-foreground hover:text-foreground">
+            <span>{label}</span>
+            {renderRunStateBadge(runState)}
+          </summary>
+          <div className="mt-2 space-y-2">
+            {renderProgressRail(runLog, false)}
+            <div className="space-y-1">
+              {runLog.map((step) => (
+                <div key={step.id} className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  {step.status === 'completed' ? (
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  ) : step.status === 'error' ? (
+                    <XCircle className="h-3 w-3 text-red-500" />
+                  ) : (
+                    <Loader className="h-3 w-3 text-primary/60" />
+                  )}
+                  <span>{step.detail ? `${step.label}: ${step.detail}` : step.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
+      </div>
+    );
+  };
+
+  const handleUpgrade = async () => {
+    if (!user) return;
+    setSubscribing(true);
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, redirectUrl: window.location.href }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert('Failed to create checkout session.');
+    } catch {
+      alert('Failed to create checkout session.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  return (
+    <div
+      className={`w-full flex flex-col bg-card/95 rounded-lg border border-border overflow-hidden ${!height ? 'flex-1' : ''}`}
+      style={height ? { height } : {}}
+    >
+      {/* Header */}
+      <div className="px-3 py-2.5 bg-card border-b border-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">Assistant</h2>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 ${
+                htmlFilePath ? 'border-border bg-muted/50' : 'border-red-200 bg-red-50 text-red-700'
+              }`}>
+                {htmlFilePath ? 'Grounded in this document' : 'Source unavailable'}
+              </span>
+              {usageLabel && (
+                <span className="inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5">
+                  {usageLabel}
+                </span>
+              )}
+            </div>
+          </div>
+          {isLoading && (
+            <button
+              type="button"
+              onClick={handleStopGenerating}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Stop generating"
+              title="Stop generating"
+            >
+              <Square className="h-3 w-3 fill-current" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Preset buttons */}
+      <div className="bg-card border-b border-border">
+        <div className="flex gap-1.5 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {presets.map(preset => (
+          <button
+            key={preset.type}
+            type="button"
+            onClick={() => handlePresetClick(preset)}
+            disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
+            className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background/70 px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${(aiLocked || sourceUnavailable) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <preset.icon className="h-3.5 w-3.5" />
+            {preset.label}
+          </button>
+        ))}
+        </div>
+      </div>
+
+      {/* Messages area */}
+      <div className="flex-1 min-h-0 overflow-y-auto bg-background/40 p-3" ref={scrollContainerRef}>
+        {sourceUnavailable ? (
+          <div className="flex h-full items-center justify-center p-4 text-center">
+            <p className="max-w-xs text-sm text-muted-foreground">AI Assistant is unavailable for this document because no source text is attached.</p>
+          </div>
+        ) : !user && !authLoading && anonLimitReached ? (
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-2">Sign in to continue using the AI Assistant</p>
+            <a
+              href={getLoginUrl(pathname)}
+              className="inline-block rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            >
+              Sign in
+            </a>
+          </div>
+        ) : aiLocked ? (
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-2">You have reached your free AI usage limit.</p>
+            <Button
+              className="text-sm rounded-md"
+              variant="default"
+              disabled={subscribing || !user}
+              onClick={handleUpgrade}
+            >
+              {subscribing ? 'Redirecting...' : 'Upgrade to Pro'}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.length === 0 && !streamingContent && (
+              <div className="flex h-full min-h-[260px] flex-col justify-center">
+                <div className="mx-auto max-w-sm text-center">
+                  <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">Ask grounded questions</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Answers use this document and cite the sections reviewed.
+                  </p>
+                  <div className="mt-4 grid grid-cols-1 gap-1.5 text-left">
+                    {presets.slice(0, 3).map(preset => (
+                      <button
+                        key={`empty-${preset.type}`}
+                        type="button"
+                        onClick={() => handlePresetClick(preset)}
+                        disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
+                        className="flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                      >
+                        <preset.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {messages.map((message, i) => (
+              <div key={i} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`group max-w-[90%] rounded-lg px-3 py-2 ${
+                    message.role === 'user'
+                      ? 'border border-border bg-muted/70 text-foreground'
+                      : 'border border-border bg-card text-foreground'
+                  }`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="mb-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMessage(message.content, `message-${i}`)}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 group-focus-within:opacity-100"
+                        title={copiedMessageId === `message-${i}` ? 'Copied' : 'Copy text'}
+                        aria-label={copiedMessageId === `message-${i}` ? 'Copied' : 'Copy text'}
+                      >
+                        {copiedMessageId === `message-${i}` ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  {message.role === 'assistant' ? (
+                    <div className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                      {message.content}
+                    </div>
+                  )}
+                  {message.role === 'assistant' && renderCitations(message.citations, message.content)}
+                  {message.role === 'assistant' && message.runLog && message.runLog.length > 0 && (
+                    renderReviewedSources(message.runLog, message.runState)
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Streaming content - show as it arrives */}
+            {streamingContent && (
+              <div className="flex justify-start">
+                <div className="max-w-[90%] rounded-lg border border-border bg-card px-3 py-2 text-foreground">
+                  {activities.length > 0 && isLoading && (
+                    <div className="mb-2">
+                      {renderProgressRail(activities, true)}
+                    </div>
+                  )}
+                  <div className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted">
+                    <ReactMarkdown>{streamingContent}</ReactMarkdown>
+                  </div>
+                  {renderCitations(streamingCitations, streamingContent)}
+                </div>
+              </div>
+            )}
+
+            {/* Activity indicators while generating */}
+            {activities.length > 0 && isLoading && !streamingContent && (
+              <div className="flex justify-start">
+                <div className="max-w-[90%] rounded-lg border border-border bg-card px-3 py-2 text-muted-foreground">
+                  {renderProgressRail(activities, true)}
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="flex justify-center">
+                <div className="max-w-[90%] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Input form */}
+      <form onSubmit={handleSubmit} className="border-t border-border bg-card p-3">
+        <div className="flex items-center gap-2">
+          <Input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Ask about this document..."
+            disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
+            className="h-10 rounded-lg border-transparent bg-muted/55 shadow-none transition-colors placeholder:text-muted-foreground/75 hover:bg-muted/75 focus-visible:bg-card focus-visible:ring-1 focus-visible:ring-primary/25 focus-visible:ring-offset-0"
+          />
+          {isLoading ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-10 rounded-lg border-transparent bg-muted/55 p-0 text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/25 focus-visible:ring-offset-0"
+              onClick={handleStopGenerating}
+              aria-label="Stop generating"
+              title="Stop generating"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              className="h-10 w-10 rounded-lg border border-primary/15 bg-primary/10 p-0 text-primary shadow-none transition-all hover:border-primary/25 hover:bg-primary/15 hover:text-primary disabled:border-transparent disabled:bg-muted/55 disabled:text-muted-foreground/45 disabled:opacity-100 focus-visible:ring-1 focus-visible:ring-primary/25 focus-visible:ring-offset-0"
+              disabled={!input.trim() || aiLocked || authLoading || sourceUnavailable}
+              aria-label="Send message"
+              title="Send message"
+            >
+              <ArrowUp className="h-4 w-4" strokeWidth={2.25} />
+            </Button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}

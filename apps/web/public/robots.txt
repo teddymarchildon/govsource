@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://govsrc.com
+
+# Sitemaps
+Sitemap: https://govsrc.com/sitemap.xml
