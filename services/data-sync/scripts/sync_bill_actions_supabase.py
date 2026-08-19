@@ -32,7 +32,8 @@ def fetch_bills_from_supabase(
     result = (
         supabase.table("bill")
         .select("id, congress, type, number, bill_unique_id")
-        .order("id")
+        # Scheduled bounded runs should refresh newly ingested bills first.
+        .order("id", desc=True)
         .range(offset, offset + limit - 1)
         .execute()
     )

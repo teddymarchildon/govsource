@@ -39,6 +39,35 @@ def test_bill_actions_consume_every_page(monkeypatch):
     assert [action["text"] for action in actions] == ["First", "Second"]
 
 
+def test_bill_action_refresh_selects_newest_bills_first():
+    class Query:
+        def __init__(self):
+            self.order_args = None
+
+        def table(self, name):
+            assert name == "bill"
+            return self
+
+        def select(self, columns):
+            return self
+
+        def order(self, column, **kwargs):
+            self.order_args = (column, kwargs)
+            return self
+
+        def range(self, start, end):
+            assert (start, end) == (0, 19)
+            return self
+
+        def execute(self):
+            self.data = []
+            return self
+
+    query = Query()
+    assert sync_bill_actions_supabase.fetch_bills_from_supabase(query) == []
+    assert query.order_args == ("id", {"desc": True})
+
+
 def test_action_fetch_failure_never_calls_replacement(monkeypatch):
     class Supabase:
         called = False

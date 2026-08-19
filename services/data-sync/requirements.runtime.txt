@@ -1,0 +1,5 @@
+# Runtime-only dependencies for scheduled data synchronization.
+python-dotenv==1.0.0
+requests==2.31.0
+supabase==2.31.0
+html2text==2025.4.15

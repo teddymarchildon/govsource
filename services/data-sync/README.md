@@ -41,3 +41,35 @@ Run the test suite with:
 ```bash
 pytest -q
 ```
+
+## Scheduled GitHub Actions
+
+Two workflows under `.github/workflows` run bounded synchronization jobs:
+
+- `data-sync-daily.yml` refreshes recent bills and their actions, Federal
+  Register documents, and Supreme Court opinions at 04:17 UTC each day.
+- `data-sync-weekly.yml` refreshes courts, Congress members, Federal Register
+  agencies, and agency relationships at 06:43 UTC each Sunday.
+
+Both workflows can also be started from the repository's **Actions** tab with
+the **Run workflow** button. They share a concurrency group, so a scheduled run
+waits rather than overlapping another data sync.
+
+Scheduled jobs install the minimal pinned dependency set in
+`requirements.runtime.txt`; development and test tools are intentionally not
+installed on the runner.
+
+Configure these repository Actions secrets before the first run:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CONGRESS_API_KEY`
+- `COURT_LISTENER_API_KEY`
+
+Keep the service-role key in Actions secrets only. Never commit it or expose it
+to frontend code. Apply the Supabase migrations before enabling the schedules.
+
+For initial setup, manually run **Weekly reference data sync** first so court
+and agency reference rows exist, then manually run **Daily data sync**. Review
+the first few run durations and upstream request volumes before increasing the
+bounded page and record limits in the workflow files.
