@@ -26,9 +26,11 @@ variables used by the frontend are documented in `apps/web/README.md`.
 cd services/data-sync
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.lock
 ```
 
 The synchronization scripts require Supabase credentials and API credentials
 for their respective upstream data sources. They are independent jobs and are
-not part of the Vercel frontend build.
+not part of the Vercel frontend build. See
+[`services/data-sync/README.md`](services/data-sync/README.md) for migration,
+credential, and operational details.

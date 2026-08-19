@@ -20,3 +20,6 @@ venv/
 
 # Vercel local state
 .vercel/
+
+# Supabase CLI local state
+**/supabase/.temp/

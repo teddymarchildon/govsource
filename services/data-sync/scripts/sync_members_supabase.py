@@ -3,16 +3,19 @@
 Script to sync members of Congress from the Congress API to Supabase.
 """
 import argparse
-import json
 import logging
-import os
 import sys
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Tuple, cast
 
-import requests
 from dotenv import load_dotenv
-from supabase import Client, create_client
+from supabase import Client
+from sync_common import (
+    RunStats,
+    build_http_session,
+    create_supabase_client,
+    get_json,
+    require_env,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -20,24 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
-
-# Supabase configuration
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-if not SUPABASE_URL or not SUPABASE_KEY:
-    logger.error("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
-    sys.exit(1)
-
-# Congress API configuration
-API_KEY = os.getenv("CONGRESS_API_KEY")
-if not API_KEY:
-    logger.error("CONGRESS_API_KEY environment variable is not set")
-    sys.exit(1)
-
 BASE_URL = "https://api.congress.gov/v3"
-HEADERS = {"X-API-Key": API_KEY}
 
 # Maximum limit allowed by the Congress API
 MAX_API_LIMIT = 250
@@ -58,7 +44,7 @@ class Chamber:
     SENATE = "senate"
 
 
-def fetch_members(limit: int = 100, offset: int = 0) -> Dict[str, Any]:
+def fetch_members(session: Any, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
     """
     Fetch members of Congress from the Congress API
 
@@ -72,18 +58,12 @@ def fetch_members(limit: int = 100, offset: int = 0) -> Dict[str, Any]:
     url = f"{BASE_URL}/member"
     params = {"limit": limit, "offset": offset, "format": "json"}
 
-    try:
-        response = requests.get(url, headers=HEADERS, params=params)
-        response.raise_for_status()
-        response_data = response.json()
-        logger.info(f"API Response structure: {list(response_data.keys())}")
-        return response_data
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching members: {e}")
-        return {"members": []}
+    response_data = get_json(session, url, params=params)
+    logger.info("API response keys: %s", list(response_data.keys()))
+    return response_data
 
 
-def fetch_member_detail(bioguide_id: str) -> Dict[str, Any]:
+def fetch_member_detail(session: Any, bioguide_id: str) -> Dict[str, Any]:
     """
     Fetch detailed information for a specific member of Congress
 
@@ -96,15 +76,9 @@ def fetch_member_detail(bioguide_id: str) -> Dict[str, Any]:
     url = f"{BASE_URL}/member/{bioguide_id}"
     params = {"format": "json"}
 
-    try:
-        response = requests.get(url, headers=HEADERS, params=params)
-        response.raise_for_status()
-        response_data = response.json()
-        logger.info(f"Member detail response structure: {list(response_data.keys())}")
-        return response_data
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching member detail for {bioguide_id}: {e}")
-        return {}
+    response_data = get_json(session, url, params=params)
+    logger.debug("Member detail response keys: %s", list(response_data.keys()))
+    return response_data
 
 
 def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -124,7 +98,10 @@ def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             # Try to find the member data in the response
             for key in member_data.keys():
-                if isinstance(member_data[key], dict) and "bioguideId" in member_data[key]:
+                if (
+                    isinstance(member_data[key], dict)
+                    and "bioguideId" in member_data[key]
+                ):
                     member_info = member_data[key]
                     break
             else:
@@ -273,7 +250,9 @@ def parse_member_data(member_data: Dict[str, Any]) -> Dict[str, Any]:
         return {}
 
 
-def extract_terms(member_detail: Dict[str, Any], congressman_id: int) -> List[Dict[str, Any]]:
+def extract_terms(
+    member_detail: Dict[str, Any], congressman_id: int
+) -> List[Dict[str, Any]]:
     """
     Extract terms from member detail data
 
@@ -328,8 +307,8 @@ def extract_terms(member_detail: Dict[str, Any], congressman_id: int) -> List[Di
 
 
 def sync_members_to_supabase(
-    supabase: Client, limit: int = 100, offset: int = 0
-) -> List[Dict[str, Any]]:
+    supabase: Client, session: Any, limit: int = 100, offset: int = 0
+) -> Tuple[List[Dict[str, Any]], int, int]:
     """
     Sync members from the Congress API to Supabase
 
@@ -344,81 +323,70 @@ def sync_members_to_supabase(
     logger.info(f"Syncing up to {limit} members starting from offset {offset}")
 
     # Fetch members from the API
-    response_data = fetch_members(limit, offset)
+    response_data = fetch_members(session, limit, offset)
 
     # Check if we have members in the response
     if "members" not in response_data or not response_data["members"]:
         logger.warning("No members found in the API response")
-        return []
+        return [], 0, 0
 
     # Process each member
     synced_members = []
+    failed_count = 0
     for member_item in response_data["members"]:
         try:
             # Get the bioguide ID
             bioguide_id = member_item.get("bioguideId")
             if not bioguide_id:
+                failed_count += 1
                 logger.warning("Member missing bioguide ID, skipping")
                 continue
 
             # Fetch detailed information about the member
-            member_detail = fetch_member_detail(bioguide_id)
+            member_detail = fetch_member_detail(session, bioguide_id)
 
             # Parse the member data
             member_data = parse_member_data(member_detail)
             if not member_data:
-                logger.warning(f"Could not parse data for member {bioguide_id}, skipping")
+                failed_count += 1
+                logger.warning(
+                    f"Could not parse data for member {bioguide_id}, skipping"
+                )
                 continue
 
-            # Check if the member already exists in Supabase
             result = (
-                supabase.table("congressman").select("id").eq("bioguide_id", bioguide_id).execute()
+                supabase.table("congressman")
+                .upsert(member_data, on_conflict="bioguide_id")
+                .execute()
             )
-            existing_member = result.data[0] if result.data else None
-
-            if existing_member:
-                congressman_id = existing_member["id"]
-                logger.info(
-                    f"Member {bioguide_id} already exists with ID {congressman_id}, updating"
-                )
-
-                # Update the existing member
-                supabase.table("congressman").update(member_data).eq("id", congressman_id).execute()
-
-                # Clear existing terms for this member to avoid duplicates
-                supabase.table("congressman_term").delete().eq(
-                    "congressman_id", congressman_id
-                ).execute()
-            else:
-                logger.info(f"Creating new member {bioguide_id}")
-
-                # Create a new member
-                result = supabase.table("congressman").insert(member_data).execute()
-                congressman_id = result.data[0]["id"] if result.data else None
-
-                if not congressman_id:
-                    logger.error(f"Failed to create member {bioguide_id}")
-                    continue
+            rows = cast(List[Dict[str, Any]], result.data or [])
+            congressman_id = rows[0]["id"] if rows else None
+            if not congressman_id:
+                raise RuntimeError(f"Upsert returned no ID for member {bioguide_id}")
 
             # Process terms if available in the member detail
             terms = extract_terms(member_detail, congressman_id)
-            if terms:
-                # Insert all terms
-                supabase.table("congressman_term").insert(terms).execute()
+            supabase.rpc(
+                "replace_congressman_terms",
+                {"p_congressman_id": congressman_id, "p_terms": terms},
+            ).execute()
 
             # Add the member to the synced list
             synced_members.append(member_data)
 
         except Exception as e:
+            failed_count += 1
             logger.error(f"Error syncing member {member_item.get('bioguideId')}: {e}")
 
     logger.info(f"Successfully synced {len(synced_members)} members")
-    return synced_members
+    return synced_members, len(response_data["members"]), failed_count
 
 
-def main():
+def main() -> int:
     """Main function to run the member sync process."""
-    parser = argparse.ArgumentParser(description="Sync members from the Congress API to Supabase")
+    parser = argparse.ArgumentParser(
+        description="Sync members from the Congress API to Supabase"
+    )
     parser.add_argument(
         "--limit",
         type=int,
@@ -426,7 +394,10 @@ def main():
         help="Total number of members to sync (default: 100, use -1 for all available)",
     )
     parser.add_argument(
-        "--offset", type=int, default=0, help="Starting offset for pagination (default: 0)"
+        "--offset",
+        type=int,
+        default=0,
+        help="Starting offset for pagination (default: 0)",
     )
     parser.add_argument(
         "--max-batches",
@@ -436,12 +407,15 @@ def main():
     )
     args = parser.parse_args()
 
-    # Initialize Supabase client
+    load_dotenv()
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        api_key = require_env("CONGRESS_API_KEY")
+        supabase = create_supabase_client()
     except Exception as e:
-        logger.error(f"Failed to initialize Supabase client: {e}")
-        sys.exit(1)
+        logger.error(f"Failed to initialize clients: {e}")
+        return 2
+    session = build_http_session(headers={"X-API-Key": api_key})
+    stats = RunStats()
 
     try:
         total_members = 0
@@ -451,7 +425,9 @@ def main():
         if args.limit == -1:
             # If limit is -1, sync all available members up to max_batches
             remaining_limit = args.max_batches * MAX_API_LIMIT
-            logger.info(f"Syncing all available members up to {args.max_batches} batches")
+            logger.info(
+                f"Syncing all available members up to {args.max_batches} batches"
+            )
         else:
             remaining_limit = args.limit
             logger.info(f"Syncing up to {remaining_limit} members")
@@ -461,30 +437,41 @@ def main():
         # Continue until we've synced all requested members or reached the end of available data
         while remaining_limit > 0 or args.limit == -1:
             # Calculate the batch size (respecting the API's max limit)
-            batch_size = min(MAX_API_LIMIT, remaining_limit) if args.limit != -1 else MAX_API_LIMIT
+            batch_size = (
+                min(MAX_API_LIMIT, remaining_limit)
+                if args.limit != -1
+                else MAX_API_LIMIT
+            )
 
             logger.info(
                 f"Starting batch {batch_num} with offset {current_offset}, batch size {batch_size}"
             )
 
             # Sync members for this batch
-            members = sync_members_to_supabase(supabase, limit=batch_size, offset=current_offset)
+            members, fetched_count, failed_count = sync_members_to_supabase(
+                supabase, session, limit=batch_size, offset=current_offset
+            )
             batch_count = len(members)
             total_members += batch_count
+            stats.fetched += fetched_count
+            stats.written += batch_count
+            stats.failed += failed_count
 
             logger.info(f"Batch {batch_num} completed: synced {batch_count} members")
 
             # If we received fewer members than requested, we've reached the end
-            if batch_count < batch_size:
-                logger.info(f"Reached end of available members at offset {current_offset}")
+            if fetched_count < batch_size:
+                logger.info(
+                    f"Reached end of available members at offset {current_offset}"
+                )
                 break
 
             # Update offset for next batch
-            current_offset += batch_count
+            current_offset += fetched_count
 
             # Update remaining limit
             if args.limit != -1:
-                remaining_limit -= batch_count
+                remaining_limit -= fetched_count
 
             # Check if we've reached the maximum number of batches
             if args.limit == -1 and batch_num >= args.max_batches:
@@ -496,8 +483,11 @@ def main():
         logger.info(f"Successfully synced {total_members} members in total")
     except Exception as e:
         logger.error(f"Error syncing members: {e}")
-        sys.exit(1)
+        stats.failed += 1
+
+    stats.log("members")
+    return 1 if stats.failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -1,81 +1,82 @@
-import os
-import sys
-import logging
-from dotenv import load_dotenv
-import requests
-from datetime import datetime
-from supabase import create_client, Client
-import argparse
+#!/usr/bin/env python3
+"""Synchronize CourtListener courts."""
 
-# Configure logging
+import argparse
+import logging
+import sys
+from typing import Any, Dict, List, Optional
+
+from dotenv import load_dotenv
+from sync_common import (
+    RateLimiter,
+    RunStats,
+    build_http_session,
+    create_supabase_client,
+    iter_next_paginated_items,
+    require_env,
+)
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Load environment variables from .env if present
-load_dotenv()
+COURTS_URL = "https://www.courtlistener.com/api/rest/v4/courts/"
+RATE_LIMITER = RateLimiter(1.0)
 
-COURT_LISTENER_URL = "https://www.courtlistener.com/api/rest/v4/courts/"
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-COURT_LISTENER_API_KEY = os.getenv("COURT_LISTENER_API_KEY")
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    logger.error("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
-    sys.exit(1)
+def fetch_all_courts(
+    session: Any, *, per_page: int = 100, page_limit: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    return list(
+        iter_next_paginated_items(
+            session,
+            COURTS_URL,
+            "results",
+            params={"page_size": per_page},
+            max_pages=page_limit,
+            rate_limiter=RATE_LIMITER,
+        )
+    )
 
-if not COURT_LISTENER_API_KEY:
-    logger.error("COURT_LISTENER_API_KEY environment variable must be set")
-    sys.exit(1)
 
-API_HEADERS = {
-    "Authorization": f"Token {COURT_LISTENER_API_KEY}"
-}
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-def fetch_all_courts(page_limit=20):
-    courts = []
-    url = COURT_LISTENER_URL
-    page_count = 0
-    while url and page_count < page_limit:
-        resp = requests.get(url, headers=API_HEADERS)
-        resp.raise_for_status()
-        data = resp.json()
-        courts.extend(data["results"])
-        url = data.get("next")
-        page_count += 1
-    return courts
-
-def map_court_to_row(api_court):
+def map_court_to_row(court: Dict[str, Any]) -> Dict[str, Any]:
     return {
-        "remote_id": api_court.get("id"),
-        "jurisdiction": api_court.get("jurisdiction"),
-        "full_name": api_court.get("full_name"),
-        "short_name": api_court.get("short_name"),
-        "start_date": api_court.get("start_date"),
-        "end_date": api_court.get("end_date"),
+        "remote_id": court.get("id"),
+        "jurisdiction": court.get("jurisdiction"),
+        "full_name": court.get("full_name"),
+        "short_name": court.get("short_name"),
+        "start_date": court.get("start_date"),
+        "end_date": court.get("end_date"),
     }
 
-def sync_courts(page_limit=20):
-    logger.info("Fetching courts from Court Listener API...")
-    courts = fetch_all_courts(page_limit=page_limit)
-    logger.info(f"Fetched {len(courts)} courts.")
 
-    rows = [map_court_to_row(c) for c in courts]
-    logger.info("Upserting courts into Supabase...")
-    for row in rows:
-        try:
-            resp = supabase.table("court").upsert(row, on_conflict=["remote_id"]).execute()
-            if resp.data and len(resp.data) > 0:
-                logger.info(f"Upserted court {row['remote_id']}")
-        except Exception as e:
-            logger.error(f"Failed to upsert court {row['remote_id']}: {e}")
-    logger.info("Sync complete.")
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--page-limit", type=int, default=20)
+    parser.add_argument("--per-page", type=int, default=100)
+    args = parser.parse_args()
+    load_dotenv()
+    try:
+        session = build_http_session(
+            headers={"Authorization": f"Token {require_env('COURT_LISTENER_API_KEY')}"}
+        )
+        courts = fetch_all_courts(
+            session, per_page=args.per_page, page_limit=args.page_limit
+        )
+        supabase = create_supabase_client()
+        rows = [map_court_to_row(court) for court in courts if court.get("id")]
+        if rows:
+            supabase.table("court").upsert(rows, on_conflict="remote_id").execute()
+        stats = RunStats(
+            fetched=len(courts), written=len(rows), skipped=len(courts) - len(rows)
+        )
+    except Exception as exc:
+        logger.exception("Court sync failed: %s", exc)
+        return 1
+    stats.log("courts")
+    return 0
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Sync courts from Court Listener API to Supabase")
-    parser.add_argument("--page-limit", type=int, default=20, help="Maximum number of pages to fetch (default: 20)")
-    args = parser.parse_args()
-    sync_courts(page_limit=args.page_limit)
+    sys.exit(main())
