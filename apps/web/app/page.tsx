@@ -1,225 +1,127 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { supabase } from '../utils/supabase/client';
-import BillCard from '../components/BillCard';
-import LawCard from '../components/LawCard';
-import { Bill, Congressman, UserPreferences, SavedBill, SavedCongressman, SavedJudge, SavedAgency, AgencyDocument, Law } from '../types/types';
-import { useAuth } from '../contexts/AuthContext';
-import Link from 'next/link';
-import {
-  getSavedBills,
-  getSavedCongressmen,
-  getSavedJudges,
-  getSavedAgencies,
-  getUserPreferences,
-  getBills,
-  getAgencyRules
-} from '../services/api';
-import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
+import PublicHome, {
+  type PersonalizedHomepageItem,
+  type PopularHomepageItem,
+} from '@/components/home/PublicHome';
+import { useAuth } from '@/contexts/AuthContext';
+import { getAgencyRules, getBills, getUserPreferences } from '@/services/api';
+import type { Article } from '@/types/article';
+import type { AgencyDocument, Bill, Law, UserPreferences } from '@/types/types';
 import { getLoginUrl } from '@/utils/utils';
-import ExecutiveOrderCard from '../components/ExecutiveOrderCard';
-import AgencyRuleCard from '../components/AgencyRuleCard';
-import CourtCaseCard from '../components/CourtCaseCard';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import PublicHome, { type PopularHomepageItem } from '@/components/home/PublicHome';
+import { supabase } from '@/utils/supabase/client';
 
-function HomeContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { user, loading: _authLoading } = useAuth();
-  const currentPolicyArea = searchParams.get('policy_area');
+export default function HomePage() {
   const pathname = usePathname();
-
-  // State for logged-out experience
+  const { user } = useAuth();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [articlesLoading, setArticlesLoading] = useState(true);
   const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPolicyArea, _setSelectedPolicyArea] = useState(currentPolicyArea || '');
-  const [selectedSponsor, _setSelectedSponsor] = useState<Congressman | null>(null);
-
-  // State for logged-in experience
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
-  const [savedBills, setSavedBills] = useState<SavedBill[]>([]);
-  const [savedCongressmen, setSavedCongressmen] = useState<SavedCongressman[]>([]);
-  const [savedJudges, setSavedJudges] = useState<SavedJudge[]>([]);
-  const [savedAgencies, setSavedAgencies] = useState<SavedAgency[]>([])
-  const [recentExecutiveOrders, setRecentExecutiveOrders] = useState<AgencyDocument[]>([]);
-  const [activeTab, setActiveTab] = useState('bills');
-
-  // State for recent legislation
-  const [recentBills, setRecentBills] = useState<Bill[]>([]);
-  const [recentLaws, setRecentLaws] = useState<Law[]>([]);
-  const [recentLegislationLoading, setRecentLegislationLoading] = useState(false);
-
-  // Popular section state
+  const [billsLoading, setBillsLoading] = useState(true);
   const [popularItems, setPopularItems] = useState<PopularHomepageItem[]>([]);
   const [popularLoading, setPopularLoading] = useState(true);
+  const [recentExecutiveOrders, setRecentExecutiveOrders] = useState<AgencyDocument[]>([]);
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+  const [personalizedItems, setPersonalizedItems] = useState<PersonalizedHomepageItem[]>([]);
+  const [personalizedLoading, setPersonalizedLoading] = useState(false);
 
-  // Fetch user data when logged in
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) return;
+    const loadPublicHomepage = async () => {
+      setArticlesLoading(true);
+      setBillsLoading(true);
 
+      const [articleResult, billResult, orderResult] = await Promise.allSettled([
+        fetch('/api/articles?limit=24', { cache: 'no-store' }).then(async (response) => {
+          if (!response.ok) throw new Error('Unable to load published briefings');
+          return response.json() as Promise<{ articles: Article[] }>;
+        }),
+        getBills({ limit: 12 }),
+        getAgencyRules({ subtype: 'Executive Order', limit: 6, sort_order: 'desc' }),
+      ]);
+
+      if (articleResult.status === 'fulfilled') setArticles(articleResult.value.articles ?? []);
+      if (billResult.status === 'fulfilled') setBills(billResult.value);
+      if (orderResult.status === 'fulfilled') setRecentExecutiveOrders(orderResult.value);
+
+      setArticlesLoading(false);
+      setBillsLoading(false);
+    };
+
+    loadPublicHomepage();
+  }, []);
+
+  useEffect(() => {
+    const loadPersonalizedItems = async () => {
+      if (!user) {
+        setUserPreferences(null);
+        setPersonalizedItems([]);
+        setPersonalizedLoading(false);
+        return;
+      }
+
+      setPersonalizedLoading(true);
       try {
-        // Fetch user preferences
         const preferences = await getUserPreferences(user.id);
         setUserPreferences(preferences);
 
-        // Fetch saved items
-        const [bills, congressmen, judges, agencies] = await Promise.all([
-          getSavedBills(user.id),
-          getSavedCongressmen(user.id),
-          getSavedJudges(user.id),
-          getSavedAgencies(user.id),
-        ]);
-
-        setSavedBills(bills);
-        setSavedCongressmen(congressmen);
-        setSavedJudges(judges);
-        setSavedAgencies(agencies);
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    if (user) {
-      fetchUserData();
-    }
-  }, [user]);
-
-  // Fetch recent executive orders
-  useEffect(() => {
-    const fetchExecutiveOrders = async () => {
-      try {
-        const orders = await getAgencyRules({
-          subtype: 'Executive Order',
-          limit: 5,
-          sort_order: 'desc'
-        });
-        setRecentExecutiveOrders(orders);
-      } catch (error) {
-        console.error('Error fetching executive orders:', error);
-      }
-    };
-
-    fetchExecutiveOrders();
-  }, []);
-
-  // Fetch bills when policy area changes
-  useEffect(() => {
-    const fetchBills = async () => {
-      setLoading(true);
-      try {
-        // Build query parameters
-        const params: any = { limit: 12 };
-
-        if (selectedPolicyArea) {
-          params.policy_area = selectedPolicyArea;
+        if (!preferences?.policy_areas?.length) {
+          setPersonalizedItems([]);
+          return;
         }
 
-        if (selectedSponsor) {
-          params.sponsor_id = selectedSponsor.id;
-        }
-
-        // Fetch bills with filters
-        const data = await getBills(params);
-        setBills(data);
-      } catch (error) {
-        console.error('Error fetching bills:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Only fetch for logged-out experience
-    if (!user) {
-      fetchBills();
-    }
-
-    // Update URL with filters
-    if (selectedPolicyArea || selectedSponsor) {
-      const params = new URLSearchParams();
-      if (selectedPolicyArea) params.set('policy_area', selectedPolicyArea);
-      if (selectedSponsor) params.set('sponsor_id', selectedSponsor.id.toString());
-      router.push(`/?${params.toString()}`, { scroll: false });
-    } else {
-      router.push('/', { scroll: false });
-    }
-  }, [selectedPolicyArea, selectedSponsor, router, user]);
-
-  // Fetch recent legislation in user's policy areas
-  useEffect(() => {
-    const fetchRecentLegislation = async () => {
-      if (!user || !userPreferences || !userPreferences.policy_areas || userPreferences.policy_areas.length === 0) return;
-
-      setRecentLegislationLoading(true);
-      try {
-        // Make a single query to fetch all recent legislation (both bills and laws)
-        // with their actions and sponsor information
-        const { data: recentLegislationData, error } = await supabase
+        const { data, error } = await supabase
           .from('bill')
           .select(`
             *,
-            sponsor:sponsored_bills!bill_id(
-              congressman:congressman(*)
-            ),
-            actions:bill_action!bill_id(
-              id,
-              date,
-              text,
-              type
-            )
+            sponsor:sponsored_bills!bill_id(congressman:congressman(*)),
+            actions:bill_action!bill_id(id, date, text, type)
           `)
-          .in('policy_area', userPreferences.policy_areas)
+          .in('policy_area', preferences.policy_areas)
           .order('introduced_date', { ascending: false })
-          .limit(8); // Fetch more items since we'll be splitting them
+          .limit(6);
 
         if (error) throw error;
 
-        // Process all legislation data to include the most recent action and format sponsor
-        const processedLegislationData = recentLegislationData.map(item => {
-          // Sort actions by date (descending) and get the most recent one
-          const sortedActions = item.actions ?
-            [...item.actions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) :
-            [];
-
-          return {
+        const items = (data ?? []).map((item) => {
+          const actions = item.actions
+            ? [...item.actions].sort(
+                (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+              )
+            : [];
+          const normalized = {
             ...item,
-            // Format sponsor to match the expected structure
-            sponsor: item.sponsor && item.sponsor.length > 0 ? { congressman: item.sponsor[0].congressman } : undefined,
-            // Add most recent action
-            most_recent_action: sortedActions.length > 0 ? sortedActions[0] : null,
-            // Remove the actions array to keep the response clean
-            actions: undefined
+            sponsor: item.sponsor?.[0]?.congressman
+              ? { congressman: item.sponsor[0].congressman }
+              : undefined,
+            most_recent_action: actions[0] ?? null,
+            actions: undefined,
           };
+
+          return item.law_enacted_date
+            ? ({ item_type: 'law', data: normalized as Law } as const)
+            : ({ item_type: 'bill', data: normalized as Bill } as const);
         });
 
-        // Separate bills and laws based on whether law_enacted_date is null
-        const bills = processedLegislationData.filter(item => !item.law_enacted_date);
-        const laws = processedLegislationData.filter(item => item.law_enacted_date);
-
-        // Set the data
-        setRecentBills(bills);
-        setRecentLaws(laws);
+        setPersonalizedItems(items);
       } catch (error) {
-        console.error('Error fetching recent legislation:', error);
+        console.error('Error loading personalized homepage items', error);
+        setPersonalizedItems([]);
       } finally {
-        setRecentLegislationLoading(false);
+        setPersonalizedLoading(false);
       }
     };
 
-    fetchRecentLegislation();
-  }, [user, userPreferences]);
+    loadPersonalizedItems();
+  }, [user]);
 
-  // Fetch popular items from ranked_item
   useEffect(() => {
-    const fetchPopularItems = async () => {
+    const loadPopularItems = async () => {
       setPopularLoading(true);
       try {
         const now = new Date().toISOString();
-        // 1. Fetch eligible ranked items. Pull extra rows so stale/missing targets do not shrink the section.
         const { data: ranked, error: rankedError } = await supabase
           .from('ranked_item')
           .select('*')
@@ -227,433 +129,106 @@ function HomeContent() {
           .or(`effectively_ranked_at.is.null,effectively_ranked_at.lte.${now}`)
           .order('rank', { ascending: true })
           .limit(24);
+
         if (rankedError) throw rankedError;
-        if (!ranked || ranked.length === 0) {
+        if (!ranked?.length) {
           setPopularItems([]);
-          setPopularLoading(false);
           return;
         }
 
-        // 2. For each ranked item, fetch the full data
-        const fetchItem = async (item: any) => {
-          switch (item.item_type) {
-            case 'bill': {
-              const { data, error } = await supabase
+        const itemsWithData = await Promise.all(
+          ranked.map(async (item): Promise<PopularHomepageItem | null> => {
+            if (item.item_type === 'bill' || item.item_type === 'law') {
+              let query = supabase
                 .from('bill')
                 .select(`*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)`)
-                .eq('id', item.item_id)
-                .single();
+                .eq('id', item.item_id);
+              if (item.item_type === 'law') query = query.not('law_enacted_date', 'is', null);
+              const { data, error } = await query.single();
               if (error || !data) return null;
-              // Format sponsor and most_recent_action
-              const sortedActions = data.actions ? [...data.actions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
-              return { ...item, item_type: 'bill', data: { ...data, sponsor: data.sponsor && data.sponsor.length > 0 ? { congressman: data.sponsor[0].congressman } : undefined, most_recent_action: sortedActions.length > 0 ? sortedActions[0] : null, actions: undefined } };
+              const actions = data.actions
+                ? [...data.actions].sort(
+                    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+                  )
+                : [];
+              const normalized = {
+                ...data,
+                sponsor: data.sponsor?.[0]?.congressman
+                  ? { congressman: data.sponsor[0].congressman }
+                  : undefined,
+                most_recent_action: actions[0] ?? null,
+                actions: undefined,
+              };
+              return item.item_type === 'law'
+                ? { item_type: 'law', data: normalized as Law }
+                : { item_type: 'bill', data: normalized as Bill };
             }
-            case 'law': {
-              const { data, error } = await supabase
-                .from('bill')
-                .select(`*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)`)
-                .eq('id', item.item_id)
-                .not('law_enacted_date', 'is', null)
-                .single();
-              if (error || !data) return null;
-              const sortedActions = data.actions ? [...data.actions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
-              return { ...item, item_type: 'law', data: { ...data, sponsor: data.sponsor && data.sponsor.length > 0 ? data.sponsor[0].congressman : undefined, most_recent_action: sortedActions.length > 0 ? sortedActions[0] : null, actions: undefined } };
-            }
-            case 'agency_document': {
-              // Fetch agency_document and its agency (if any)
-              const { data, error } = await supabase
+
+            if (
+              item.item_type === 'agency_document' ||
+              item.item_type === 'executive_order'
+            ) {
+              let query = supabase
                 .from('agency_document')
                 .select(`*, agency_link:agency_agencydocument!agency_document_id(agency:agency(*))`)
-                .eq('id', item.item_id)
-                .single();
-              if (error || !data) return null;
-              // Attach agency if available
-              let agency = undefined;
-              if (data.agency_link && data.agency_link.length > 0 && data.agency_link[0].agency) {
-                agency = data.agency_link[0].agency;
+                .eq('id', item.item_id);
+              if (item.item_type === 'executive_order') {
+                query = query.eq('subtype', 'Executive Order');
               }
-              return { ...item, item_type: data.subtype === 'Executive Order' ? 'executive_order' : 'agency_document', data: { ...data, agency } };
+              const { data, error } = await query.single();
+              if (error || !data) return null;
+              const agency = data.agency_link?.[0]?.agency;
+              return {
+                item_type:
+                  data.subtype === 'Executive Order' ? 'executive_order' : 'agency_document',
+                data: { ...data, agency } as AgencyDocument,
+              };
             }
-            case 'cluster': {
-              // Fetch cluster and its opinions (with author)
+
+            if (item.item_type === 'cluster') {
               const { data, error } = await supabase
                 .from('cluster')
                 .select(`*, court:court(*), opinions:court_opinion!cluster_id(*, author:judge(*))`)
                 .eq('id', item.item_id)
                 .single();
               if (error || !data) return null;
-              return { ...item, item_type: 'cluster', data };
+              return { item_type: 'cluster', data };
             }
-            case 'executive_order': {
-              // Executive orders are stored as agency_document with subtype 'Executive Order'
-              const { data, error } = await supabase
-                .from('agency_document')
-                .select(`*, agency_link:agency_agencydocument!agency_document_id(agency:agency(*))`)
-                .eq('id', item.item_id)
-                .eq('subtype', 'Executive Order')
-                .single();
-              if (error || !data) return null;
-              let agency = undefined;
-              if (data.agency_link && data.agency_link.length > 0 && data.agency_link[0].agency) {
-                agency = data.agency_link[0].agency;
-              }
-              return { ...item, item_type: 'executive_order', data: { ...data, agency } };
-            }
-            default:
-              return null;
-          }
-        };
 
-        const itemsWithData = await Promise.all(ranked.map(fetchItem));
-        // Filter out nulls and items with missing data
-        setPopularItems(itemsWithData.filter(Boolean).slice(0, 8));
-      } catch (err) {
-        console.error('Error fetching popular items:', err);
+            return null;
+          }),
+        );
+
+        setPopularItems(
+          itemsWithData
+            .filter((item): item is PopularHomepageItem => item !== null)
+            .slice(0, 8),
+        );
+      } catch (error) {
+        console.error('Error loading popular homepage items', error);
         setPopularItems([]);
       } finally {
         setPopularLoading(false);
       }
     };
-    fetchPopularItems();
+
+    loadPopularItems();
   }, []);
 
-  // Render logged-in user experience
-  if (user) {
-    return (
-      <div className="container mx-auto px-4 py-10">
-        {/* Popular Section */}
-        <div className="mb-10">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Popular now</h2>
-          </div>
-          {popularLoading ? (
-            <div className="flex justify-center items-center h-32">
-              <LoadingIndicator size="large" />
-            </div>
-          ) : popularItems.length === 0 ? (
-            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-              <p className="text-muted-foreground">No popular items found.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {popularItems.map((item) => {
-                switch (item.item_type) {
-                  case 'bill':
-                    return <BillCard key={`popular-bill-${item.data.id}`} bill={item.data} />;
-                  case 'law':
-                    return <LawCard key={`popular-law-${item.data.id}`} law={item.data} />;
-                  case 'executive_order':
-                    return <ExecutiveOrderCard key={`popular-execorder-${item.data.id}`} order={item.data} />;
-                  case 'agency_document':
-                    return <AgencyRuleCard key={`popular-agencydoc-${item.data.id}`} rule={item.data} />;
-                  case 'cluster':
-                    return <CourtCaseCard key={`popular-cluster-${item.data.id}`} cluster={item.data} />;
-                  default:
-                    return null;
-                }
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* SEO Content Section for Logged-in Users */}
-        <div className="mb-8 rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Track Congress members and legislative activities</h2>
-          <div className="grid grid-cols-1 gap-6 text-sm text-muted-foreground md:grid-cols-2">
-            <div>
-              <h3 className="font-medium mb-2">Congress members</h3>
-              <p className="mb-3">
-                Discover and track Congress members from all states. 
-                Monitor their voting records, sponsored bills, and legislative activities.
-              </p>
-              <Link href="/congress-members" className="text-primary hover:underline font-medium">
-                Browse all Congress members →
-              </Link>
-            </div>
-            <div>
-              <h3 className="font-medium mb-2">Legislative Tracking</h3>
-              <p className="mb-3">
-                Stay informed about the latest bills, laws, and government activities. 
-                Track how Congress members vote and influence policy decisions.
-              </p>
-              <Link href="/bills" className="text-primary hover:underline font-medium">
-                View recent legislation →
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Legislation in Your Policy Areas */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Your policy areas</h2>
-            <Link href="/bills" className="text-sm text-primary hover:underline">
-              View all legislation
-            </Link>
-          </div>
-          {userPreferences?.policy_areas && userPreferences.policy_areas.length > 0 ? (
-            recentLegislationLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <LoadingIndicator size="large" />
-              </div>
-            ) : (
-              <div>
-                {recentBills.length > 0 || recentLaws.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Combined and sorted bills and laws by most recent action date */}
-                    {[
-                      ...recentBills.map(bill => ({ type: 'bill', data: bill })),
-                      ...recentLaws.map(law => ({ type: 'law', data: law as Law }))
-                    ]
-                      .sort((a, b) => {
-                        // Get the action dates or default to a very old date if no action
-                        const dateA = a.data.most_recent_action?.date ? new Date(a.data.most_recent_action.date).getTime() : 0;
-                        const dateB = b.data.most_recent_action?.date ? new Date(b.data.most_recent_action.date).getTime() : 0;
-                        return dateB - dateA; // Sort descending (newest first)
-                      })
-                      .map(item => (
-                        item.type === 'bill' ?
-                          <BillCard key={`bill-${item.data.id}`} bill={item.data as Bill} /> :
-                          <LawCard key={`law-${item.data.id}`} law={item.data as Law} />
-                      ))
-                    }
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-                    <p className="text-muted-foreground">No recent legislation found in your policy areas.</p>
-                    <Link href="/bills" className="text-primary hover:underline mt-2 inline-block">
-                      Browse all bills
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )
-          ) : (
-            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-              <p className="text-muted-foreground">You haven&apos;t selected any policy areas yet.</p>
-              <Link href="/profile" className="text-primary hover:underline mt-2 inline-block">
-                Update preferences
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Watching */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold">Watching</h2>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-            <TabsList className="mb-4">
-              <TabsTrigger value="bills">
-                Bills <Badge variant="outline" className="ml-1 h-5 text-xs">{savedBills.length}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="congressmen">
-                Congress members <Badge variant="outline" className="ml-1 h-5 text-xs">{savedCongressmen.length}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="judges">
-                Judges <Badge variant="outline" className="ml-1 h-5 text-xs">{savedJudges.length}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="agencies">
-                Agencies <Badge variant="outline" className="ml-1 h-5 text-xs">{savedAgencies.length}</Badge>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="bills" className="mt-0">
-              <>
-                {savedBills.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {savedBills.map((savedBill) => (
-                      savedBill.bill && <BillCard key={savedBill.id} bill={savedBill.bill} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-                    <p className="text-muted-foreground">You haven&apos;t saved any bills yet.</p>
-                    <Link href="/bills" className="text-primary hover:underline mt-2 inline-block">
-                      Browse bills
-                    </Link>
-                  </div>
-                )}
-              </>
-            </TabsContent>
-
-            <TabsContent value="congressmen" className="mt-0">
-              <>
-                {savedCongressmen.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {savedCongressmen.map((saved) => (
-                      saved.congressman && (
-                        <div key={saved.id} className="h-full overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm transition-shadow duration-200 hover:shadow-md">
-                          <div className="p-4 h-full flex flex-col">
-                            <Link
-                              href={`/congress-members/${saved.congressman.id}`}
-                              className="block mb-2 hover:text-primary transition-colors"
-                            >
-                              <h3 className="text-lg font-medium text-foreground">
-                                {saved.congressman.full_name}
-                              </h3>
-                            </Link>
-                            <div className="mb-2 text-sm text-muted-foreground">
-                              {saved.congressman.party} - {saved.congressman.state}
-                              {saved.congressman.district && `, District ${saved.congressman.district}`}
-                            </div>
-                            <div className="mt-auto text-sm text-muted-foreground">
-                              {saved.congressman.chamber === 'House' ? 'Representative' : 'Senator'}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-                    <p className="text-muted-foreground">You haven&apos;t saved any Congress members yet.</p>
-                    <Link href="/congress-members" className="text-primary hover:underline mt-2 inline-block">
-                      Browse Congress members
-                    </Link>
-                  </div>
-                )}
-              </>
-            </TabsContent>
-
-            <TabsContent value="judges" className="mt-0">
-              <>
-                {savedJudges.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {savedJudges.map((saved) => (
-                      saved.judge && (
-                        <div key={saved.id} className="h-full overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm transition-shadow duration-200 hover:shadow-md">
-                          <div className="p-4 h-full flex flex-col">
-                            <Link
-                              href={`/judges/${saved.judge.id}`}
-                              className="block mb-2 hover:text-primary transition-colors"
-                            >
-                              <h3 className="text-lg font-medium text-foreground">
-                                {saved.judge.full_name}
-                              </h3>
-                            </Link>
-                          </div>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-                    <p className="text-muted-foreground">You haven&apos;t saved any judges yet.</p>
-                    <Link href="/judges" className="text-primary hover:underline mt-2 inline-block">
-                      Browse judges
-                    </Link>
-                  </div>
-                )}
-              </>
-            </TabsContent>
-
-            <TabsContent value="agencies" className="mt-0">
-              <>
-                {savedAgencies.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {savedAgencies.map((saved) => (
-                      saved.agency && (
-                        <div key={saved.id} className="h-full overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm transition-shadow duration-200 hover:shadow-md">
-                          <div className="p-4 h-full flex flex-col">
-                            <Link
-                              href={`/agencies/${saved.agency.id}`}
-                              className="block mb-2 hover:text-primary transition-colors"
-                            >
-                              <h3 className="text-lg font-medium text-foreground">
-                                {saved.agency.name}
-                              </h3>
-                            </Link>
-                            {saved.agency.description && (
-                              <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
-                                {saved.agency.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-                    <p className="text-muted-foreground">You haven&apos;t saved any agencies yet.</p>
-                    <Link href="/agencies" className="text-primary hover:underline mt-2 inline-block">
-                      Browse agencies
-                    </Link>
-                  </div>
-                )}
-              </>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Recent Executive Orders */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Executive Orders</h2>
-            <Link href="/executive-orders" className="text-sm text-primary hover:underline">
-              View executive orders
-            </Link>
-          </div>
-
-          {recentExecutiveOrders.length > 0 ? (
-            <div className="space-y-4">
-              {recentExecutiveOrders.map((order) => (
-                <div key={order.id} className="rounded-xl border border-border/80 bg-card/95 p-4 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <Link
-                        href={`/executive-orders/${order.id}`}
-                        className="text-lg font-medium text-foreground transition-colors hover:text-primary"
-                      >
-                        {order.title}
-                      </Link>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {order.signing_date && (
-                          <span>Signed on {new Date(order.signing_date).toLocaleDateString()}</span>
-                        )}
-                        {order.president && (
-                          <span> by President {order.president}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-shrink-0">
-                      <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
-                        Executive Order
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border/80 bg-card/90 p-4">
-              <p className="text-muted-foreground">No recent executive orders found.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Render logged-out experience
   return (
     <PublicHome
+      articles={articles}
+      articlesLoading={articlesLoading}
       bills={bills}
-      billsLoading={loading}
+      billsLoading={billsLoading}
+      isSignedIn={Boolean(user)}
       loginUrl={getLoginUrl(pathname)}
+      personalizedItems={personalizedItems}
+      personalizedLoading={personalizedLoading}
+      policyAreas={userPreferences?.policy_areas ?? []}
       popularItems={popularItems}
       popularLoading={popularLoading}
       recentExecutiveOrders={recentExecutiveOrders}
     />
-  );
-}
-export default function HomePage() {
-  return (
-    <Suspense fallback={<div className="flex justify-center items-center h-64">
-      <LoadingIndicator size="large" />
-    </div>}>
-      <HomeContent />
-    </Suspense>
   );
 }

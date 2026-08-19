@@ -7,19 +7,18 @@ import {
   Building2,
   CheckCircle2,
   Clock3,
-  FileText,
+  FileCheck2,
   Landmark,
   PenLine,
   Scale,
-  Search,
+  Sparkles,
 } from 'lucide-react';
 
-import SearchResults from '@/components/SearchResults';
 import { buttonVariants } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import useSearch from '@/hooks/useSearch';
 import { cn } from '@/lib/utils';
+import type { Article } from '@/types/article';
 import type { AgencyDocument, Bill, Cluster, Law } from '@/types/types';
+import { getContentTypeLabel } from '@/utils/contentReferences';
 
 type PopularItemType = 'bill' | 'law' | 'agency_document' | 'executive_order' | 'cluster';
 
@@ -27,22 +26,16 @@ interface PopularItemDisplayData {
   id: string;
   title?: string;
   law_title?: string;
-  type?: string;
-  number?: string;
   policy_area?: string;
   introduced_date?: string;
   law_enacted_date?: string;
   signing_date?: string;
   publication_date?: string;
-  president?: string;
   abstract?: string;
   case_name?: string;
   case_name_short?: string;
   date_filed?: string;
-  most_recent_action?: {
-    date?: string;
-    text?: string;
-  } | null;
+  most_recent_action?: { date?: string; text?: string } | null;
 }
 
 export type PopularHomepageItem =
@@ -51,10 +44,20 @@ export type PopularHomepageItem =
   | { id?: string; item_type: 'agency_document' | 'executive_order'; data: AgencyDocument }
   | { id?: string; item_type: 'cluster'; data: Cluster };
 
+export type PersonalizedHomepageItem =
+  | { item_type: 'bill'; data: Bill }
+  | { item_type: 'law'; data: Law };
+
 interface PublicHomeProps {
+  articles: Article[];
+  articlesLoading: boolean;
   bills: Bill[];
   billsLoading: boolean;
+  isSignedIn: boolean;
   loginUrl: string;
+  personalizedItems: PersonalizedHomepageItem[];
+  personalizedLoading: boolean;
+  policyAreas: string[];
   popularItems: PopularHomepageItem[];
   popularLoading: boolean;
   recentExecutiveOrders: AgencyDocument[];
@@ -66,55 +69,94 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
+const sectionLinks = [
+  { href: '/articles', label: 'Today' },
+  { href: '/bills', label: 'Congress' },
+  { href: '/executive-orders', label: 'White House' },
+  { href: '/agency-rules', label: 'Agencies' },
+  { href: '/supreme-court-cases', label: 'Courts' },
+  { href: '/laws', label: 'Sources' },
+] as const;
+
 const sourceLinks = [
-  {
-    description: 'Bills, laws, sponsors, and legislative actions.',
-    href: '/bills',
-    icon: Landmark,
-    label: 'Congress',
-  },
-  {
-    description: 'Executive orders and presidential actions.',
-    href: '/executive-orders',
-    icon: PenLine,
-    label: 'White House',
-  },
-  {
-    description: 'Rules, notices, and federal agency documents.',
-    href: '/agency-rules',
-    icon: Building2,
-    label: 'Agencies',
-  },
-  {
-    description: 'Supreme Court cases, opinions, and justices.',
-    href: '/supreme-court-cases',
-    icon: Scale,
-    label: 'Courts',
-  },
+  { description: 'Bills, laws, sponsors, and every legislative action.', href: '/bills', icon: Landmark, label: 'Congress' },
+  { description: 'Executive orders and presidential actions.', href: '/executive-orders', icon: PenLine, label: 'White House' },
+  { description: 'Rules, notices, and federal agency documents.', href: '/agency-rules', icon: Building2, label: 'Agencies' },
+  { description: 'Supreme Court cases, opinions, and justices.', href: '/supreme-court-cases', icon: Scale, label: 'Courts' },
 ] as const;
 
-const helpSteps = [
-  {
-    icon: Search,
-    text: 'Search federal legislation, orders, rules, decisions, agencies, and officials.',
-    title: 'Find the record',
-  },
-  {
-    icon: BookOpenText,
-    text: 'Read concise explanations, timelines, and related government activity.',
-    title: 'Understand what changed',
-  },
-  {
-    icon: FileText,
-    text: 'Save records and build a personal view of the policies and institutions you care about.',
-    title: 'Follow what matters',
-  },
+const articleLanes = [
+  { label: 'Congress', types: ['bill', 'law'] },
+  { label: 'White House', types: ['executive_order'] },
+  { label: 'Agencies', types: ['agency_document'] },
+  { label: 'Courts', types: ['cluster'] },
 ] as const;
 
-function formatDate(value?: string) {
+function formatDate(value?: string | null) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : dateFormatter.format(date);
+}
+
+function normalizePoint(value: string) {
+  return value
+    .replace(/^[-*•\d.)\s]+/, '')
+    .replace(/\[(.*?)\]\([^)]*\)/g, '$1')
+    .replace(/[*_#>`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getArticleKeyPoints(article: Article) {
+  const candidates: string[] = [];
+  const body = article.body;
+
+  if (body && typeof body === 'object') {
+    const record = body as {
+      paragraphs?: unknown[];
+      sections?: Array<{ bullets?: unknown[] }>;
+    };
+    record.sections?.forEach((section) => {
+      section.bullets?.forEach((bullet) => {
+        if (typeof bullet === 'string') candidates.push(bullet);
+      });
+    });
+    record.paragraphs?.forEach((paragraph) => {
+      if (typeof paragraph === 'string') candidates.push(paragraph);
+    });
+  }
+
+  const editorialText = [article.summary, article.body_markdown, article.dek, article.excerpt]
+    .filter((value): value is string => Boolean(value))
+    .join('\n');
+  const markdownBullets = editorialText
+    .split('\n')
+    .filter((line) => /^\s*[-*•]\s+/.test(line));
+  candidates.unshift(...markdownBullets);
+
+  if (candidates.length < 3) {
+    candidates.push(
+      ...editorialText
+        .replace(/\n+/g, ' ')
+        .split(/(?<=[.!?])\s+/)
+        .filter((sentence) => sentence.length > 35),
+    );
+  }
+
+  const points = candidates
+    .map(normalizePoint)
+    .filter((point, index, values) => point.length > 24 && values.indexOf(point) === index)
+    .slice(0, 3);
+
+  if (points.length === 0) {
+    points.push('This briefing is grounded in the linked government record and its latest available activity.');
+  }
+
+  return points;
+}
+
+function getArticleSourceCount(article: Article) {
+  return Math.max(1, 1 + (article.related_items?.length ?? 0) + article.source_urls.length);
 }
 
 function getPopularItemDetails(item: PopularHomepageItem) {
@@ -127,373 +169,325 @@ function getPopularItemDetails(item: PopularHomepageItem) {
     law: { href: `/laws/${data.id}`, label: 'Law' },
   };
   const detail = detailByType[item.item_type];
-  const title =
-    data.law_title || data.title || data.case_name_short || data.case_name || 'Untitled federal record';
-  const date =
-    data.law_enacted_date ||
-    data.signing_date ||
-    data.publication_date ||
-    data.most_recent_action?.date ||
-    data.date_filed ||
-    data.introduced_date;
-  const context =
-    data.most_recent_action?.text ||
-    data.abstract ||
-    data.policy_area ||
-    (data.president ? `Signed by President ${data.president}` : 'View the official record and related activity.');
+  const title = data.law_title || data.title || data.case_name_short || data.case_name || 'Untitled federal record';
+  const date = data.law_enacted_date || data.signing_date || data.publication_date || data.most_recent_action?.date || data.date_filed || data.introduced_date;
+  const context = data.most_recent_action?.text || data.abstract || data.policy_area || 'Open the source record to review the official text and related activity.';
 
   return { ...detail, context, date: formatDate(date), title };
 }
 
-function SectionHeading({
-  description,
-  eyebrow,
-  title,
-}: {
-  description: string;
-  eyebrow: string;
-  title: string;
-}) {
+function StoryMeta({ article }: { article: Article }) {
   return (
-    <div className="max-w-2xl">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
-      <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight text-foreground md:text-4xl">{title}</h2>
-      <p className="mt-3 text-base leading-7 text-muted-foreground">{description}</p>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <span className="text-primary">{getContentTypeLabel(article.primary_item_type)}</span>
+      {formatDate(article.published_at) ? <span>{formatDate(article.published_at)}</span> : null}
+      {article.reading_time ? <span>{article.reading_time} min read</span> : null}
     </div>
   );
 }
 
-function HomeSearch() {
-  const {
-    clearSearch,
-    closeResults,
-    handleSearchChange,
-    isLoading,
-    results,
-    searchQuery,
-    showResults,
-  } = useSearch();
-
+function StoryRow({ article }: { article: Article }) {
   return (
-    <div className="relative z-20 mt-8 max-w-2xl">
-      <label htmlFor="public-home-search" className="sr-only">
-        Search federal public records
-      </label>
-      <div className="relative rounded-xl border border-border bg-card shadow-[0_14px_40px_-26px_hsl(var(--foreground))]">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-        <Input
-          id="public-home-search"
-          type="search"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Search a bill, policy, agency, official, or question"
-          className="h-14 border-0 bg-transparent pl-12 pr-12 text-base shadow-none focus-visible:ring-2 focus-visible:ring-primary/35"
-          aria-expanded={showResults}
-        />
-        {searchQuery ? (
-          <button
-            type="button"
-            onClick={clearSearch}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Clear
-          </button>
-        ) : null}
+    <Link href={`/articles/${article.slug}`} className="group block border-t border-border py-5 first:border-t-0 first:pt-0 last:pb-0">
+      <StoryMeta article={article} />
+      <h3 className="mt-2 font-serif text-xl font-semibold leading-6 transition-colors group-hover:text-primary">
+        {article.title}
+      </h3>
+      <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
+        {article.dek || article.excerpt || article.summary}
+      </p>
+    </Link>
+  );
+}
+
+function SectionHeading({ eyebrow, title, action }: { eyebrow: string; title: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-end justify-between gap-6 border-b-2 border-foreground pb-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+        <h2 className="mt-2 font-serif text-3xl font-semibold leading-tight md:text-4xl">{title}</h2>
       </div>
-      {showResults ? (
-        <SearchResults
-          results={results}
-          isLoading={isLoading}
-          onClose={closeResults}
-          searchQuery={searchQuery}
-        />
-      ) : null}
+      {action}
     </div>
   );
 }
 
 export default function PublicHome({
+  articles,
+  articlesLoading,
   bills,
   billsLoading,
+  isSignedIn,
   loginUrl,
+  personalizedItems,
+  personalizedLoading,
+  policyAreas,
   popularItems,
   popularLoading,
   recentExecutiveOrders,
 }: PublicHomeProps) {
-  const spotlightItems = popularItems.slice(0, 3);
-  const radarItems = popularItems.slice(0, 4);
+  const leadArticle = articles[0];
+  const latestArticles = articles.slice(1, 5);
+  const moreArticles = articles.slice(5, 11);
+  const leadPoints = leadArticle ? getArticleKeyPoints(leadArticle) : [];
 
   return (
     <div className="-mx-4 -mb-4 overflow-hidden md:-mx-6 md:-mb-6">
-      <section className="relative border-b border-border/80 bg-background">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute -right-32 -top-40 h-[32rem] w-[32rem] rounded-full bg-primary/[0.07] blur-3xl" />
-          <div className="absolute -left-28 bottom-0 h-64 w-64 rounded-full bg-[hsl(var(--trust)/0.08)] blur-3xl" />
+      <div className="border-b border-border bg-card/75">
+        <div className="container mx-auto flex gap-6 overflow-x-auto px-4 py-3 text-sm font-semibold">
+          {sectionLinks.map((item) => (
+            <Link key={item.href} href={item.href} className="whitespace-nowrap text-muted-foreground transition-colors hover:text-primary">
+              {item.label}
+            </Link>
+          ))}
         </div>
+      </div>
 
-        <div className="container relative mx-auto grid gap-12 px-4 py-16 md:py-24 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] lg:items-center lg:gap-16">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--trust)/0.25)] bg-[hsl(var(--trust)/0.08)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[hsl(var(--trust))]">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Federal public records, made clear
+      <section className="border-b border-border bg-background py-10 md:py-14">
+        <div className="container mx-auto px-4">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[hsl(var(--trust))]">
+              <CheckCircle2 className="h-4 w-4" />
+              Briefings grounded in official records
             </div>
-            <h1 className="mt-6 max-w-4xl text-balance font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.035em] text-foreground md:text-6xl lg:text-7xl">
-              See what the federal government is doing.{' '}
-              <span className="text-primary">Start with the source.</span>
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Explore bills, laws, executive orders, agency actions, court decisions, and the people behind them—explained clearly and linked to the official record.
-            </p>
-
-            <HomeSearch />
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <a href="#latest-activity" className={buttonVariants({ size: 'lg' })}>
-                Explore latest activity
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-              <Link href="/articles" className={buttonVariants({ size: 'lg', variant: 'outline' })}>
-                Read briefings
-              </Link>
-            </div>
-            <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-muted-foreground">
-              <span>Official-source links</span>
-              <span aria-hidden="true">·</span>
-              <span>Plain-language context</span>
-              <span aria-hidden="true">·</span>
-              <span>Updated continuously</span>
+            <p className="text-xs font-medium text-muted-foreground" suppressHydrationWarning>
+              {new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date())}
             </p>
           </div>
 
-          <aside className="rounded-2xl border border-border bg-card p-5 shadow-[0_24px_70px_-48px_hsl(var(--foreground))] md:p-7">
-            <div className="flex items-center justify-between gap-4 border-b border-border pb-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Live record</p>
-                <h2 className="mt-1 font-serif text-2xl font-semibold">Today in government</h2>
+          {articlesLoading ? (
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)]">
+              <div className="space-y-5">
+                <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                <div className="h-24 max-w-3xl animate-pulse rounded bg-muted" />
+                <div className="h-48 animate-pulse rounded bg-muted" />
               </div>
-              <Clock3 className="h-5 w-5 text-muted-foreground" />
+              <div className="h-96 animate-pulse rounded bg-muted" />
             </div>
+          ) : leadArticle ? (
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)] lg:gap-12">
+              <article className="lg:border-r lg:border-border lg:pr-12">
+                <StoryMeta article={leadArticle} />
+                <Link href={`/articles/${leadArticle.slug}`} className="group block">
+                  <h1 className="mt-5 max-w-4xl text-balance font-serif text-4xl font-semibold leading-[1.04] tracking-[-0.035em] transition-colors group-hover:text-primary md:text-6xl">
+                    {leadArticle.title}
+                  </h1>
+                  <p className="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">
+                    {leadArticle.dek || leadArticle.excerpt || leadArticle.summary}
+                  </p>
+                </Link>
 
-            <div className="divide-y divide-border">
-              {popularLoading ? (
-                Array.from({ length: 3 }, (_, index) => (
-                  <div key={index} className="space-y-2 py-5">
-                    <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-                    <div className="h-5 w-full animate-pulse rounded bg-muted" />
+                <div className="mt-8 border-y border-border bg-card/70 px-5 py-5 md:px-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em]">
+                      <BookOpenText className="h-4 w-4 text-primary" />
+                      Three things to know
+                    </h2>
+                    <span className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
+                      <FileCheck2 className="h-3.5 w-3.5 text-[hsl(var(--trust))]" />
+                      {getArticleSourceCount(leadArticle)} official {getArticleSourceCount(leadArticle) === 1 ? 'source' : 'sources'}
+                    </span>
                   </div>
-                ))
-              ) : spotlightItems.length > 0 ? (
-                spotlightItems.map((item) => {
+                  <ol className="mt-4 grid gap-4 md:grid-cols-3">
+                    {leadPoints.map((point, index) => (
+                      <li key={point} className="flex gap-3 text-sm leading-6">
+                        <span className="font-mono text-xs font-bold text-primary">0{index + 1}</span>
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-4">
+                  <Link href={`/articles/${leadArticle.slug}`} className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}>
+                    Read the briefing <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" /> AI-assisted, source-linked analysis
+                  </span>
+                </div>
+              </article>
+
+              <aside>
+                <div className="mb-5 flex items-center justify-between border-b-2 border-foreground pb-3">
+                  <h2 className="font-serif text-2xl font-semibold">Latest</h2>
+                  <Clock3 className="h-4 w-4 text-muted-foreground" />
+                </div>
+                {latestArticles.length > 0 ? (
+                  latestArticles.map((article) => <StoryRow key={article.id} article={article} />)
+                ) : (
+                  <p className="text-sm leading-6 text-muted-foreground">More source-grounded Briefs will appear here as they are published.</p>
+                )}
+              </aside>
+            </div>
+          ) : (
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.75fr)]">
+              <div className="border-r-0 border-border lg:border-r lg:pr-10">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Today in government</p>
+                <h1 className="mt-4 max-w-3xl font-serif text-4xl font-semibold leading-tight md:text-6xl">The official record, made readable.</h1>
+                <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">Published Briefs will lead this page. Until then, explore the latest verified activity from Congress, agencies, the White House, and the courts.</p>
+                <Link href="/articles" className={cn(buttonVariants({ size: 'lg' }), 'mt-7')}>Browse Briefs</Link>
+              </div>
+              <div className="space-y-4">
+                {popularLoading ? <div className="h-56 animate-pulse rounded bg-muted" /> : popularItems.slice(0, 3).map((item) => {
                   const detail = getPopularItemDetails(item);
                   return (
-                    <Link key={`${item.item_type}-${item.data.id}`} href={detail.href} className="group block py-5">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                        <span className="text-primary">{detail.label}</span>
-                        {detail.date ? <span>· {detail.date}</span> : null}
-                      </div>
-                      <p className="mt-2 line-clamp-2 font-serif text-lg font-semibold leading-6 transition-colors group-hover:text-primary">
-                        {detail.title}
-                      </p>
+                    <Link key={`${item.item_type}-${item.data.id}`} href={detail.href} className="group block border-b border-border pb-4 last:border-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-primary">{detail.label}</p>
+                      <h2 className="mt-2 font-serif text-xl font-semibold group-hover:text-primary">{detail.title}</h2>
                     </Link>
                   );
-                })
-              ) : (
-                <div className="py-8 text-sm leading-6 text-muted-foreground">
-                  Browse the latest records from Congress, federal agencies, the White House, and the courts.
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {isSignedIn ? (
+        <section className="border-b border-border bg-[hsl(var(--ink))] py-10 text-[hsl(var(--ink-foreground))]">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--highlight))]">For you</p>
+                <h2 className="mt-2 font-serif text-3xl font-semibold">Your policy briefing</h2>
+                <p className="mt-2 text-sm text-white/65">
+                  {policyAreas.length > 0 ? `Recent activity across ${policyAreas.slice(0, 3).join(', ')}${policyAreas.length > 3 ? ` and ${policyAreas.length - 3} more` : ''}.` : 'Choose policy areas to shape this section.'}
+                </p>
+              </div>
+              <Link href="/profile" className="text-sm font-semibold text-[hsl(var(--highlight))] hover:underline">Manage interests</Link>
+            </div>
+
+            <div className="mt-7 grid gap-px overflow-hidden border border-white/15 bg-white/15 md:grid-cols-3">
+              {personalizedLoading ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-40 animate-pulse bg-white/5" />) : personalizedItems.length > 0 ? personalizedItems.slice(0, 3).map((item) => {
+                const href = item.item_type === 'law' ? `/laws/${item.data.id}` : `/bills/${item.data.id}`;
+                const title = item.item_type === 'law' && 'law_title' in item.data && item.data.law_title ? item.data.law_title : item.data.title;
+                return (
+                  <Link key={`${item.item_type}-${item.data.id}`} href={href} className="group bg-[hsl(var(--ink))] p-5 transition-colors hover:bg-white/5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[hsl(var(--highlight))]">{item.data.policy_area || (item.item_type === 'law' ? 'Law' : 'Bill')}</p>
+                    <h3 className="mt-3 line-clamp-3 font-serif text-xl font-semibold leading-6 group-hover:text-[hsl(var(--highlight))]">{title}</h3>
+                    <p className="mt-4 line-clamp-2 text-sm leading-6 text-white/60">{item.data.most_recent_action?.text || 'Review the latest source record and legislative activity.'}</p>
+                  </Link>
+                );
+              }) : (
+                <div className="bg-[hsl(var(--ink))] p-6 md:col-span-3">
+                  <p className="text-sm text-white/70">Select policy areas in your profile to receive a personalized source feed here.</p>
                 </div>
               )}
             </div>
-          </aside>
-        </div>
-      </section>
+          </div>
+        </section>
+      ) : null}
 
-      <section className="border-b border-border bg-card/45 py-16 md:py-20">
-        <div className="container mx-auto px-4">
-          <SectionHeading
-            eyebrow="Curated activity"
-            title="On the radar"
-            description="Significant and fast-moving activity across Congress, the White House, federal agencies, and the courts."
-          />
+      {moreArticles.length > 0 ? (
+        <section className="border-b border-border bg-card/40 py-14 md:py-20">
+          <div className="container mx-auto px-4">
+            <SectionHeading eyebrow="More to know" title="The latest Briefs" action={<Link href="/articles" className="hidden text-sm font-semibold text-primary hover:underline sm:block">View all Briefs</Link>} />
+            <div className="mt-8 grid gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
+              {moreArticles.map((article) => (
+                <article key={article.id} className="group border-t border-border pt-5">
+                  <StoryMeta article={article} />
+                  <Link href={`/articles/${article.slug}`}>
+                    <h3 className="mt-3 font-serif text-2xl font-semibold leading-7 transition-colors group-hover:text-primary">{article.title}</h3>
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{article.dek || article.excerpt || article.summary}</p>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">Read briefing <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+                  </Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
-          <div className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-2 xl:grid-cols-4">
-            {popularLoading ? (
-              Array.from({ length: 4 }, (_, index) => (
-                <div key={index} className="min-h-64 space-y-4 bg-card p-6">
-                  <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                  <div className="h-7 w-full animate-pulse rounded bg-muted" />
-                  <div className="h-16 w-full animate-pulse rounded bg-muted" />
-                </div>
-              ))
-            ) : radarItems.length > 0 ? (
-              radarItems.map((item) => {
-                const detail = getPopularItemDetails(item);
+      {articles.length > 1 ? (
+        <section className="border-b border-border py-14 md:py-20">
+          <div className="container mx-auto px-4">
+            <SectionHeading eyebrow="By institution" title="Follow the federal government" />
+            <div className="mt-9 grid gap-8 lg:grid-cols-2">
+              {articleLanes.map((lane) => {
+                const laneArticles = articles.filter((article) => (lane.types as readonly string[]).includes(article.primary_item_type)).slice(0, 3);
+                if (laneArticles.length === 0) return null;
                 return (
-                  <Link
-                    key={`${item.item_type}-${item.data.id}`}
-                    href={detail.href}
-                    className="group flex min-h-64 flex-col bg-card p-6 transition-colors hover:bg-secondary/45"
-                  >
-                    <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.12em]">
-                      <span className="text-primary">{detail.label}</span>
-                      {detail.date ? <span className="text-muted-foreground">{detail.date}</span> : null}
+                  <div key={lane.label} className="border-t-4 border-foreground pt-4">
+                    <div className="mb-5 flex items-center justify-between">
+                      <h3 className="font-serif text-2xl font-semibold">{lane.label}</h3>
+                      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source-linked</span>
                     </div>
-                    <h3 className="mt-6 line-clamp-4 font-serif text-2xl font-semibold leading-7 transition-colors group-hover:text-primary">
-                      {detail.title}
-                    </h3>
-                    <p className="mt-4 line-clamp-3 text-sm leading-6 text-muted-foreground">{detail.context}</p>
-                    <span className="mt-auto flex items-center gap-2 pt-6 text-sm font-semibold text-foreground">
-                      View source and details
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    {laneArticles.map((article) => <StoryRow key={article.id} article={article} />)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="border-b border-border bg-card/45 py-14 md:py-20">
+        <div className="container mx-auto px-4">
+          <SectionHeading eyebrow="The evidence layer" title="Go directly to the source" action={<span className="hidden items-center gap-2 text-xs font-medium text-muted-foreground md:flex"><FileCheck2 className="h-4 w-4 text-[hsl(var(--trust))]" /> Official records</span>} />
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-2">
+            <div className="border-t border-border">
+              <div className="flex items-center justify-between py-4">
+                <h3 className="font-serif text-xl font-semibold">Latest from Congress</h3>
+                <Link href="/bills" className="text-sm font-semibold text-primary hover:underline">View all</Link>
+              </div>
+              <div className="divide-y divide-border">
+                {billsLoading ? Array.from({ length: 4 }, (_, index) => <div key={index} className="my-4 h-12 animate-pulse rounded bg-muted" />) : bills.slice(0, 4).map((bill) => (
+                  <Link key={bill.id} href={`/bills/${bill.id}`} className="group grid grid-cols-[78px_1fr] gap-4 py-4">
+                    <span className="text-xs font-bold uppercase tracking-wide text-primary">{bill.type}. {bill.number}</span>
+                    <span>
+                      <span className="line-clamp-2 text-sm font-medium leading-5 group-hover:text-primary">{bill.title}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">{formatDate(bill.introduced_date) || 'Official legislative record'}</span>
                     </span>
                   </Link>
-                );
-              })
-            ) : (
-              <div className="bg-card p-6 text-sm text-muted-foreground md:col-span-2 xl:col-span-4">
-                No curated records are available right now.
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section id="latest-activity" className="scroll-mt-36 py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <SectionHeading
-            eyebrow="Primary sources"
-            title="Latest official actions"
-            description="Newly introduced, signed, published, and decided records from across the federal government."
-          />
-
-          <div className="mt-10 grid gap-8 lg:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-card">
-              <div className="flex items-center justify-between border-b border-border px-5 py-4 md:px-6">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Landmark className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="font-serif text-xl font-semibold">From Congress</p>
-                    <p className="text-xs text-muted-foreground">Recently introduced legislation</p>
-                  </div>
-                </div>
-                <Link href="/bills" className="text-sm font-semibold text-primary hover:underline">
-                  View all
-                </Link>
-              </div>
-              <div className="divide-y divide-border px-5 md:px-6">
-                {billsLoading ? (
-                  Array.from({ length: 5 }, (_, index) => <div key={index} className="my-4 h-14 animate-pulse rounded bg-muted" />)
-                ) : bills.length > 0 ? (
-                  bills.slice(0, 5).map((bill) => (
-                    <Link key={bill.id} href={`/bills/${bill.id}`} className="group flex gap-4 py-5">
-                      <span className="mt-0.5 min-w-20 text-xs font-semibold uppercase tracking-wide text-primary">
-                        {bill.type}. {bill.number}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="line-clamp-2 font-medium leading-6 transition-colors group-hover:text-primary">{bill.title}</span>
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          {formatDate(bill.introduced_date) ? `Introduced ${formatDate(bill.introduced_date)}` : 'View legislative record'}
-                        </span>
-                      </span>
-                    </Link>
-                  ))
-                ) : (
-                  <p className="py-8 text-sm text-muted-foreground">No recent legislation is available.</p>
-                )}
+                ))}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card">
-              <div className="flex items-center justify-between border-b border-border px-5 py-4 md:px-6">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--trust)/0.1)] text-[hsl(var(--trust))]">
-                    <PenLine className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="font-serif text-xl font-semibold">From the White House</p>
-                    <p className="text-xs text-muted-foreground">Recently signed executive orders</p>
-                  </div>
-                </div>
-                <Link href="/executive-orders" className="text-sm font-semibold text-primary hover:underline">
-                  View all
-                </Link>
+            <div className="border-t border-border">
+              <div className="flex items-center justify-between py-4">
+                <h3 className="font-serif text-xl font-semibold">Latest from the White House</h3>
+                <Link href="/executive-orders" className="text-sm font-semibold text-primary hover:underline">View all</Link>
               </div>
-              <div className="divide-y divide-border px-5 md:px-6">
-                {recentExecutiveOrders.length > 0 ? (
-                  recentExecutiveOrders.slice(0, 5).map((order) => (
-                    <Link key={order.id} href={`/executive-orders/${order.id}`} className="group block py-5">
-                      <span className="line-clamp-2 font-medium leading-6 transition-colors group-hover:text-primary">{order.title}</span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {formatDate(order.signing_date) ? `Signed ${formatDate(order.signing_date)}` : 'View executive order'}
-                        {order.president ? ` · President ${order.president}` : ''}
-                      </span>
-                    </Link>
-                  ))
-                ) : (
-                  <p className="py-8 text-sm text-muted-foreground">No recent executive orders are available.</p>
-                )}
+              <div className="divide-y divide-border">
+                {recentExecutiveOrders.slice(0, 4).map((order) => (
+                  <Link key={order.id} href={`/executive-orders/${order.id}`} className="group block py-4">
+                    <span className="line-clamp-2 text-sm font-medium leading-5 group-hover:text-primary">{order.title}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">{formatDate(order.signing_date) || 'Official executive record'}{order.president ? ` · President ${order.president}` : ''}</span>
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-10 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
             {sourceLinks.map(({ description, href, icon: Icon, label }) => (
-              <Link key={href} href={href} className="group rounded-xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-sm">
+              <Link key={href} href={href} className="group bg-card p-5 transition-colors hover:bg-secondary/55">
                 <Icon className="h-5 w-5 text-primary" />
                 <h3 className="mt-4 font-serif text-xl font-semibold">{label}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
-                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-                  Browse records <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                </span>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">Browse records <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="border-y border-border bg-[hsl(var(--ink))] py-16 text-[hsl(var(--ink-foreground))] md:py-20">
-        <div className="container mx-auto px-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--highlight))]">How GovSource helps</p>
-          <h2 className="mt-3 max-w-2xl font-serif text-3xl font-semibold md:text-4xl">From official record to useful context</h2>
-          <div className="mt-10 grid gap-8 md:grid-cols-3">
-            {helpSteps.map(({ icon: Icon, text, title }, index) => (
-              <div key={title} className="border-t border-white/20 pt-6">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-[hsl(var(--highlight))]">0{index + 1}</span>
-                  <Icon className="h-5 w-5 text-[hsl(var(--highlight))]" />
-                </div>
-                <h3 className="mt-5 font-serif text-2xl font-semibold">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-white/70">{text}</p>
+      {!isSignedIn ? (
+        <section className="py-14 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="grid gap-6 border-y border-border py-10 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--trust))]">Make it yours</p>
+                <h2 className="mt-2 font-serif text-3xl font-semibold">Follow the policies and institutions that matter to you.</h2>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">Sign in to add a personal policy briefing without losing the same editorial front page.</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-10 md:px-12 md:py-14">
-            <div className="absolute bottom-0 right-0 h-48 w-48 translate-x-1/3 translate-y-1/3 rounded-full bg-primary/10 blur-2xl" aria-hidden="true" />
-            <div className="relative max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--trust))]">Personalize your view</p>
-              <h2 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Make GovSource yours</h2>
-              <p className="mt-4 text-base leading-7 text-muted-foreground">
-                Follow policies, officials, agencies, and cases you care about. Your saved sources and updates stay together in one place.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-4">
-                <Link href={loginUrl} className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}>
-                  Create your watchlist
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href={loginUrl} className="text-sm font-semibold text-primary hover:underline">
-                  Already have an account? Sign in
-                </Link>
-              </div>
+              <Link href={loginUrl} className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}>Create your briefing <ArrowRight className="h-4 w-4" /></Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }
