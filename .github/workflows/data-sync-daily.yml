@@ -68,7 +68,8 @@ jobs:
             python scripts/sync_federal_register_docs.py \
               --document-type "${document_type}" \
               --per-page 100 \
-              --max-pages 2
+              --max-pages 2 \
+              --stop-on-existing
           done
 
       - name: Sync recent Supreme Court opinions

@@ -47,7 +47,9 @@ pytest -q
 Two workflows under `.github/workflows` run bounded synchronization jobs:
 
 - `data-sync-daily.yml` refreshes recent bills and their actions, Federal
-  Register documents, and Supreme Court opinions at 04:17 UTC each day.
+  Register documents, and Supreme Court opinions at 04:17 UTC each day. Each
+  newest-first Federal Register sync stops when it reaches a document already
+  in the database.
 - `data-sync-weekly.yml` refreshes courts, Congress members, Federal Register
   agencies, and agency relationships at 06:43 UTC each Sunday.
 

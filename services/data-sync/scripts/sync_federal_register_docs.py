@@ -7,7 +7,7 @@ import argparse
 import logging
 import sys
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from dotenv import load_dotenv
 from sync_common import (
@@ -71,8 +71,8 @@ class FederalRegisterClient:
         page_size: int,
         max_pages: Optional[int],
         start_page: int,
-    ) -> List[Dict[str, Any]]:
-        documents: List[Dict[str, Any]] = []
+    ) -> Iterator[Dict[str, Any]]:
+        """Yield newest documents first, fetching the next page only as needed."""
         page = start_page
         processed = 0
         while max_pages is None or processed < max_pages:
@@ -94,13 +94,12 @@ class FederalRegisterClient:
             results = payload.get("results") or []
             if not isinstance(results, list):
                 raise UpstreamAPIError("Federal Register results was not a list")
-            documents.extend(item for item in results if isinstance(item, dict))
+            yield from (item for item in results if isinstance(item, dict))
             processed += 1
             total_pages = int(payload.get("total_pages") or page)
             if page >= total_pages:
                 break
             page += 1
-        return documents
 
     def detail(self, document_number: str) -> Dict[str, Any]:
         return get_json(
@@ -185,6 +184,17 @@ def document_row(detail: Dict[str, Any]) -> Dict[str, Any]:
     return row
 
 
+def document_exists(supabase: Any, document_number: str) -> bool:
+    result = (
+        supabase.table("agency_document")
+        .select("id")
+        .eq("remote_document_number", document_number)
+        .limit(1)
+        .execute()
+    )
+    return bool(result.data)
+
+
 def sync_documents_to_supabase(
     supabase: Any,
     client: FederalRegisterClient,
@@ -195,6 +205,7 @@ def sync_documents_to_supabase(
     max_pages: Optional[int] = None,
     skip_storage: bool = False,
     start_page: int = 1,
+    stop_on_existing: bool = False,
 ) -> RunStats:
     documents = client.documents(
         agency_id=agency_id,
@@ -203,12 +214,19 @@ def sync_documents_to_supabase(
         max_pages=max_pages,
         start_page=start_page,
     )
-    stats = RunStats(fetched=len(documents))
+    stats = RunStats()
     for document in documents:
+        stats.fetched += 1
         try:
             number = document.get("document_number")
             if not number:
                 raise UpstreamAPIError("Document is missing document_number")
+            if stop_on_existing and document_exists(supabase, number):
+                stats.skipped += 1
+                logger.info(
+                    "Stopping at existing Federal Register document %s", number
+                )
+                break
             detail = client.detail(number)
             row = document_row(detail)
             if not row["remote_document_number"]:
@@ -253,6 +271,14 @@ def main() -> int:
     parser.add_argument("--max-pages", type=int, default=50)
     parser.add_argument("--start-page", type=int, default=1)
     parser.add_argument("--skip-storage", action="store_true")
+    parser.add_argument(
+        "--stop-on-existing",
+        action="store_true",
+        help=(
+            "stop at the first document already in the database; use only with "
+            "newest-first incremental syncs"
+        ),
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -266,6 +292,7 @@ def main() -> int:
             max_pages=args.max_pages,
             skip_storage=args.skip_storage,
             start_page=args.start_page,
+            stop_on_existing=args.stop_on_existing,
         )
     except Exception as exc:
         logger.exception("Federal Register sync failed: %s", exc)
