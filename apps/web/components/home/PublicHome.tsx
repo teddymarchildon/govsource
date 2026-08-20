@@ -60,15 +60,6 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-const sectionLinks = [
-  { href: '/articles', label: 'Today' },
-  { href: '/bills', label: 'Congress' },
-  { href: '/executive-orders', label: 'White House' },
-  { href: '/agency-rules', label: 'Agencies' },
-  { href: '/supreme-court-cases', label: 'Courts' },
-  { href: '/laws', label: 'Sources' },
-] as const;
-
 const sourceLinks = [
   { description: 'Bills, laws, sponsors, and every legislative action.', href: '/bills', icon: Landmark, label: 'Congress' },
   { description: 'Executive orders and presidential actions.', href: '/executive-orders', icon: PenLine, label: 'White House' },
@@ -224,16 +215,6 @@ export default function PublicHome({
 
   return (
     <div className="-mx-4 -mb-4 overflow-hidden md:-mx-6 md:-mb-6">
-      <div className="border-b border-border bg-card/75">
-        <div className="container mx-auto flex gap-6 overflow-x-auto px-4 py-3 text-sm font-semibold">
-          {sectionLinks.map((item) => (
-            <Link key={item.href} href={item.href} className="whitespace-nowrap text-muted-foreground transition-colors hover:text-primary">
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-
       <section className="border-b border-border bg-background py-10 md:py-14">
         <div className="container mx-auto px-4">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
