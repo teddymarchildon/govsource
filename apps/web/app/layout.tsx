@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description: 'Explore federal bills, laws, executive orders, agency actions, and court decisions with clear context and links to official sources.',
   keywords: 'congress members, us congress members, legislative tracking, government data, bills, laws',
   icons: {
-    icon: '/favicon.png',
+    icon: '/favicon.svg',
   },
   openGraph: {
     title: 'GovSource - Federal Public Records, Made Clear',
