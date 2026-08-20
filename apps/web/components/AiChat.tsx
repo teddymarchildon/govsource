@@ -594,7 +594,7 @@ export default function AiChat({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold tracking-tight text-foreground">
-              {documentType === 'executiveOrder' ? 'Ask this order' : 'Assistant'}
+              Ask this {noun}
             </h2>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
               {usageLabel && (
