@@ -1,139 +1,76 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
-import type { Agency, AgencyDocument } from '../../../types/types';
-import AgencyCard from '../../../components/AgencyCard';
-import SaveButton from '../../../components/SaveButton';
-import AgencyDocuments from '../../../components/AgencyDocuments';
-import Breadcrumbs from '../../../components/Breadcrumbs';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import type { ReactNode } from 'react';
+import { ArrowUpRight, Building2, FileText, Network } from 'lucide-react';
+
+import AgencyCard from '@/components/AgencyCard';
+import AgencyDocuments from '@/components/AgencyDocuments';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import SaveButton from '@/components/SaveButton';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { Agency, AgencyDocument } from '@/types/types';
 
-type AgencyDetailClientProps = {
-  agencyId: string;
-  agency: Agency;
-  childAgencies: Agency[];
-  documents: AgencyDocument[];
-};
+type Props = { agencyId: string; agency: Agency; childAgencies: Agency[]; documents: AgencyDocument[] };
 
-export default function AgencyDetailClient({ agencyId, agency, childAgencies, documents }: AgencyDetailClientProps) {
-  const [activeTab, setActiveTab] = useState<'subagencies' | 'rules'>('subagencies');
+export default function AgencyDetailClient({ agencyId, agency, childAgencies, documents }: Props) {
+  const isTopLevel = agency.parent_id == null;
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <Breadcrumbs
-        steps={[
-          { label: 'Home', href: '/' },
-          { label: 'Federal Agencies', href: '/agencies' },
-          { label: agency.name }
-        ]}
-      />
+      <Breadcrumbs steps={[{ label: 'Home', href: '/' }, { label: 'Federal agencies', href: '/agencies' }, { label: agency.name }]} />
 
-      {/* Agency Header (match CongressmanDetailPage style) */}
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{agency.name}
-            {agency.short_name && (
-              <span className="ml-2 text-lg text-gray-500">({agency.short_name})</span>
-            )}
-          </h1>
-          {agency.parent && (
-            <div className="text-gray-600 text-sm mb-1">
-              <span className="font-medium">Part of:</span>{' '}
-              <Link href={`/agencies/${agency.parent.id}`} className="text-primary hover:underline">
-                {agency.parent.name}
-              </Link>
+      <header className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+        <div className="h-1.5 bg-primary" />
+        <div className="flex flex-col gap-6 p-6 md:flex-row md:items-start md:justify-between md:p-8">
+          <div className="flex min-w-0 items-start gap-4 md:gap-6">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15 md:h-20 md:w-20"><Building2 className="h-8 w-8 md:h-10 md:w-10" /></div>
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Federal agency</p>
+                {isTopLevel ? <Badge variant="secondary">Top-level agency</Badge> : null}
+              </div>
+              <h1 className="text-balance text-3xl font-bold leading-tight text-foreground md:text-4xl">{agency.name}</h1>
+              {agency.short_name ? <p className="mt-2 text-lg font-medium text-muted-foreground">{agency.short_name}</p> : null}
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+                {agency.parent ? <span className="text-muted-foreground">Part of <Link href={`/agencies/${agency.parent.id}`} className="font-medium text-primary hover:underline">{agency.parent.name}</Link></span> : null}
+                {agency.url ? <a href={agency.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">Agency source <ArrowUpRight className="h-3.5 w-3.5" /></a> : null}
+              </div>
             </div>
-          )}
-        </div>
-        <div className="mt-4 md:mt-0">
+          </div>
           <SaveButton itemId={agencyId} itemType="agency" />
         </div>
-      </div>
+        <div className="grid border-t border-border/70 bg-muted/20 sm:grid-cols-2">
+          <div className="px-6 py-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sub-agencies</p><p className="mt-1 text-xl font-semibold">{childAgencies.length}</p></div>
+          <div className="border-t border-border/60 px-6 py-4 sm:border-l sm:border-t-0"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Published documents</p><p className="mt-1 text-xl font-semibold">{documents.length}</p></div>
+        </div>
+      </header>
 
-      {/* Agency Description (separate section) */}
-      <div className="mb-8">
-        {agency.description ? (
-          <p className="text-gray-700 whitespace-pre-line">{agency.description}</p>
-        ) : (
-          <p className="text-gray-500 italic">No description available for this agency.</p>
-        )}
-      </div>
-
-      {/* Tab Navigation (moved out of Card, styled like CongressmanDetailPage) */}
-      <div className="border-b border-border/60 mb-6 overflow-x-auto">
-        <nav className="flex gap-2 whitespace-nowrap pb-1" aria-label="Tabs">
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('subagencies')}
-            className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
-              activeTab === 'subagencies'
-                ? 'rounded-md bg-muted/80 text-foreground'
-                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-            }`}
-          >
-            Sub-Agencies
-            <Badge variant={activeTab === 'subagencies' ? 'secondary' : 'outline'} className="ml-2">
-              {childAgencies.length}
-            </Badge>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('rules')}
-            className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
-              activeTab === 'rules'
-                ? 'rounded-md bg-muted/80 text-foreground'
-                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-            }`}
-          >
-            Rules
-            <Badge variant={activeTab === 'rules' ? 'secondary' : 'outline'} className="ml-2">
-              {documents.length}
-            </Badge>
-          </Button>
-        </nav>
-      </div>
-
-      {/* Tab Content (inside Card) */}
-      <Card className="bg-white shadow rounded-lg overflow-hidden">
-        <CardContent className="p-6">
-          {activeTab === 'subagencies' && (
-            <div>
-              <CardHeader className="p-0 mb-4">
-                <CardTitle className="text-xl font-semibold text-gray-900">Sub-Agencies</CardTitle>
-              </CardHeader>
-              {childAgencies.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {childAgencies.map((childAgency) => (
-                    <AgencyCard key={childAgency.id} agency={childAgency} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No sub-agencies</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    This agency does not have any sub-agencies.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          {activeTab === 'rules' && (
-            <div>
-              <CardHeader className="p-0 mb-4">
-                <CardTitle className="text-xl font-semibold text-gray-900">Rules</CardTitle>
-              </CardHeader>
-              <AgencyDocuments documents={documents} />
-            </div>
-          )}
+      <Card className="mt-6">
+        <CardHeader><CardTitle className="text-xl">About this agency</CardTitle></CardHeader>
+        <CardContent>
+          {agency.description ? <p className="max-w-4xl whitespace-pre-line text-sm leading-7 text-muted-foreground md:text-base">{agency.description}</p> : <p className="text-sm italic text-muted-foreground">No agency description is currently available.</p>}
         </CardContent>
       </Card>
+
+      <Tabs defaultValue={childAgencies.length ? 'subagencies' : 'documents'} className="mt-8">
+        <TabsList>
+          <TabsTrigger value="subagencies"><Network className="h-4 w-4" />Sub-agencies <Badge variant="outline">{childAgencies.length}</Badge></TabsTrigger>
+          <TabsTrigger value="documents"><FileText className="h-4 w-4" />Documents <Badge variant="outline">{documents.length}</Badge></TabsTrigger>
+        </TabsList>
+        <TabsContent value="subagencies" className="mt-6">
+          <div className="mb-4"><h2 className="text-xl font-semibold">Agency structure</h2><p className="mt-1 text-sm text-muted-foreground">Offices and agencies directly organized under {agency.short_name || agency.name}.</p></div>
+          {childAgencies.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{childAgencies.map((child) => <AgencyCard key={child.id} agency={{ ...child, parent: agency }} />)}</div> : <EmptyAgencyState icon={<Network className="h-6 w-6" />} title="No sub-agencies listed" body="This agency has no directly connected sub-agencies in GovSource." />}
+        </TabsContent>
+        <TabsContent value="documents" className="mt-6">
+          <div className="mb-4"><h2 className="text-xl font-semibold">Published documents</h2><p className="mt-1 text-sm text-muted-foreground">Rules, notices, executive orders, and other records connected to this agency.</p></div>
+          <AgencyDocuments documents={documents} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
+}
+
+function EmptyAgencyState({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
+  return <div className="flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center"><div className="mb-3 rounded-full bg-muted p-3 text-muted-foreground">{icon}</div><h3 className="font-semibold">{title}</h3><p className="mt-1 max-w-md text-sm text-muted-foreground">{body}</p></div>;
 }

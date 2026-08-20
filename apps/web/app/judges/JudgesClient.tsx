@@ -62,15 +62,15 @@ export default function JudgesClient({ initialJudges }: { initialJudges: Judge[]
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Supreme Court Judges</h1>
+      <h1 className="text-3xl font-bold mb-2">Supreme Court justices</h1>
       <p className="text-gray-600 text-sm mb-6">
-        Browse current and former justices, then search to quickly zero in on a particular name.
+        Browse justices and open a profile to explore the opinions they authored.
       </p>
 
       <FilterToolbar
         searchValue={searchQuery}
         onSearchChange={handleSearchChange}
-        searchLabel="Search judges"
+        searchLabel="Search justices"
         searchPlaceholder="Search by name..."
         helperText="Type to filter the directory instantly."
         activeFilters={activeFilters}
@@ -79,7 +79,7 @@ export default function JudgesClient({ initialJudges }: { initialJudges: Judge[]
       />
 
       <>
-          <p className="mb-4">Showing {judges.length} judges</p>
+          <p className="mb-4">Showing {judges.length} justices</p>
           {judges.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {judges.map((judge) => (
@@ -89,7 +89,7 @@ export default function JudgesClient({ initialJudges }: { initialJudges: Judge[]
           ) : (
             <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
               <p className="text-yellow-700">
-                No judges found matching your search. Try adjusting your search criteria.
+                No justices found matching your search. Try adjusting your search criteria.
               </p>
             </div>
           )}

@@ -10,6 +10,7 @@ import {
   type FilterChip,
 } from "@/components/listing/FilterToolbar";
 import { FilterPopover } from "@/components/listing/FilterPopover";
+import { getPartyLabel } from '@/components/directory/directoryUtils';
 
 type CongressMembersClientProps = {
   members: Congressman[];
@@ -38,7 +39,7 @@ export default function CongressMembersClient({ members, currentMemberIds }: Con
     const normalizedSearch = searchTerm.trim().toLowerCase();
     return members.filter((member) =>
       (!currentOnly || currentIdSet.has(String(member.id))) &&
-      (!party || member.party === party) &&
+      (!party || getPartyLabel(member.party) === party) &&
       (!state || member.state === state) &&
       (!chamber || member.chamber?.toLowerCase() === chamber.toLowerCase()) &&
       (!normalizedSearch || member.full_name.toLowerCase().includes(normalizedSearch))

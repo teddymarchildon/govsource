@@ -28,7 +28,7 @@ export const getJudgeDetail = cache(async (id: string): Promise<JudgeDetail | nu
     supabase.from('judge').select('*').eq('id', id).maybeSingle(),
     supabase
       .from('court_opinion')
-      .select('*, author:judge(*), cluster:cluster(*), joined_by:judge(*)')
+      .select('*, author:judge(*), court:court(*), cluster:cluster(*, court:court(*)), joined_by:judge(*)')
       .eq('author_id', id)
       .order('date', { ascending: false })
       .limit(10),

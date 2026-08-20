@@ -1,497 +1,152 @@
 'use client';
 
-import React, { useState } from 'react';
-import BillCard from '../../../components/BillCard';
-import Breadcrumbs from '../../../components/Breadcrumbs';
-import { Bill, Congressman, CongressmanTerm } from '../../../types/types';
-import SaveButton from '../../../components/SaveButton';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { useMemo } from 'react';
+import { ArrowUpRight, CalendarDays, Globe, Landmark, MapPin, Phone } from 'lucide-react';
+
+import BillCard from '@/components/BillCard';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import SaveButton from '@/components/SaveButton';
+import { getInitials, getMemberRole, getPartyBadgeClass, getPartyLabel } from '@/components/directory/directoryUtils';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { Bill, Congressman, CongressmanTerm } from '@/types/types';
 
-type TabType = 'bills' | 'terms' | 'statistics';
+type Props = { member: Congressman; sponsoredBills: Bill[]; cosponsoredBills: Bill[]; terms: CongressmanTerm[] };
+type PolicyAreaStat = { total: number; becameLaw: number };
+type YearStat = { total: number; sponsored: number; cosponsored: number; becameLaw: number };
 
-type CongressMemberDetailClientProps = {
-  member: Congressman;
-  sponsoredBills: Bill[];
-  cosponsoredBills: Bill[];
-  terms: CongressmanTerm[];
-};
+const formatTermYears = (term: CongressmanTerm) => `${term.start_year}–${term.end_year || 'Present'}`;
+const formatTermPosition = (term: CongressmanTerm) => getMemberRole({ chamber: term.chamber, state: term.state, district: term.district });
+const isDifferentParty = (party: string, other?: string) => Boolean(other) && getPartyLabel(party) !== getPartyLabel(other);
 
-export default function CongressMemberDetailClient({
-  member: congressman,
-  sponsoredBills,
-  cosponsoredBills,
-  terms,
-}: CongressMemberDetailClientProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('bills');
+function EmptyState({ children }: { children: string }) {
+  return <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">{children}</div>;
+}
 
-  // Calculate statistics
-  const calculateStatistics = () => {
-    const sponsoredBecameLaw = sponsoredBills.filter(bill => bill.law_enacted_date).length;
-    const cosponsoredBecameLaw = cosponsoredBills.filter(bill => bill.law_enacted_date).length;
-
-    // Calculate cross-party collaboration
-    // 1. Bills they sponsored with other-party cosponsors
-    const sponsoredWithOtherParty = sponsoredBills.filter(bill => {
-      const cosponsors = bill.cosponsors || [];
-      return cosponsors.some((cosponsor: any) =>
-        (cosponsor.congressman?.party || cosponsor.party)?.toLowerCase() !== congressman?.party.toLowerCase()
-      );
-    }).length;
-
-    // 2. Bills they cosponsored where the sponsor was from the other party
-    const cosponsoredOtherParty = cosponsoredBills.filter(bill => {
-      const sponsor = bill.sponsor?.congressman;
-      return sponsor && (sponsor?.party)?.toLowerCase() !== congressman?.party.toLowerCase();
-    }).length;
-
-    const totalCrossPartyBills = sponsoredWithOtherParty + cosponsoredOtherParty;
-    const totalBills = sponsoredBills.length + cosponsoredBills.length;
-
-    const crossPartyPercentage = totalBills > 0
-      ? Math.round((totalCrossPartyBills / totalBills) * 100)
-      : 0;
-
-    // Calculate policy area statistics
-    const policyAreaStats = [...sponsoredBills, ...cosponsoredBills].reduce((acc: any, bill) => {
+export default function CongressMemberDetailClient({ member, sponsoredBills, cosponsoredBills, terms }: Props) {
+  const stats = useMemo(() => {
+    const allBills = [...sponsoredBills, ...cosponsoredBills];
+    const policyAreas = allBills.reduce<Record<string, PolicyAreaStat>>((areas, bill) => {
       const area = bill.policy_area || 'Uncategorized';
-      if (!acc[area]) {
-        acc[area] = {
-          total: 0,
-          becameLaw: 0,
-          crossParty: 0
-        };
-      }
-      acc[area].total++;
-      if (bill.law_enacted_date) acc[area].becameLaw++;
-
-      // Check for cross-party collaboration
-      const isCrossParty = (bill.sponsor?.congressman?.party || bill.sponsor?.congressman?.party)?.toLowerCase() !== congressman?.party.toLowerCase() ||
-        (bill.cosponsors || []).some((cosponsor: any) =>
-          (cosponsor.congressman?.party || cosponsor.party)?.toLowerCase() !== congressman?.party.toLowerCase()
-        );
-      if (isCrossParty) acc[area].crossParty++;
-
-      return acc;
+      areas[area] ??= { total: 0, becameLaw: 0 };
+      areas[area].total += 1;
+      if (bill.law_enacted_date) areas[area].becameLaw += 1;
+      return areas;
     }, {});
-
-    // Calculate activity over time
-    const activityByYear = [...sponsoredBills, ...cosponsoredBills].reduce((acc: any, bill) => {
-      const year = new Date(bill.introduced_date || '').getFullYear();
-      if (!acc[year]) {
-        acc[year] = {
-          total: 0,
-          becameLaw: 0,
-          sponsored: 0,
-          cosponsored: 0
-        };
-      }
-      acc[year].total++;
-      if (bill.law_enacted_date) acc[year].becameLaw++;
-      if (bill.sponsor?.congressman?.id === congressman?.id) {
-        acc[year].sponsored++;
-      } else {
-        acc[year].cosponsored++;
-      }
-      return acc;
-    }, {});
-
-    // Calculate bipartisan collaboration depth
-    const otherPartyCollaborators = [...sponsoredBills, ...cosponsoredBills].reduce((acc: any, bill) => {
-      // Check sponsor
-      if (bill.sponsor?.congressman && bill.sponsor.congressman.party?.toLowerCase() !== congressman?.party.toLowerCase()) {
-        const sponsorId = bill.sponsor.congressman.id;
-        const sponsorName = bill.sponsor.congressman.full_name;
-        const sponsorParty = bill.sponsor.congressman.party;
-
-        if (!acc[sponsorId]) {
-          acc[sponsorId] = {
-            name: sponsorName,
-            party: sponsorParty,
-            count: 0
-          };
-        }
-        acc[sponsorId].count++;
-      }
-
-      // Check cosponsors
-      (bill.cosponsors || []).forEach((cosponsor: any) => {
-        if (cosponsor.congressman && cosponsor.congressman.party?.toLowerCase() !== congressman?.party.toLowerCase()) {
-          const cosponsorId = cosponsor.congressman.id;
-          const cosponsorName = cosponsor.congressman.name; // Changed from full_name to name
-          const cosponsorParty = cosponsor.congressman.party;
-
-          if (!acc[cosponsorId]) {
-            acc[cosponsorId] = {
-              name: cosponsorName,
-              party: cosponsorParty,
-              count: 0
-            };
-          }
-          acc[cosponsorId].count++;
-        }
-      });
-
-      return acc;
-    }, {});
-
-    const avgOtherPartyCollaborators = totalBills > 0
-      ? (Object.keys(otherPartyCollaborators).length / totalBills).toFixed(1)
-      : 0;
-
-    // Sort collaborators by count for top collaborators list
-    const topCollaborators = Object.entries(otherPartyCollaborators)
-      .sort(([, a]: [string, any], [, b]: [string, any]) => b.count - a.count)
-      .slice(0, 5)
-      .reduce((acc: any, [id, data]: [string, any]) => {
-        acc[id] = data;
-        return acc;
-      }, {});
-    return {
-      sponsoredBecameLaw,
-      cosponsoredBecameLaw,
-      sponsoredWithOtherParty,
-      cosponsoredOtherParty,
-      totalCrossPartyBills,
-      crossPartyPercentage,
-      totalBills,
-      policyAreaStats,
-      activityByYear,
-      avgOtherPartyCollaborators,
-      topCollaborators
+    const activityByYear: Record<string, YearStat> = {};
+    const addActivity = (bill: Bill, kind: 'sponsored' | 'cosponsored') => {
+      const year = bill.introduced_date?.slice(0, 4);
+      if (!year) return;
+      activityByYear[year] ??= { total: 0, sponsored: 0, cosponsored: 0, becameLaw: 0 };
+      activityByYear[year].total += 1;
+      activityByYear[year][kind] += 1;
+      if (bill.law_enacted_date) activityByYear[year].becameLaw += 1;
     };
-  };
+    sponsoredBills.forEach((bill) => addActivity(bill, 'sponsored'));
+    cosponsoredBills.forEach((bill) => addActivity(bill, 'cosponsored'));
 
-  const stats = calculateStatistics();
+    const crossPartyBills = sponsoredBills.filter((bill) =>
+      (bill.cosponsors || []).some(({ congressman }) => isDifferentParty(member.party, congressman?.party)),
+    ).length + cosponsoredBills.filter((bill) => isDifferentParty(member.party, bill.sponsor?.congressman?.party)).length;
 
-  // Match party chip colors used in CongressmanCard
-  const getPartyBadgeClass = (party: string) => {
-    switch (party.toLowerCase()) {
-      case 'democrat':
-        return 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/90';
-      case 'republican':
-        return 'border-transparent bg-red-100 text-red-800 hover:bg-red-200';
-      default:
-        return 'border-transparent bg-muted text-muted-foreground hover:bg-muted/90';
-    }
-  };
+    return {
+      total: allBills.length,
+      becameLaw: allBills.filter((bill) => bill.law_enacted_date).length,
+      crossPartyBills,
+      policyAreas: Object.entries(policyAreas).sort(([, a], [, b]) => b.total - a.total),
+      activityByYear: Object.entries(activityByYear).sort(([a], [b]) => Number(b) - Number(a)),
+    };
+  }, [cosponsoredBills, member.party, sponsoredBills]);
 
-  // Format chamber and district info
-  const getChamberInfo = () => {
-    if (!congressman.chamber) return null;
-
-    const isHouse = congressman.chamber.toLowerCase() === 'house';
-    const isSenate = congressman.chamber.toLowerCase() === 'senate';
-
-    if (isHouse) {
-      return `U.S. Representative${congressman.district ? `, ${congressman.state}-${congressman.district}` : ''}`;
-    } else if (isSenate) {
-      return `U.S. Senator, ${congressman.state}`;
-    }
-
-    return congressman.chamber;
-  };
-
-  // Format term years
-  const formatTermYears = (term: CongressmanTerm) => {
-    const startYear = term.start_year;
-    const endYear = term.end_year ? term.end_year : 'Present';
-    return `${startYear} - ${endYear}`;
-  };
-
-  // Format term position
-  const formatTermPosition = (term: CongressmanTerm) => {
-    const isHouse = term.chamber.toLowerCase() === 'house';
-    const isSenate = term.chamber.toLowerCase() === 'senate';
-
-    if (isHouse) {
-      return `U.S. Representative${term.district ? `, ${term.state}-${term.district}` : ''}`;
-    } else if (isSenate) {
-      return `U.S. Senator, ${term.state}`;
-    }
-
-    return term.chamber;
-  };
+  const currentTerm = terms.find((term) => !term.end_year) || terms[0];
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Breadcrumbs
-        steps={[
-          { label: 'Home', href: '/' },
-          { label: 'Congress members', href: '/congress-members' },
-          { label: congressman?.full_name || 'Loading...' }
-        ]}
-      />
+      <Breadcrumbs steps={[{ label: 'Home', href: '/' }, { label: 'Congress members', href: '/congress-members' }, { label: member.full_name }]} />
 
-      <div>
-          <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{congressman.full_name}</h1>
-              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm md:text-base">
-                <Badge className={`px-2 py-1 ${getPartyBadgeClass(congressman.party)}`}>
-                  {congressman.party}
-                </Badge>
-                <div>{getChamberInfo()}</div>
+      <header className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+        <div className="h-1.5 bg-primary" />
+        <div className="flex flex-col gap-6 p-6 md:flex-row md:items-start md:justify-between md:p-8">
+          <div className="flex min-w-0 items-start gap-4 md:gap-6">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xl font-bold text-primary ring-1 ring-primary/15 md:h-20 md:w-20 md:text-2xl">{getInitials(member.full_name)}</div>
+            <div className="min-w-0">
+              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary"><Landmark className="h-4 w-4" /> Member of Congress</p>
+              <h1 className="text-balance text-3xl font-bold leading-tight text-foreground md:text-4xl">{member.full_name}</h1>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline" className={getPartyBadgeClass(member.party)}>{getPartyLabel(member.party)}</Badge>
+                <span>{getMemberRole(member)}</span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                {member.phone ? <a href={`tel:${member.phone}`} className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary"><Phone className="h-4 w-4" />{member.phone}</a> : null}
+                {member.website ? <a href={member.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"><Globe className="h-4 w-4" />Official website<ArrowUpRight className="h-3.5 w-3.5" /></a> : null}
               </div>
             </div>
-            <div className="mt-4 md:mt-0">
-              <SaveButton itemId={congressman.id} itemType="congressman" />
-            </div>
           </div>
+          <SaveButton itemId={member.id} itemType="congressman" />
+        </div>
+        <div className="grid border-t border-border/70 bg-muted/20 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['Sponsored', sponsoredBills.length], ['Cosponsored', cosponsoredBills.length], ['Became law', stats.becameLaw], ['Most recent term', currentTerm ? `${currentTerm.congress}th Congress` : 'Not listed'],
+          ].map(([label, value]) => <div key={label} className="border-b border-border/60 px-6 py-4 last:border-b-0 sm:border-l sm:first:border-l-0 lg:border-b-0"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold text-foreground">{value}</p></div>)}
+        </div>
+      </header>
 
-          {/* Tab Navigation */}
-          <div className="border-b border-border/60 mb-6 overflow-x-auto">
-            <nav className="flex gap-2 whitespace-nowrap pb-1" aria-label="Tabs">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('bills')}
-                className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'bills'
-                    ? 'rounded-md bg-muted/80 text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                }`}
-              >
-                Bills
-                <Badge variant={activeTab === 'bills' ? 'secondary' : 'outline'}>
-                  {sponsoredBills.length + cosponsoredBills.length}
-                </Badge>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('terms')}
-                className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'terms'
-                    ? 'rounded-md bg-muted/80 text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                }`}
-              >
-                Terms
-                <Badge variant={activeTab === 'terms' ? 'secondary' : 'outline'}>
-                  {terms.length}
-                </Badge>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab('statistics')}
-                className={`inline-flex items-center gap-2 rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm md:text-base font-normal transition-colors duration-200 ${
-                  activeTab === 'statistics'
-                    ? 'rounded-md bg-muted/80 text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                }`}
-              >
-                Statistics
-              </Button>
-            </nav>
-          </div>
+      <Tabs defaultValue="bills" className="mt-8">
+        <TabsList>
+          <TabsTrigger value="bills">Bills <Badge variant="outline">{stats.total}</Badge></TabsTrigger>
+          <TabsTrigger value="terms">Terms <Badge variant="outline">{terms.length}</Badge></TabsTrigger>
+          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+        </TabsList>
 
-          {/* Tab Content */}
-          <div className="mb-8">
-            {activeTab === 'bills' && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Sponsored Bills ({sponsoredBills.length})</h2>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {sponsoredBills.map(bill => (
-                      <BillCard key={bill.id} bill={bill} />
-                    ))}
-                    {sponsoredBills.length === 0 && (
-                      <p>No sponsored bills found.</p>
-                    )}
-                  </div>
+        <TabsContent value="bills" className="mt-6 space-y-10">
+          <BillSection title="Sponsored bills" description="Legislation introduced by this member." bills={sponsoredBills} empty="No sponsored bills are available." />
+          <BillSection title="Cosponsored bills" description="Legislation this member formally supported." bills={cosponsoredBills} empty="No cosponsored bills are available." />
+        </TabsContent>
+
+        <TabsContent value="terms" className="mt-6">
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><CalendarDays className="h-5 w-5 text-primary" />Congressional service</CardTitle></CardHeader>
+            <CardContent>
+              {terms.length ? <div className="divide-y divide-border">{terms.map((term) => (
+                <div key={term.id} className="grid gap-2 py-5 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr_auto] sm:items-center">
+                  <div><p className="font-semibold">{term.congress}th Congress</p><p className="text-sm text-muted-foreground">{formatTermYears(term)}</p></div>
+                  <p className="flex items-center gap-2 text-sm"><MapPin className="h-4 w-4 text-muted-foreground" />{formatTermPosition(term)}</p>
+                  {!term.end_year ? <Badge>Current</Badge> : null}
                 </div>
+              ))}</div> : <EmptyState>No congressional terms are available.</EmptyState>}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Cosponsored Bills ({cosponsoredBills.length})</h2>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {cosponsoredBills.map(bill => (
-                      <BillCard key={bill.id} bill={bill} />
-                    ))}
-                    {cosponsoredBills.length === 0 && (
-                      <p>No cosponsored bills found.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'terms' && (
-              <Card className="bg-white rounded-lg shadow p-4 md:p-6">
-                <CardHeader className="p-0 mb-4">
-                  <CardTitle className="text-xl font-semibold">Congressional Terms</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Congress
-                          </th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Years
-                          </th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Position
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {terms.map((term, index) => (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {term.congress}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                              {formatTermYears(term)}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                              {formatTermPosition(term)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {activeTab === 'statistics' && stats && (
-              <div className="space-y-8">
-                {/* Summary Statistics */}
-                <Card className="bg-white rounded-lg shadow p-4 md:p-6">
-                  <CardHeader className="p-0 mb-4">
-                    <CardTitle className="text-xl font-semibold">Summary</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm text-gray-500">Total Bills</div>
-                        <div className="text-2xl font-bold">{stats.totalBills}</div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm text-gray-500">Sponsored</div>
-                        <div className="text-2xl font-bold">{sponsoredBills.length}</div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm text-gray-500">Cosponsored</div>
-                        <div className="text-2xl font-bold">{cosponsoredBills.length}</div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm text-gray-500">Became Law</div>
-                        <div className="text-2xl font-bold">{(stats.sponsoredBecameLaw + stats.cosponsoredBecameLaw)}</div>
-                        <div className="text-xs text-gray-500">
-                          {stats.totalBills > 0 ? Math.round(((stats.sponsoredBecameLaw + stats.cosponsoredBecameLaw) / stats.totalBills) * 100) : 0}% success rate
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Policy Area Breakdown */}
-                <Card className="bg-gray-50 rounded-lg p-4 md:p-6">
-                  <CardHeader className="p-0 mb-4">
-                    <CardTitle className="text-xl font-semibold">Policy Area Breakdown</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(stats.policyAreaStats)
-                        .sort(([, dataA]: [string, any], [, dataB]: [string, any]) => dataB.total - dataA.total)
-                        .slice(0, 6)
-                        .map(([area, data]: [string, any]) => (
-                          <Card key={area} className="bg-white rounded-lg p-4 shadow-sm">
-                            <CardHeader className="p-0 mb-2">
-                              <CardTitle className="font-medium text-base mb-2">{area}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-0 space-y-2">
-                              <div>
-                                <div className="flex justify-between text-sm">
-                                  <span>Total Bills</span>
-                                  <span className="font-medium">{data.total}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-primary h-2 rounded-full"
-                                    style={{ width: `${(data.total / stats.totalBills) * 100}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-sm">
-                                  <span>Became Law</span>
-                                  <span className="font-medium">{data.becameLaw}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-green-600 h-2 rounded-full"
-                                    style={{ width: `${(data.becameLaw / data.total) * 100}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-sm">
-                                  <span>Cross-Party</span>
-                                  <span className="font-medium">{data.crossParty}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-purple-600 h-2 rounded-full"
-                                    style={{ width: `${(data.crossParty / data.total) * 100}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Legislative Activity Over Time Section */}
-                <Card className="bg-gray-50 rounded-lg p-4 md:p-6">
-                  <CardHeader className="p-0 mb-4">
-                    <CardTitle className="text-xl font-semibold">Legislative Activity Over Time</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="bg-white rounded-lg p-4 shadow-sm">
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-2 text-xs">Year</th>
-                              <th className="text-right py-2 text-xs">Total Bills</th>
-                              <th className="text-right py-2 text-xs">Sponsored</th>
-                              <th className="text-right py-2 text-xs">Cosponsored</th>
-                              <th className="text-right py-2 text-xs">Became Law</th>
-                              <th className="text-right py-2 text-xs">Success Rate</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Object.entries(stats.activityByYear)
-                              .sort(([yearA], [yearB]) => parseInt(yearB) - parseInt(yearA))
-                              .map(([year, data]: [string, any]) => (
-                                <tr key={year} className="border-b">
-                                  <td className="py-2 text-sm">{year}</td>
-                                  <td className="text-right py-2 text-sm">{data.total}</td>
-                                  <td className="text-right py-2 text-sm">{data.sponsored}</td>
-                                  <td className="text-right py-2 text-sm">{data.cosponsored}</td>
-                                  <td className="text-right py-2 text-sm">{data.becameLaw}</td>
-                                  <td className="text-right py-2 text-sm">
-                                    {Math.round((data.becameLaw / data.total) * 100)}%
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+        <TabsContent value="statistics" className="mt-6 space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['Total bill activity', stats.total, 'Sponsored and cosponsored'],
+              ['Sponsored', sponsoredBills.length, 'Introduced by this member'],
+              ['Became law', stats.becameLaw, stats.total ? `${Math.round((stats.becameLaw / stats.total) * 100)}% of listed bills` : 'No listed bills'],
+              ['Cross-party bills', stats.crossPartyBills, 'Based on listed sponsors'],
+            ].map(([label, value, helper]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></CardContent></Card>)}
           </div>
-      </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card><CardHeader><CardTitle className="text-xl">Top policy areas</CardTitle></CardHeader><CardContent className="space-y-4">
+              {stats.policyAreas.length ? stats.policyAreas.slice(0, 8).map(([area, data]) => <div key={area}>
+                <div className="mb-1.5 flex justify-between gap-4 text-sm"><span className="font-medium">{area}</span><span className="text-muted-foreground">{data.total} bill{data.total === 1 ? '' : 's'}</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(5, (data.total / stats.policyAreas[0][1].total) * 100)}%` }} /></div>
+                {data.becameLaw ? <p className="mt-1 text-xs text-muted-foreground">{data.becameLaw} became law</p> : null}
+              </div>) : <EmptyState>No policy-area data is available.</EmptyState>}
+            </CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-xl">Activity by year</CardTitle></CardHeader><CardContent>
+              {stats.activityByYear.length ? <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="pb-3 font-medium">Year</th><th className="pb-3 text-right font-medium">Sponsored</th><th className="pb-3 text-right font-medium">Cosponsored</th><th className="pb-3 text-right font-medium">Law</th></tr></thead><tbody>{stats.activityByYear.map(([year, data]) => <tr key={year} className="border-b border-border/60 last:border-0"><td className="py-3 font-medium">{year}</td><td className="py-3 text-right">{data.sponsored}</td><td className="py-3 text-right">{data.cosponsored}</td><td className="py-3 text-right">{data.becameLaw}</td></tr>)}</tbody></table></div> : <EmptyState>No dated bill activity is available.</EmptyState>}
+            </CardContent></Card>
+          </div>
+          <p className="text-xs text-muted-foreground">Statistics reflect the bills currently available in GovSource and are descriptive, not an effectiveness rating.</p>
+        </TabsContent>
+      </Tabs>
     </div>
   );
+}
+
+function BillSection({ title, description, bills, empty }: { title: string; description: string; bills: Bill[]; empty: string }) {
+  return <section><div className="mb-4 flex items-end justify-between gap-4"><div><h2 className="text-xl font-semibold">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></div><Badge variant="secondary">{bills.length}</Badge></div>{bills.length ? <div className="grid gap-4 lg:grid-cols-2">{bills.map((bill) => <BillCard key={bill.id} bill={bill} />)}</div> : <EmptyState>{empty}</EmptyState>}</section>;
 }

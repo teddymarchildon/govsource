@@ -90,14 +90,14 @@ export default function AgenciesClient({ initialAgencies }: { initialAgencies: A
         className="mb-8"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAgencies.map((agency) => (
-          <AgencyCard
-            key={agency.id}
-            agency={agency}
-          />
-        ))}
-      </div>
+      <p className="mb-4">Showing {filteredAgencies.length} agencies</p>
+      {filteredAgencies.length ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredAgencies.map((agency) => <AgencyCard key={agency.id} agency={agency} />)}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">No agencies match these filters.</div>
+      )}
     </div>
   );
 }
