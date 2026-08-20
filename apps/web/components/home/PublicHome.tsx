@@ -16,7 +16,7 @@ import {
 
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { Article } from '@/types/article';
+import type { Brief } from '@/types/brief';
 import type { AgencyDocument, Bill } from '@/types/types';
 import type { PersonalizedHomepageItem, PopularHomepageItem } from '@/types/homepage';
 import { getContentTypeLabel } from '@/utils/contentReferences';
@@ -40,8 +40,8 @@ interface PopularItemDisplayData {
 }
 
 interface PublicHomeProps {
-  articles: Article[];
-  articlesLoading: boolean;
+  briefs: Brief[];
+  briefsLoading: boolean;
   bills: Bill[];
   billsLoading: boolean;
   isSignedIn: boolean;
@@ -67,7 +67,7 @@ const sourceLinks = [
   { description: 'Supreme Court cases, opinions, and justices.', href: '/supreme-court-cases', icon: Scale, label: 'Courts' },
 ] as const;
 
-const articleLanes = [
+const briefLanes = [
   { label: 'Congress', types: ['bill', 'law'] },
   { label: 'White House', types: ['executive_order'] },
   { label: 'Agencies', types: ['agency_document'] },
@@ -80,65 +80,8 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? null : dateFormatter.format(date);
 }
 
-function normalizePoint(value: string) {
-  return value
-    .replace(/^[-*•\d.)\s]+/, '')
-    .replace(/\[(.*?)\]\([^)]*\)/g, '$1')
-    .replace(/[*_#>`]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getArticleKeyPoints(article: Article) {
-  const candidates: string[] = [];
-  const body = article.body;
-
-  if (body && typeof body === 'object') {
-    const record = body as {
-      paragraphs?: unknown[];
-      sections?: Array<{ bullets?: unknown[] }>;
-    };
-    record.sections?.forEach((section) => {
-      section.bullets?.forEach((bullet) => {
-        if (typeof bullet === 'string') candidates.push(bullet);
-      });
-    });
-    record.paragraphs?.forEach((paragraph) => {
-      if (typeof paragraph === 'string') candidates.push(paragraph);
-    });
-  }
-
-  const editorialText = [article.summary, article.body_markdown, article.dek, article.excerpt]
-    .filter((value): value is string => Boolean(value))
-    .join('\n');
-  const markdownBullets = editorialText
-    .split('\n')
-    .filter((line) => /^\s*[-*•]\s+/.test(line));
-  candidates.unshift(...markdownBullets);
-
-  if (candidates.length < 3) {
-    candidates.push(
-      ...editorialText
-        .replace(/\n+/g, ' ')
-        .split(/(?<=[.!?])\s+/)
-        .filter((sentence) => sentence.length > 35),
-    );
-  }
-
-  const points = candidates
-    .map(normalizePoint)
-    .filter((point, index, values) => point.length > 24 && values.indexOf(point) === index)
-    .slice(0, 3);
-
-  if (points.length === 0) {
-    points.push('This briefing is grounded in the linked government record and its latest available activity.');
-  }
-
-  return points;
-}
-
-function getArticleSourceCount(article: Article) {
-  return Math.max(1, 1 + (article.related_items?.length ?? 0) + article.source_urls.length);
+function getBriefSourceCount(brief: Brief) {
+  return Math.max(1, 1 + (brief.related_items?.length ?? 0) + brief.sources.length);
 }
 
 function getPopularItemDetails(item: PopularHomepageItem) {
@@ -158,25 +101,24 @@ function getPopularItemDetails(item: PopularHomepageItem) {
   return { ...detail, context, date: formatDate(date), title };
 }
 
-function StoryMeta({ article }: { article: Article }) {
+function StoryMeta({ brief }: { brief: Brief }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-      <span className="text-primary">{getContentTypeLabel(article.primary_item_type)}</span>
-      {formatDate(article.published_at) ? <span>{formatDate(article.published_at)}</span> : null}
-      {article.reading_time ? <span>{article.reading_time} min read</span> : null}
+      <span className="text-primary">{getContentTypeLabel(brief.primary_item_type)}</span>
+      {formatDate(brief.published_at) ? <span>{formatDate(brief.published_at)}</span> : null}
     </div>
   );
 }
 
-function StoryRow({ article }: { article: Article }) {
+function StoryRow({ brief }: { brief: Brief }) {
   return (
-    <Link href={`/articles/${article.slug}`} className="group block border-t border-border py-5 first:border-t-0 first:pt-0 last:pb-0">
-      <StoryMeta article={article} />
+    <Link href={`/briefs/${brief.slug}`} className="group block border-t border-border py-5 first:border-t-0 first:pt-0 last:pb-0">
+      <StoryMeta brief={brief} />
       <h3 className="mt-2 font-serif text-xl font-semibold leading-6 transition-colors group-hover:text-primary">
-        {article.title}
+        {brief.title}
       </h3>
       <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-        {article.dek || article.excerpt || article.summary}
+        {brief.dek}
       </p>
     </Link>
   );
@@ -195,8 +137,8 @@ function SectionHeading({ eyebrow, title, action }: { eyebrow: string; title: st
 }
 
 export default function PublicHome({
-  articles,
-  articlesLoading,
+  briefs,
+  briefsLoading,
   bills,
   billsLoading,
   isSignedIn,
@@ -208,10 +150,11 @@ export default function PublicHome({
   popularLoading,
   recentExecutiveOrders,
 }: PublicHomeProps) {
-  const leadArticle = articles[0];
-  const latestArticles = articles.slice(1, 5);
-  const moreArticles = articles.slice(5, 11);
-  const leadPoints = leadArticle ? getArticleKeyPoints(leadArticle) : [];
+  const activeFeatured = briefs.find((brief) => brief.is_featured && (!brief.featured_until || new Date(brief.featured_until) > new Date()));
+  const leadBrief = activeFeatured || briefs[0];
+  const remainingBriefs = briefs.filter((brief) => brief.id !== leadBrief?.id);
+  const latestBriefs = remainingBriefs.slice(0, 4);
+  const moreBriefs = remainingBriefs.slice(4, 10);
 
   return (
     <div className="-mx-4 -mb-4 overflow-hidden md:-mx-6 md:-mb-6">
@@ -220,14 +163,14 @@ export default function PublicHome({
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[hsl(var(--trust))]">
               <CheckCircle2 className="h-4 w-4" />
-              Briefings grounded in official records
+              Briefs grounded in official records
             </div>
             <p className="text-xs font-medium text-muted-foreground" suppressHydrationWarning>
               {new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date())}
             </p>
           </div>
 
-          {articlesLoading ? (
+          {briefsLoading ? (
             <div className="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)]">
               <div className="space-y-5">
                 <div className="h-4 w-32 animate-pulse rounded bg-muted" />
@@ -236,16 +179,16 @@ export default function PublicHome({
               </div>
               <div className="h-96 animate-pulse rounded bg-muted" />
             </div>
-          ) : leadArticle ? (
+          ) : leadBrief ? (
             <div className="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)] lg:gap-12">
               <article className="lg:border-r lg:border-border lg:pr-12">
-                <StoryMeta article={leadArticle} />
-                <Link href={`/articles/${leadArticle.slug}`} className="group block">
+                <StoryMeta brief={leadBrief} />
+                <Link href={`/briefs/${leadBrief.slug}`} className="group block">
                   <h1 className="mt-5 max-w-4xl text-balance font-serif text-4xl font-semibold leading-[1.04] tracking-[-0.035em] transition-colors group-hover:text-primary md:text-6xl">
-                    {leadArticle.title}
+                    {leadBrief.title}
                   </h1>
                   <p className="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">
-                    {leadArticle.dek || leadArticle.excerpt || leadArticle.summary}
+                    {leadBrief.dek}
                   </p>
                 </Link>
 
@@ -253,29 +196,29 @@ export default function PublicHome({
                   <div className="flex items-center justify-between gap-4">
                     <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em]">
                       <BookOpenText className="h-4 w-4 text-primary" />
-                      Three things to know
+                      What to know
                     </h2>
                     <span className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
                       <FileCheck2 className="h-3.5 w-3.5 text-[hsl(var(--trust))]" />
-                      {getArticleSourceCount(leadArticle)} official {getArticleSourceCount(leadArticle) === 1 ? 'source' : 'sources'}
+                      {getBriefSourceCount(leadBrief)} official {getBriefSourceCount(leadBrief) === 1 ? 'source' : 'sources'}
                     </span>
                   </div>
                   <ol className="mt-4 grid gap-4 md:grid-cols-3">
-                    {leadPoints.map((point, index) => (
-                      <li key={point} className="flex gap-3 text-sm leading-6">
+                    {leadBrief.points.slice(0, 3).map((point, index) => (
+                      <li key={point.id} className="flex gap-3 text-sm leading-6">
                         <span className="font-mono text-xs font-bold text-primary">0{index + 1}</span>
-                        <span>{point}</span>
+                        <span>{point.text}</span>
                       </li>
                     ))}
                   </ol>
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center gap-4">
-                  <Link href={`/articles/${leadArticle.slug}`} className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}>
-                    Read the briefing <ArrowRight className="h-4 w-4" />
+                  <Link href={`/briefs/${leadBrief.slug}`} className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}>
+                    Read the Brief <ArrowRight className="h-4 w-4" />
                   </Link>
                   <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5" /> AI-assisted, source-linked analysis
+                    <Sparkles className="h-3.5 w-3.5" /> Source-linked government context
                   </span>
                 </div>
               </article>
@@ -285,8 +228,8 @@ export default function PublicHome({
                   <h2 className="font-serif text-2xl font-semibold">Latest</h2>
                   <Clock3 className="h-4 w-4 text-muted-foreground" />
                 </div>
-                {latestArticles.length > 0 ? (
-                  latestArticles.map((article) => <StoryRow key={article.id} article={article} />)
+                {latestBriefs.length > 0 ? (
+                  latestBriefs.map((brief) => <StoryRow key={brief.id} brief={brief} />)
                 ) : (
                   <p className="text-sm leading-6 text-muted-foreground">More source-grounded Briefs will appear here as they are published.</p>
                 )}
@@ -298,7 +241,7 @@ export default function PublicHome({
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Today in government</p>
                 <h1 className="mt-4 max-w-3xl font-serif text-4xl font-semibold leading-tight md:text-6xl">The official record, made readable.</h1>
                 <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">Published Briefs will lead this page. Until then, explore the latest verified activity from Congress, agencies, the White House, and the courts.</p>
-                <Link href="/articles" className={cn(buttonVariants({ size: 'lg' }), 'mt-7')}>Browse Briefs</Link>
+                <Link href="/briefs" className={cn(buttonVariants({ size: 'lg' }), 'mt-7')}>Browse Briefs</Link>
               </div>
               <div className="space-y-4">
                 {popularLoading ? <div className="h-56 animate-pulse rounded bg-muted" /> : popularItems.slice(0, 3).map((item) => {
@@ -351,18 +294,18 @@ export default function PublicHome({
         </section>
       ) : null}
 
-      {moreArticles.length > 0 ? (
+      {moreBriefs.length > 0 ? (
         <section className="border-b border-border bg-card/40 py-14 md:py-20">
           <div className="container mx-auto px-4">
-            <SectionHeading eyebrow="More to know" title="The latest Briefs" action={<Link href="/articles" className="hidden text-sm font-semibold text-primary hover:underline sm:block">View all Briefs</Link>} />
+            <SectionHeading eyebrow="More to know" title="The latest Briefs" action={<Link href="/briefs" className="hidden text-sm font-semibold text-primary hover:underline sm:block">View all Briefs</Link>} />
             <div className="mt-8 grid gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
-              {moreArticles.map((article) => (
-                <article key={article.id} className="group border-t border-border pt-5">
-                  <StoryMeta article={article} />
-                  <Link href={`/articles/${article.slug}`}>
-                    <h3 className="mt-3 font-serif text-2xl font-semibold leading-7 transition-colors group-hover:text-primary">{article.title}</h3>
-                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{article.dek || article.excerpt || article.summary}</p>
-                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">Read briefing <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+              {moreBriefs.map((brief) => (
+                <article key={brief.id} className="group border-t border-border pt-5">
+                  <StoryMeta brief={brief} />
+                  <Link href={`/briefs/${brief.slug}`}>
+                    <h3 className="mt-3 font-serif text-2xl font-semibold leading-7 transition-colors group-hover:text-primary">{brief.title}</h3>
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{brief.dek}</p>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">Read Brief <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
                   </Link>
                 </article>
               ))}
@@ -371,21 +314,21 @@ export default function PublicHome({
         </section>
       ) : null}
 
-      {articles.length > 1 ? (
+      {briefs.length > 1 ? (
         <section className="border-b border-border py-14 md:py-20">
           <div className="container mx-auto px-4">
             <SectionHeading eyebrow="By institution" title="Follow the federal government" />
             <div className="mt-9 grid gap-8 lg:grid-cols-2">
-              {articleLanes.map((lane) => {
-                const laneArticles = articles.filter((article) => (lane.types as readonly string[]).includes(article.primary_item_type)).slice(0, 3);
-                if (laneArticles.length === 0) return null;
+              {briefLanes.map((lane) => {
+                const laneBriefs = briefs.filter((brief) => (lane.types as readonly string[]).includes(brief.primary_item_type)).slice(0, 3);
+                if (laneBriefs.length === 0) return null;
                 return (
                   <div key={lane.label} className="border-t-4 border-foreground pt-4">
                     <div className="mb-5 flex items-center justify-between">
                       <h3 className="font-serif text-2xl font-semibold">{lane.label}</h3>
                       <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source-linked</span>
                     </div>
-                    {laneArticles.map((article) => <StoryRow key={article.id} article={article} />)}
+                    {laneBriefs.map((brief) => <StoryRow key={brief.id} brief={brief} />)}
                   </div>
                 );
               })}

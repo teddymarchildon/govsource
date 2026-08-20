@@ -8,7 +8,7 @@ GovSource presents three source families:
 - **Executive and regulatory:** agency documents belong to agencies through `agency_agencydocument`. Executive orders are agency documents with the `Executive Order` subtype.
 - **Judicial:** a case `cluster` groups one or more court opinions, which connect to courts and authoring judges.
 
-Cross-domain features—published articles, homepage rankings, and source links—use the canonical `ContentType` definition in `types/content.ts`. Route construction must go through `utils/contentReferences.ts` instead of duplicating path switches.
+Cross-domain features—published Briefs, homepage rankings, and source links—use the canonical `ContentType` definition in `types/content.ts`. Route construction must go through `utils/contentReferences.ts` instead of duplicating path switches.
 
 ## Rendering and data access
 
@@ -28,17 +28,17 @@ Independent queries should start together with `Promise.all`. Missing records sh
 - `utils/supabase/client.ts`: browser client for interactive reads and RLS-protected mutations.
 - `utils/supabase/admin.ts`: service-role client for tightly scoped server-only operations.
 
-Never import the admin client from a Client Component. A service-role query must still enforce the product-level access rule explicitly, such as `status = published` for public articles.
+Never import the admin client from a Client Component. A service-role query must still enforce the product-level access rule explicitly, including status and publication-time checks for public Briefs.
 
 ## Public content and editorial workflow
 
-Published articles are available at `/articles` and `/articles/[slug]`. The public repository returns only rows that:
+Published Briefs are available at `/briefs` and `/briefs/[slug]`. The public repository returns only rows that:
 
 - have `status = published`;
 - have a slug;
 - have a `published_at` value that is not in the future.
 
-Each briefing links to its primary government record through the shared content-reference mapping. Drafting, generation, scheduling, and ranking remain protected under `/admin`.
+Each Brief contains three to five structured points and links to its primary government record through the shared content-reference mapping. Drafting, review, scheduling, and homepage featuring remain protected under `/admin`.
 
 ## Route conventions
 

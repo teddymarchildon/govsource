@@ -28,7 +28,7 @@ import {
 import LoadingIndicator from './ui/LoadingIndicator';
 
 const sectionItems = [
-  { href: '/', label: 'Today', paths: ['/', '/articles'] },
+  { href: '/', label: 'Today', paths: ['/', '/briefs'] },
   { href: '/bills', label: 'Congress', paths: ['/bills', '/laws', '/congress-members'] },
   { href: '/executive-orders', label: 'White House', paths: ['/executive-orders'] },
   { href: '/agency-rules', label: 'Agencies', paths: ['/agency-rules', '/agencies'] },
@@ -38,7 +38,7 @@ const sectionItems = [
 const archiveGroups = [
   {
     label: 'Editorial',
-    items: [{ href: '/articles', icon: BookOpenText, label: 'Briefings' }],
+    items: [{ href: '/briefs', icon: BookOpenText, label: 'Briefs' }],
   },
   {
     label: 'Official records',

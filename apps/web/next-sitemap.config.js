@@ -19,7 +19,7 @@ module.exports = {
     const publicIndexes = [
       '/agencies',
       '/agency-rules',
-      '/articles',
+      '/briefs',
       '/bills',
       '/congress-members',
       '/executive-orders',

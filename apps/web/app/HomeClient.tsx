@@ -11,7 +11,7 @@ import type { UserPreferences } from '@/types/types';
 import { getLoginUrl } from '@/utils/utils';
 
 export default function HomeClient({
-  articles,
+  briefs,
   bills,
   popularItems,
   recentExecutiveOrders,
@@ -53,8 +53,8 @@ export default function HomeClient({
 
   return (
     <PublicHome
-      articles={articles}
-      articlesLoading={false}
+      briefs={briefs}
+      briefsLoading={false}
       bills={bills}
       billsLoading={false}
       isSignedIn={Boolean(user)}

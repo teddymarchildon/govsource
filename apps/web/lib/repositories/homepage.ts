@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 import { createClient } from '@/utils/supabase/server';
-import { getPublishedArticles } from './articles';
+import { getPublishedBriefs } from './briefs';
 import { getRecentExecutiveOrders } from './agencyDocuments';
 import type { AgencyDocument, Bill, Cluster, Law } from '@/types/types';
 import type { HomepagePublicData, PopularHomepageItem } from '@/types/homepage';
@@ -35,8 +35,8 @@ function normalizeBill(row: BillRow): Bill | Law {
 export const getHomepagePublicData = cache(async (): Promise<HomepagePublicData> => {
   const supabase = await createClient();
   const now = new Date().toISOString();
-  const [articles, billsResult, recentExecutiveOrders, rankedResult] = await Promise.all([
-    getPublishedArticles(24),
+  const [briefs, billsResult, recentExecutiveOrders, rankedResult] = await Promise.all([
+    getPublishedBriefs(24),
     supabase
       .from('bill')
       .select('*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)')
@@ -120,7 +120,7 @@ export const getHomepagePublicData = cache(async (): Promise<HomepagePublicData>
   }).slice(0, 8);
 
   return {
-    articles,
+    briefs,
     bills: ((billsResult.data ?? []) as unknown as BillRow[]).map((row) => normalizeBill(row) as Bill),
     popularItems,
     recentExecutiveOrders,

@@ -27,14 +27,6 @@ interface AdminRecentActivityProps {
   items: AdminActivityItem[];
 }
 
-interface GenerationResult {
-  articleId: number;
-  status: string;
-  title: string;
-  updated: boolean;
-  wordCount: number;
-}
-
 function formatDate(value: string | null) {
   if (!value) {
     return 'Unknown';
@@ -161,9 +153,6 @@ export default function AdminRecentActivity({ items }: AdminRecentActivityProps)
   const [searchItems, setSearchItems] = useState<AdminActivityItem[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<string, GenerationResult>>({});
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const runSearch = useCallback(
     async (query: string) => {
@@ -233,68 +222,18 @@ export default function AdminRecentActivity({ items }: AdminRecentActivityProps)
 
   const isSearching = Boolean(activeQuery);
 
-  const handleGenerate = useCallback(async (item: AdminActivityItem) => {
-    const key = `${item.category}:${item.id}`;
+  const getCreateBriefHref = (item: AdminActivityItem) => {
     const primaryItemType = CATEGORY_TO_TYPE[item.category];
-    const primaryItemId = Number(item.id);
-
-    if (!Number.isFinite(primaryItemId)) {
-      setAlert({ type: 'error', message: 'Invalid item identifier' });
-      return;
-    }
-    if (!primaryItemType) {
-      setAlert({ type: 'error', message: 'Unsupported item category' });
-      return;
-    }
-
-    setPendingKey(key);
-    setAlert(null);
-
-    try {
-      const response = await fetch('/api/admin/articles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          primaryItemType,
-          primaryItemId,
-        }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error ?? 'Failed to generate article');
-      }
-
-      setResults((prev) => ({ ...prev, [key]: payload as GenerationResult }));
-      setAlert({
-        type: 'success',
-        message: payload.updated
-          ? `Updated draft #${payload.articleId} (${payload.wordCount} words)`
-          : `Created draft #${payload.articleId} (${payload.wordCount} words)`,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to generate article';
-      setAlert({ type: 'error', message });
-    } finally {
-      setPendingKey(null);
-    }
-  }, []);
+    const params = new URLSearchParams({
+      primaryItemType,
+      primaryItemId: item.id,
+      title: item.title,
+    });
+    return `/admin/briefs?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-6">
-      {alert && (
-        <div
-          className={[
-            'rounded-md border px-4 py-3 text-sm',
-            alert.type === 'success'
-              ? 'border-green-300 bg-green-50 text-green-700'
-              : 'border-red-300 bg-red-50 text-red-700',
-          ].join(' ')}
-        >
-          {alert.message}
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex flex-wrap gap-2">
           {CATEGORY_FILTERS.map((filter) => {
@@ -379,9 +318,6 @@ export default function AdminRecentActivity({ items }: AdminRecentActivityProps)
             ) : (
               filteredItems.map((item) => {
                 const rowKey = `${item.category}:${item.id}`;
-                const result = results[rowKey];
-                const isPending = pendingKey === rowKey;
-
                 return (
                   <tr key={rowKey}>
                     <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
@@ -402,25 +338,9 @@ export default function AdminRecentActivity({ items }: AdminRecentActivityProps)
                       {formatDate(item.updatedAt ?? item.createdAt)}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
-                      <div className="flex items-center justify-end gap-3">
-                        {result ? (
-                          <span className="text-xs text-gray-500">
-                            {result.updated ? 'Draft updated' : 'Draft created'} (#{result.articleId})
-                          </span>
-                        ) : null}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleGenerate(item)}
-                          disabled={isPending}
-                        >
-                          {isPending
-                            ? 'Generating...'
-                            : result
-                            ? 'Regenerate'
-                            : 'Generate Summary'}
-                        </Button>
-                      </div>
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={getCreateBriefHref(item)}>Draft Brief</Link>
+                      </Button>
                     </td>
                   </tr>
                 );
