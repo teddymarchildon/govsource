@@ -7,7 +7,7 @@ import type { Cluster, CourtOpinion, Judge } from '@/types/types';
 const clusterSelection = `
   *,
   court:court(*),
-  opinions:court_opinion!cluster_id(*, author:judge(*))
+  opinions:court_opinion!cluster_id(*, author:judge(*), joined_by:judge(*))
 `;
 
 export const getJudges = cache(async (): Promise<Judge[]> => {
@@ -77,7 +77,7 @@ export async function getSupremeCourtCasesPage(
     .select(`
       *,
       court:court!inner(*),
-      opinions:${opinionsJoin}(*, author:judge(*))
+      opinions:${opinionsJoin}(*, author:judge(*), joined_by:judge(*))
     `)
     .eq('court.remote_id', 'scotus');
 
