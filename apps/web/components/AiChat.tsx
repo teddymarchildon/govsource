@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FileText, Sparkles, BookOpenText, Scale, Loader, CheckCircle2, XCircle, Copy, Check, ArrowUp, Square, CalendarDays, Users } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { FileText, Sparkles, BookOpenText, Scale, Loader, CheckCircle2, XCircle, Copy, Check, ArrowUp, Square, CalendarDays, Users, Landmark, ListChecks, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { MessageResponse } from './ai-elements/message';
 import { usePathname } from 'next/navigation';
 import { getLoginUrl } from '@/utils/utils';
 import { AI_FREE_USAGE_LIMIT, ANON_LIMIT } from '@/constants/onboarding';
@@ -112,12 +112,21 @@ function getRailStageStatuses(activities: Activity[], isRunning: boolean): Recor
   return statuses;
 }
 
-const PRESETS: Preset[] = [
+const DEFAULT_PRESETS: Preset[] = [
   { type: 'summarizeKeyPoints', label: 'Key points', icon: Sparkles, getMessage: n => `Please summarize the key points of this ${n}.` },
   { type: 'documentContext', label: 'Document context', icon: BookOpenText, getMessage: n => `What context, background, findings, purposes, or authorities does this ${n} state?` },
   { type: 'prosAndCons', label: 'Pros & Cons', icon: Scale, getMessage: n => `What are the pros and cons of this ${n}?` },
   { type: 'deadlines', label: 'Deadlines', icon: CalendarDays, getMessage: n => `What dates, deadlines, effective dates, or reporting timelines does this ${n} include?` },
   { type: 'affectedParties', label: 'Who is affected', icon: Users, getMessage: n => `Who is affected by this ${n}, and how?` },
+];
+
+const EXECUTIVE_ORDER_PRESETS: Preset[] = [
+  { type: 'summarizeKeyPoints', label: 'Plain-English overview', icon: Sparkles, getMessage: () => 'Explain this executive order in plain English, focusing on its main directives.' },
+  { type: 'default', label: 'Agency responsibilities', icon: ListChecks, getMessage: () => 'What does this executive order require federal agencies or officials to do?' },
+  { type: 'deadlines', label: 'Dates and deadlines', icon: CalendarDays, getMessage: () => 'List the dates, deadlines, effective dates, and reporting timelines in this executive order.' },
+  { type: 'affectedParties', label: 'Who is affected', icon: Users, getMessage: () => 'Who does this executive order affect, and what does the order say about those effects?' },
+  { type: 'documentContext', label: 'Authorities and findings', icon: Landmark, getMessage: () => 'What legal authorities, findings, purposes, and policy statements does this executive order cite?' },
+  { type: 'default', label: 'Policies changed', icon: BookOpenText, getMessage: () => 'What existing orders, policies, delegations, or rules does this executive order say it changes, revokes, or supersedes?' },
 ];
 
 const DOCUMENT_NOUNS: Record<string, string> = {
@@ -190,7 +199,7 @@ export default function AiChat({
     : (!authLoading ? `${anonUsage}/${ANON_LIMIT} trial uses` : null);
 
   // Build presets list, adding diff preset if applicable
-  const presets = [...PRESETS];
+  const presets = documentType === 'executiveOrder' ? [...EXECUTIVE_ORDER_PRESETS] : [...DEFAULT_PRESETS];
   if ((documentType === 'bill' || documentType === 'law') && diffHtmlFilePaths?.length === 2 && diffHtmlFilePaths[0] && diffHtmlFilePaths[1]) {
     presets.unshift({
       type: 'diff',
@@ -356,12 +365,23 @@ export default function AiChat({
     abortControllerRef.current?.abort();
   };
 
+  const handleNewConversation = () => {
+    abortControllerRef.current?.abort();
+    setMessages([]);
+    setInput('');
+    setError(null);
+    setActivities([]);
+    setStreamingContent('');
+    setStreamingCitations([]);
+  };
+
   const renderCitations = (citations: CitationMeta[] | undefined, fallbackContent: string) => {
-    const fallback = extractSectionCitations(fallbackContent).map((raw) => {
+    const fallback: CitationMeta[] = extractSectionCitations(fallbackContent).map((raw) => {
       const section = parseInt(raw.match(/\d+/)?.[0] || '', 10);
       return {
         label: raw.replace('[', '').replace(']', ''),
         section: Number.isFinite(section) ? section : -1,
+        searchText: undefined,
       };
     }).filter(c => c.section > 0);
 
@@ -369,21 +389,28 @@ export default function AiChat({
     if (!resolved.length) return null;
 
     return (
-      <div className="mt-2 flex flex-wrap gap-1">
-        {resolved.map((citation) => (
+      <div className="mt-3 border-t border-border/70 pt-2">
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Sources in this order</p>
+        <div className="space-y-1">
+        {resolved.map((citation, index) => (
           <button
             key={`${citation.label}-${citation.section}`}
             type="button"
             onClick={() => onCitationClick?.(citation)}
             disabled={!onCitationClick}
-            className={`inline-flex items-center rounded-md border border-border bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground ${
-              onCitationClick ? 'hover:border-primary/30 hover:bg-primary/5 hover:text-primary' : 'cursor-default'
+            className={`flex w-full items-start gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-left text-[11px] text-muted-foreground ${
+              onCitationClick ? 'hover:border-primary/30 hover:bg-primary/5 hover:text-foreground' : 'cursor-default'
             }`}
             title={onCitationClick ? `Jump to ${citation.label}` : citation.label}
           >
-            {citation.label}
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">{index + 1}</span>
+            <span className="min-w-0">
+              <span className="block font-medium text-foreground">{citation.label}</span>
+              {citation.searchText ? <span className="mt-0.5 block line-clamp-2 leading-4">“{citation.searchText}”</span> : null}
+            </span>
           </button>
         ))}
+        </div>
       </div>
     );
   };
@@ -508,14 +535,12 @@ export default function AiChat({
 
   const renderReviewedSources = (runLog: Activity[], runState: RunState | undefined) => {
     if (!runLog.length) return null;
-    const reviewedCount = runLog.filter(step => step.id !== 'understanding' && step.id !== 'drafting').length;
-    const label = reviewedCount > 0 ? `Reviewed ${reviewedCount} source steps` : 'Reviewed document';
 
     return (
       <div className="mt-2 border-t border-border/70 pt-2">
         <details>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] text-muted-foreground hover:text-foreground">
-            <span>{label}</span>
+            <span>How this answer was produced</span>
             {renderRunStateBadge(runState)}
           </summary>
           <div className="mt-2 space-y-2">
@@ -568,13 +593,10 @@ export default function AiChat({
       <div className="px-3 py-2.5 bg-card border-b border-border">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold tracking-tight text-foreground">Assistant</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              {documentType === 'executiveOrder' ? 'Ask this order' : 'Assistant'}
+            </h2>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 ${
-                htmlFilePath ? 'border-border bg-muted/50' : 'border-red-200 bg-red-50 text-red-700'
-              }`}>
-                {htmlFilePath ? 'Grounded in this document' : 'Source unavailable'}
-              </span>
               {usageLabel && (
                 <span className="inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5">
                   {usageLabel}
@@ -582,6 +604,19 @@ export default function AiChat({
               )}
             </div>
           </div>
+          <div className="flex items-center gap-1">
+          {(messages.length > 0 || streamingContent) && (
+            <button
+              type="button"
+              onClick={handleNewConversation}
+              className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Start a new conversation"
+              title="New conversation"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              New
+            </button>
+          )}
           {isLoading && (
             <button
               type="button"
@@ -593,24 +628,7 @@ export default function AiChat({
               <Square className="h-3 w-3 fill-current" />
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Preset buttons */}
-      <div className="bg-card border-b border-border">
-        <div className="flex gap-1.5 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {presets.map(preset => (
-          <button
-            key={preset.type}
-            type="button"
-            onClick={() => handlePresetClick(preset)}
-            disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
-            className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background/70 px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${(aiLocked || sourceUnavailable) ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <preset.icon className="h-3.5 w-3.5" />
-            {preset.label}
-          </button>
-        ))}
+          </div>
         </div>
       </div>
 
@@ -650,14 +668,16 @@ export default function AiChat({
                   <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card">
                     <Sparkles className="h-4 w-4 text-primary" />
                   </div>
-                  <h3 className="text-sm font-semibold text-foreground">Ask grounded questions</h3>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {documentType === 'executiveOrder' ? 'Understand this order' : 'Ask grounded questions'}
+                  </h3>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    Answers use this document and cite the sections reviewed.
+                    Answers use only this source and cite the sections reviewed.
                   </p>
-                  <div className="mt-4 grid grid-cols-1 gap-1.5 text-left">
-                    {presets.slice(0, 3).map(preset => (
+                  <div className="mt-4 grid grid-cols-1 gap-1.5 text-left sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+                    {presets.slice(0, documentType === 'executiveOrder' ? 6 : 3).map((preset, index) => (
                       <button
-                        key={`empty-${preset.type}`}
+                        key={`empty-${preset.type}-${index}`}
                         type="button"
                         onClick={() => handlePresetClick(preset)}
                         disabled={isLoading || aiLocked || authLoading || sourceUnavailable}
@@ -698,9 +718,7 @@ export default function AiChat({
                     </div>
                   )}
                   {message.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
-                    </div>
+                    <MessageResponse className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs">{message.content}</MessageResponse>
                   ) : (
                     <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                       {message.content}
@@ -723,9 +741,7 @@ export default function AiChat({
                       {renderProgressRail(activities, true)}
                     </div>
                   )}
-                  <div className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted">
-                    <ReactMarkdown>{streamingContent}</ReactMarkdown>
-                  </div>
+                  <MessageResponse isAnimating className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs">{streamingContent}</MessageResponse>
                   {renderCitations(streamingCitations, streamingContent)}
                 </div>
               </div>
@@ -752,6 +768,10 @@ export default function AiChat({
 
       {/* Input form */}
       <form onSubmit={handleSubmit} className="border-t border-border bg-card p-3">
+        <div className={`mb-2 flex items-center gap-1.5 text-[11px] ${htmlFilePath ? 'text-muted-foreground' : 'text-red-700'}`}>
+          <ShieldCheck className="h-3.5 w-3.5" />
+          {htmlFilePath ? `Grounded only in this ${noun}` : 'Source text unavailable'}
+        </div>
         <div className="flex items-center gap-2">
           <Input
             type="text"

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import AgencyRuleDetail from '@/components/AgencyRuleDetail';
+import ExecutiveOrderDetail from '@/components/ExecutiveOrderDetail';
 import { getAgencyDocument } from '@/lib/repositories/agencyDocuments';
 
 export const dynamic = 'force-dynamic';
@@ -17,5 +17,5 @@ export default async function ExecutiveOrderDetailPage({ params }: ExecutiveOrde
   const { id } = await params;
   const order = await getAgencyDocument(id, 'Executive Order');
   if (!order) notFound();
-  return <AgencyRuleDetail rule={order} kind="executiveOrder" />;
+  return <ExecutiveOrderDetail order={order} />;
 }
