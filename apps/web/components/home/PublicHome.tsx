@@ -17,7 +17,8 @@ import {
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Article } from '@/types/article';
-import type { AgencyDocument, Bill, Cluster, Law } from '@/types/types';
+import type { AgencyDocument, Bill } from '@/types/types';
+import type { PersonalizedHomepageItem, PopularHomepageItem } from '@/types/homepage';
 import { getContentTypeLabel } from '@/utils/contentReferences';
 
 type PopularItemType = 'bill' | 'law' | 'agency_document' | 'executive_order' | 'cluster';
@@ -37,16 +38,6 @@ interface PopularItemDisplayData {
   date_filed?: string;
   most_recent_action?: { date?: string; text?: string } | null;
 }
-
-export type PopularHomepageItem =
-  | { id?: string; item_type: 'bill'; data: Bill }
-  | { id?: string; item_type: 'law'; data: Law }
-  | { id?: string; item_type: 'agency_document' | 'executive_order'; data: AgencyDocument }
-  | { id?: string; item_type: 'cluster'; data: Cluster };
-
-export type PersonalizedHomepageItem =
-  | { item_type: 'bill'; data: Bill }
-  | { item_type: 'law'; data: Law };
 
 interface PublicHomeProps {
   articles: Article[];

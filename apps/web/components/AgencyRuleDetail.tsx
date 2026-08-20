@@ -13,10 +13,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface AgencyRuleDetailProps {
   rule: AgencyDocument;
+  kind?: 'agencyDocument' | 'executiveOrder';
 }
 
-export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
+export default function AgencyRuleDetail({ rule, kind = 'agencyDocument' }: AgencyRuleDetailProps) {
   const [pdfJumpTarget, setPdfJumpTarget] = useState<PdfJumpTarget | undefined>(undefined);
+  const isExecutiveOrder = kind === 'executiveOrder';
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <div className="container mx-auto px-4 py-4 flex flex-col flex-1 overflow-hidden">
@@ -25,7 +27,10 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           <Breadcrumbs
             steps={[
               { label: 'Home', href: '/' },
-              { label: 'Agency Rules', href: '/agency-rules' },
+              {
+                label: isExecutiveOrder ? 'Executive Orders' : 'Agency Documents',
+                href: isExecutiveOrder ? '/executive-orders' : '/agency-rules',
+              },
               { label: rule.title }
             ]}
           />
@@ -122,7 +127,7 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
           {/* Right: AiChatWrapper - hidden on mobile, shown on desktop */}
           <div className="hidden md:flex h-full flex-col min-h-0">
             <AiChatWrapper
-              documentType="agencyDocument"
+              documentType={kind}
               documentId={rule.id}
               documentTitle={rule.title}
               htmlFilePath={rule.html_file_path}
@@ -142,7 +147,7 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
       {/* AiChatWrapper for mobile - renders floating button */}
       <div className="md:hidden">
         <AiChatWrapper
-          documentType="agencyDocument"
+          documentType={kind}
           documentId={rule.id}
           documentTitle={rule.title}
           htmlFilePath={rule.html_file_path}
