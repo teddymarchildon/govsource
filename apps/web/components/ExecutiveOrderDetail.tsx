@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import {
-  BookOpenText,
   Download,
   ExternalLink,
   FileText,
@@ -14,14 +13,12 @@ import {
 } from 'lucide-react';
 
 import type { AgencyDocument } from '@/types/types';
-import { getStoragePublicUrl } from '@/services/api';
 import AiChat from '@/components/AiChat';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import PdfViewer, { type PdfJumpTarget } from '@/components/PdfViewer';
 import SaveButton from '@/components/SaveButton';
 import { Button } from '@/components/ui/button';
 
-type SourceMode = 'read' | 'pdf';
 type MobileWorkspace = 'source' | 'assistant';
 
 interface ExecutiveOrderDetailProps {
@@ -30,8 +27,6 @@ interface ExecutiveOrderDetailProps {
 
 interface SourceViewerProps {
   order: AgencyDocument;
-  mode: SourceMode;
-  onModeChange: (mode: SourceMode) => void;
   jumpTarget?: PdfJumpTarget;
 }
 
@@ -60,65 +55,18 @@ function formatOrderDate(dateString: string) {
   });
 }
 
-function SourceViewer({ order, mode, onModeChange, jumpTarget }: SourceViewerProps) {
-  const [htmlUnavailable, setHtmlUnavailable] = useState(false);
-  const hasReadableSource = Boolean(order.html_file_path || order.html_url);
-  const storedHtmlUrl = order.html_file_path
-    ? getStoragePublicUrl('agency-docs', order.html_file_path) || order.html_url || null
-    : order.html_url || null;
-
-  const effectiveMode = mode === 'read' && (!hasReadableSource || htmlUnavailable) ? 'pdf' : mode;
-
+function SourceViewer({ order, jumpTarget }: SourceViewerProps) {
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card" aria-label="Official executive order source">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2.5">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Official text</h2>
         </div>
-        <div className="inline-flex rounded-lg bg-muted p-0.5" aria-label="Source format">
-          <button
-            type="button"
-            onClick={() => onModeChange('read')}
-            disabled={!hasReadableSource || htmlUnavailable}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
-              effectiveMode === 'read' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            } disabled:cursor-not-allowed disabled:opacity-40`}
-            aria-pressed={effectiveMode === 'read'}
-          >
-            <BookOpenText className="h-3.5 w-3.5" />
-            Read
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange('pdf')}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
-              effectiveMode === 'pdf' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-            aria-pressed={effectiveMode === 'pdf'}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            PDF
-          </button>
-        </div>
       </div>
 
       <div className="min-h-0 flex-1 bg-white">
-        {effectiveMode === 'read' ? (
-          storedHtmlUrl ? (
-            <iframe
-              src={storedHtmlUrl}
-              title={`Readable text of ${order.title}`}
-              className="h-full w-full border-0 bg-white"
-              sandbox=""
-              onError={() => setHtmlUnavailable(true)}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-              Loading readable text…
-            </div>
-          )
-        ) : order.pdf_file_path ? (
+        {order.pdf_file_path ? (
           <PdfViewer storagePath={order.pdf_file_path} storageBucket="agency-docs" className="h-full" jumpTo={jumpTarget} />
         ) : order.pdf_url ? (
           <PdfViewer pdfUrl={order.pdf_url} className="h-full" jumpTo={jumpTarget} />
@@ -132,7 +80,6 @@ function SourceViewer({ order, mode, onModeChange, jumpTarget }: SourceViewerPro
 
 export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProps) {
   const isMobile = useSyncExternalStore(subscribeToMobileBreakpoint, getMobileSnapshot, getServerMobileSnapshot);
-  const [sourceMode, setSourceMode] = useState<SourceMode>(order.html_file_path || order.html_url ? 'read' : 'pdf');
   const [mobileWorkspace, setMobileWorkspace] = useState<MobileWorkspace>('source');
   const [assistantOpen, setAssistantOpen] = useState(true);
   const [assistantWidth, setAssistantWidth] = useState(420);
@@ -176,7 +123,6 @@ export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProp
   };
 
   const handleCitationClick = (citation: { page?: number; searchText?: string }) => {
-    setSourceMode('pdf');
     setMobileWorkspace('source');
     setPdfJumpTarget({ page: citation.page, searchText: citation.searchText, token: Date.now() });
   };
@@ -264,7 +210,7 @@ export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProp
 
           <div className="h-[calc(100dvh-7rem)] min-h-[560px]">
             <div className={mobileWorkspace === 'source' ? 'h-full' : 'hidden h-full'}>
-              <SourceViewer order={order} mode={sourceMode} onModeChange={setSourceMode} jumpTarget={pdfJumpTarget} />
+              <SourceViewer order={order} jumpTarget={pdfJumpTarget} />
             </div>
             <div className={mobileWorkspace === 'assistant' ? 'h-full' : 'hidden h-full'}>
               <AiChat
@@ -283,7 +229,7 @@ export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProp
           className="grid min-h-0 flex-1"
           style={{ gridTemplateColumns: assistantOpen ? `minmax(0, 1fr) 10px ${assistantWidth}px` : 'minmax(0, 1fr) 0 0' }}
         >
-          <SourceViewer order={order} mode={sourceMode} onModeChange={setSourceMode} jumpTarget={pdfJumpTarget} />
+          <SourceViewer order={order} jumpTarget={pdfJumpTarget} />
           <div
             role="separator"
             aria-label="Resize assistant"
