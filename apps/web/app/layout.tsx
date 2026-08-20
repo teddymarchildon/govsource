@@ -7,7 +7,6 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { NavigationProvider } from '../contexts/NavigationContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import FeedbackForm from '@/components/FeedbackForm';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -58,7 +57,6 @@ export default async function RootLayout({
                 {children}
               </main>
             </div>
-            <FeedbackForm />
           </NavigationProvider>
         </AuthProvider>
         <Analytics />
