@@ -1,14 +1,9 @@
-'use client';
+import { FileText, PenLine } from 'lucide-react';
 
-import Link from 'next/link';
-import { AgencyDocument, Agency } from '../types/types';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PublicRecordCard } from '@/components/listing/PublicRecordCard';
+import { Badge } from '@/components/ui/badge';
+import type { Agency, AgencyDocument } from '@/types/types';
+import { formatDate, plainText } from '@/utils/utils';
 
 interface ExecutiveOrderCardProps {
   order: AgencyDocument & {
@@ -18,39 +13,34 @@ interface ExecutiveOrderCardProps {
 }
 
 export default function ExecutiveOrderCard({ order }: ExecutiveOrderCardProps) {
+  const abstract = plainText(order.abstract);
+
   return (
-    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <CardHeader className="p-4 pb-2">
-        <Link
-          href={`/executive-orders/${order.id}`}
-          className="block transition-colors group-hover:text-primary"
-        >
-          <CardTitle className="line-clamp-2 text-base font-semibold text-foreground">
-            {order.title}
-          </CardTitle>
-        </Link>
-      </CardHeader>
-
-      <CardContent className="flex-grow px-4 pb-2">
-        {/* No title here, only abstract or other info if needed */}
-      </CardContent>
-
-      <CardFooter className="p-4 pt-2">
-        <div className="flex flex-col space-y-2 text-xs w-full mt-auto">
-          {order.president && (
-            <div className="text-muted-foreground">
-              <span className="font-medium">President:</span>{' '}
-              <span>{order.president}</span>
+    <PublicRecordCard
+      href={`/executive-orders/${order.id}`}
+      eyebrow="Executive order"
+      title={order.title}
+      badge={order.president ? <Badge variant="secondary" className="max-w-[150px] truncate text-[10px]">{order.president}</Badge> : null}
+      footer={(
+        <div className="space-y-1 text-xs leading-5 text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <PenLine className="h-3.5 w-3.5 shrink-0" />
+            <span>{order.signing_date ? `Signed ${formatDate(order.signing_date)}` : 'Signing date unavailable'}</span>
+          </div>
+          {order.remote_document_number ? (
+            <div className="flex items-center gap-2">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span>Federal Register document {order.remote_document_number}</span>
             </div>
-          )}
-
-          {order.signing_date && (
-            <div className="text-muted-foreground/90">
-              <span className="font-medium">Signed:</span> {new Date(order.signing_date).toLocaleDateString()}
-            </div>
-          )}
+          ) : null}
         </div>
-      </CardFooter>
-    </Card>
+      )}
+    >
+      {abstract ? (
+        <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{abstract}</p>
+      ) : (
+        <p className="text-sm leading-6 text-muted-foreground">Review the signed order and its official source record.</p>
+      )}
+    </PublicRecordCard>
   );
 }

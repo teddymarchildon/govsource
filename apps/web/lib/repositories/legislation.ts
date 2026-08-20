@@ -3,32 +3,45 @@ import 'server-only';
 import { cache } from 'react';
 import { createClient } from '@/utils/supabase/server';
 import type { LegislationDetail } from '@/types/legislation';
-import type { Bill, Law } from '@/types/types';
+import type { Bill, Congressman, Law } from '@/types/types';
 
 export type LegislationKind = 'bill' | 'law';
 
-type LegislationListingRow = (Bill | Law) & {
-  sponsor?: Array<{ congressman: unknown }>;
+type LegislationListingRow = Omit<Bill, 'sponsor'> & Omit<Partial<Law>, 'sponsor'> & {
+  sponsor?: Array<{ congressman: Congressman }>;
+  actions?: Array<NonNullable<Bill['most_recent_action']>>;
 };
 
-function normalizeListingSponsor<T extends Bill | Law>(row: LegislationListingRow): T {
+function normalizeBillListing(row: LegislationListingRow): Bill {
+  return {
+    ...row,
+    sponsor: row.sponsor?.[0]?.congressman ? { congressman: row.sponsor[0].congressman } : undefined,
+    most_recent_action: row.actions?.[0] ?? null,
+    actions: undefined,
+  } as Bill;
+}
+
+function normalizeLawListing(row: LegislationListingRow): Law {
   return {
     ...row,
     sponsor: row.sponsor?.[0]?.congressman ?? undefined,
-  } as T;
+    actions: undefined,
+  } as Law;
 }
 
 export const getRecentBills = cache(async (limit = 50): Promise<Bill[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('bill')
-    .select('*, sponsor:sponsored_bills(congressman:congressman(*))')
+    .select('*, sponsor:sponsored_bills(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)')
     .is('law_enacted_date', null)
     .order('introduced_date', { ascending: false })
+    .order('date', { referencedTable: 'actions', ascending: false })
+    .limit(1, { referencedTable: 'actions' })
     .limit(limit);
 
   if (error) throw error;
-  return ((data ?? []) as unknown as LegislationListingRow[]).map((row) => normalizeListingSponsor<Bill>(row));
+  return ((data ?? []) as unknown as LegislationListingRow[]).map(normalizeBillListing);
 });
 
 export const getRecentLaws = cache(async (limit = 50): Promise<Law[]> => {
@@ -41,7 +54,7 @@ export const getRecentLaws = cache(async (limit = 50): Promise<Law[]> => {
     .limit(limit);
 
   if (error) throw error;
-  return ((data ?? []) as unknown as LegislationListingRow[]).map((row) => normalizeListingSponsor<Law>(row));
+  return ((data ?? []) as unknown as LegislationListingRow[]).map(normalizeLawListing);
 });
 
 export const getLegislationDetail = cache(

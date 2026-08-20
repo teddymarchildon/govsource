@@ -422,11 +422,19 @@ export const getSavedBills = async (userId: string): Promise<SavedBill[]> => {
   
   const { data, error } = await supabase
     .from('saved_bill')
-    .select('*, bill:bill_id(*)')
+    .select('*, bill:bill_id(*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)))')
     .eq('user_id', userId);
 
   if (error) throw error;
-  return data as SavedBill[];
+  return (data ?? []).map((savedBill) => ({
+    ...savedBill,
+    bill: savedBill.bill ? {
+      ...savedBill.bill,
+      sponsor: savedBill.bill.sponsor?.[0]?.congressman
+        ? { congressman: savedBill.bill.sponsor[0].congressman }
+        : undefined,
+    } : undefined,
+  })) as SavedBill[];
 };
 
 export async function getBillActions(billId: string) {

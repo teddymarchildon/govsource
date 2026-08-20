@@ -1,57 +1,55 @@
-'use client';
-
-import { AgencyDocument, Agency } from '../types/types';
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Building2, FileText } from 'lucide-react';
+
+import { PublicRecordCard } from '@/components/listing/PublicRecordCard';
+import { Badge } from '@/components/ui/badge';
+import type { Agency, AgencyDocument } from '@/types/types';
+import { formatDate, plainText } from '@/utils/utils';
 
 interface AgencyRuleCardProps {
-  rule: AgencyDocument & { agency?: Agency };
+  rule: AgencyDocument & { agency?: Agency | null };
 }
 
 export default function AgencyRuleCard({ rule }: AgencyRuleCardProps) {
+  const abstract = plainText(rule.abstract);
+  const documentType = rule.subtype && rule.subtype !== rule.type ? rule.subtype : rule.type;
+  const agencyLabel = rule.agency?.short_name || rule.agency?.name;
+
   return (
-    <Card className="group flex h-full flex-col border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <CardHeader className="p-4 pb-2">
-        <div className="flex justify-between items-start gap-2">
-          <span className="text-sm font-semibold text-muted-foreground">
-            {rule.publication_date ? new Date(rule.publication_date).toLocaleDateString() : 'No Date'}
-          </span>
-          {rule.agency && (
-            <Badge variant="secondary" className="max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[10px]">
-              {rule.agency.name}
-            </Badge>
-          )}
+    <PublicRecordCard
+      href={`/agency-rules/${rule.id}`}
+      eyebrow="Agency document"
+      title={rule.title}
+      badge={documentType ? (
+        <Badge variant="secondary" title={documentType} className="max-w-[150px] truncate text-[10px]">
+          {documentType}
+        </Badge>
+      ) : null}
+      footer={(
+        <div className="space-y-1 text-xs leading-5 text-muted-foreground">
+          {rule.agency ? (
+            <div className="flex items-start gap-2">
+              <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <Link href={`/agencies/${rule.agency.id}`} title={rule.agency.name} className="relative z-10 font-medium text-primary hover:underline">
+                {agencyLabel}
+              </Link>
+            </div>
+          ) : null}
+          <div className="flex items-start gap-2">
+            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              {rule.publication_date ? `Published ${formatDate(rule.publication_date)}` : 'Publication date unavailable'}
+              {rule.remote_document_number ? ` · FR Doc. ${rule.remote_document_number}` : ''}
+            </span>
+          </div>
         </div>
-      </CardHeader>
-      
-      <CardContent className="p-4 pt-2 flex-grow flex flex-col">
-        <Link href={`/agency-rules/${rule.id}`} className="mb-2 block transition-colors group-hover:text-primary">
-          <h3 className="line-clamp-2 text-base font-medium text-foreground">
-            {rule.title}
-          </h3>
-        </Link>
-
-        <div className="mb-2 flex items-center space-x-2 text-xs text-muted-foreground/90">
-          {rule.type && <span>{rule.type}</span>}
-          {rule.subtype && (
-            <>
-              {rule.type && <span className="text-border">•</span>}
-              <span>{rule.subtype}</span>
-            </>
-          )}
-        </div>
-
-        {rule.abstract && (
-          <p className="mt-auto line-clamp-3 text-sm text-muted-foreground">
-            {rule.abstract}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    >
+      {abstract ? (
+        <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{abstract}</p>
+      ) : (
+        <p className="text-sm leading-6 text-muted-foreground">Review the official document and source materials.</p>
+      )}
+    </PublicRecordCard>
   );
 }

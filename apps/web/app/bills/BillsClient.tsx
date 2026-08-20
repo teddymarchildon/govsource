@@ -65,9 +65,15 @@ export default function BillsClient({
       // Base query for bills
       let baseQuery = supabase
         .from("bill")
-        .select(`*, sponsor:sponsored_bills(congressman:congressman(*))`)
+        .select(`
+          *,
+          sponsor:sponsored_bills(congressman:congressman(*)),
+          actions:bill_action!bill_id(id, date, text, type)
+        `)
         .is('law_enacted_date', null)
         .order("introduced_date", { ascending: sortOrder === "asc" })
+        .order("date", { referencedTable: "actions", ascending: false })
+        .limit(1, { referencedTable: "actions" })
         .range(from, to);
 
       // Apply policy area filter if selected
@@ -103,7 +109,11 @@ export default function BillsClient({
       const fetchedBills =
         data?.map((bill: any) => ({
           ...bill,
-          sponsor: bill.sponsor?.[0]?.congressman || null,
+          sponsor: bill.sponsor?.[0]?.congressman
+            ? { congressman: bill.sponsor[0].congressman }
+            : undefined,
+          most_recent_action: bill.actions?.[0] || null,
+          actions: undefined,
         })) || [];
 
       // Update bills state

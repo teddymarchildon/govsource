@@ -62,6 +62,7 @@ export default function ExecutiveOrdersClient({
           signing_date,
           publication_date,
           president,
+          abstract,
           agency:agency_agencydocument!agency_document_id(
             agency:agency(id, name)
           )
