@@ -56,7 +56,7 @@ jobs:
 
       # Courts must exist before opinion rows can resolve their court_id.
       - name: Sync courts
-        run: python scripts/sync_courts.py --per-page 100 --page-limit 20
+        run: python scripts/sync_courts.py --per-page 100 --page-limit 40
 
       - name: Sync Congress members
         run: python scripts/sync_members_supabase.py --limit -1 --max-batches 10

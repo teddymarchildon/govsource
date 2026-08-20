@@ -28,6 +28,17 @@ unique keys and service-role-only transaction functions used by the scripts.
 
 - Network requests use bounded timeouts, retry transient failures, respect
   `Retry-After`, and follow upstream pagination.
+- CourtListener API calls use a default 72-second request interval, and opinion
+  updates additionally have a 120-request run budget. These defaults stay
+  within the standard 50/hour and 125/day authenticated quotas; accounts with
+  a different quota can override them with
+  `COURT_LISTENER_MINIMUM_REQUEST_INTERVAL` and
+  `COURT_LISTENER_MAX_API_REQUESTS`.
+- CourtListener opinion updates use source `date_modified` checkpoints with a
+  short overlap window.
+- CourtListener content is downloaded only when its source SHA-1 changes. PDF
+  downloads prefer CourtListener's durable Storage copy and use an
+  unauthenticated HTTP session so the API token is never sent to another host.
 - A failed or incomplete fetch is never treated as a successful empty result.
 - Child collections are reconciled atomically after their complete source data
   has been fetched and validated.

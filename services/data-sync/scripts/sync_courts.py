@@ -3,6 +3,7 @@
 
 import argparse
 import logging
+import os
 import sys
 from typing import Any, Dict, List, Optional
 
@@ -22,11 +23,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 COURTS_URL = "https://www.courtlistener.com/api/rest/v4/courts/"
-RATE_LIMITER = RateLimiter(1.0)
+DEFAULT_MINIMUM_REQUEST_INTERVAL = 72.0
 
 
 def fetch_all_courts(
-    session: Any, *, per_page: int = 100, page_limit: Optional[int] = None
+    session: Any,
+    *,
+    per_page: int = 100,
+    page_limit: Optional[int] = None,
+    rate_limiter: Optional[RateLimiter] = None,
 ) -> List[Dict[str, Any]]:
     return list(
         iter_next_paginated_items(
@@ -35,7 +40,7 @@ def fetch_all_courts(
             "results",
             params={"page_size": per_page},
             max_pages=page_limit,
-            rate_limiter=RATE_LIMITER,
+            rate_limiter=rate_limiter or RateLimiter(DEFAULT_MINIMUM_REQUEST_INTERVAL),
         )
     )
 
@@ -53,8 +58,9 @@ def map_court_to_row(court: Dict[str, Any]) -> Dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--page-limit", type=int, default=20)
+    parser.add_argument("--page-limit", type=int, default=40)
     parser.add_argument("--per-page", type=int, default=100)
+    parser.add_argument("--minimum-request-interval", type=float, default=None)
     args = parser.parse_args()
     load_dotenv()
     try:
@@ -62,7 +68,19 @@ def main() -> int:
             headers={"Authorization": f"Token {require_env('COURT_LISTENER_API_KEY')}"}
         )
         courts = fetch_all_courts(
-            session, per_page=args.per_page, page_limit=args.page_limit
+            session,
+            per_page=args.per_page,
+            page_limit=args.page_limit,
+            rate_limiter=RateLimiter(
+                args.minimum_request_interval
+                if args.minimum_request_interval is not None
+                else float(
+                    os.getenv(
+                        "COURT_LISTENER_MINIMUM_REQUEST_INTERVAL",
+                        str(DEFAULT_MINIMUM_REQUEST_INTERVAL),
+                    )
+                )
+            ),
         )
         supabase = create_supabase_client()
         rows = [map_court_to_row(court) for court in courts if court.get("id")]
