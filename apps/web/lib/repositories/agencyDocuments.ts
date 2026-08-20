@@ -67,6 +67,50 @@ export const getTopLevelAgencies = cache(async (): Promise<Agency[]> => {
   return (data ?? []) as Agency[];
 });
 
+export const getAgencies = cache(async (): Promise<Agency[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('agency')
+    .select('*, parent:parent_id(id, name, short_name)')
+    .order('name');
+
+  if (error) throw error;
+  return (data ?? []) as Agency[];
+});
+
+export type AgencyDetail = {
+  agency: Agency;
+  childAgencies: Agency[];
+  documents: AgencyDocument[];
+};
+
+export const getAgencyDetail = cache(async (id: string): Promise<AgencyDetail | null> => {
+  const supabase = await createClient();
+  const [agencyResult, childrenResult, documentsResult] = await Promise.all([
+    supabase
+      .from('agency')
+      .select('*, parent:parent_id(id, name, short_name)')
+      .eq('id', id)
+      .maybeSingle(),
+    supabase.from('agency').select('*').eq('parent_id', id).order('name'),
+    supabase
+      .from('agency_document')
+      .select('*, agency_link:agency_agencydocument!inner(agency_id)')
+      .eq('agency_link.agency_id', id)
+      .order('publication_date', { ascending: false }),
+  ]);
+
+  const firstError = [agencyResult.error, childrenResult.error, documentsResult.error].find(Boolean);
+  if (firstError) throw firstError;
+  if (!agencyResult.data) return null;
+
+  return {
+    agency: agencyResult.data as Agency,
+    childAgencies: (childrenResult.data ?? []) as Agency[],
+    documents: (documentsResult.data ?? []) as AgencyDocument[],
+  };
+});
+
 export const getAgencyDocument = cache(
   async (id: string, subtype?: string): Promise<AgencyDocument | null> => {
     const supabase = await createClient();
