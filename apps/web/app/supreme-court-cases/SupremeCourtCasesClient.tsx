@@ -167,7 +167,7 @@ export default function SupremeCourtCasesClient({ initialClusters, judges }: Sup
   if (judgeId) {
     activeFilters.push({
       id: 'judge',
-      label: `Judge: ${
+      label: `Justice: ${
         selectedJudge?.full_name ||
         judges.find((judge) => judge.id.toString() === judgeId)?.full_name ||
         'Selected judge'
@@ -206,11 +206,11 @@ export default function SupremeCourtCasesClient({ initialClusters, judges }: Sup
         <div className="space-y-4">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Judge
+              Justice
             </p>
             <Select value={judgeId} onValueChange={handleJudgeChange}>
               <SelectTrigger>
-                <SelectValue placeholder="All judges" />
+                <SelectValue placeholder="All justices" />
               </SelectTrigger>
               <SelectContent>
                 {judges.map((judge) => (
@@ -254,8 +254,8 @@ export default function SupremeCourtCasesClient({ initialClusters, judges }: Sup
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Supreme Court Cases</h1>
-      <p className="text-gray-600 text-sm mb-6">Explore Supreme Court cases, their judges, and outcomes.</p>
+      <h1 className="text-3xl font-bold mb-2">Supreme Court cases</h1>
+      <p className="text-muted-foreground text-sm mb-6">Explore cases, authored opinions, and participating justices.</p>
 
       <FilterToolbar
         searchValue={searchQuery}
@@ -291,10 +291,8 @@ export default function SupremeCourtCasesClient({ initialClusters, judges }: Sup
               {loadingMore && <LoadingIndicator size="medium" />}
             </>
           ) : (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-              <p className="text-yellow-700">
-                No cases found matching your filters. Try adjusting your search criteria.
-              </p>
+            <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">
+              No cases match these filters. Try broadening your search.
             </div>
           )}
         </>
