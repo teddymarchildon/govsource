@@ -16,18 +16,32 @@ type RelatedItemRow = {
   item_type: string;
 };
 
+const COMPLETE_SENTENCE_END = /[.!?]["'’”)\]]*$/;
+
+function normalizeDek(dek: string | null, points: Brief['points']): string | null {
+  const value = dek?.trim() || null;
+  if (!value || COMPLETE_SENTENCE_END.test(value)) return value;
+
+  return points.find((point) => {
+    const text = point.text.trim();
+    return text.length <= 360 && COMPLETE_SENTENCE_END.test(text);
+  })?.text.trim() ?? value;
+}
+
 function normalizeBrief(row: BriefRow, relatedItems: RelatedItemRow[] = []): Brief {
   const related: ContentReference[] = relatedItems.flatMap((item) =>
     isContentType(item.item_type)
       ? [{ id: String(item.item_id), type: item.item_type }]
       : [],
   );
+  const points = Array.isArray(row.points) ? row.points : [];
 
   return {
     ...row,
     id: String(row.id),
     primary_item_id: String(row.primary_item_id),
-    points: Array.isArray(row.points) ? row.points : [],
+    dek: normalizeDek(row.dek, points),
+    points,
     policy_areas: row.policy_areas ?? [],
     sources: Array.isArray(row.sources) ? row.sources : [],
     related_items: related,
