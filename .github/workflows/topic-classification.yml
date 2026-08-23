@@ -1,0 +1,88 @@
+name: Classify recent records into topics
+
+on:
+  schedule:
+    # Runs after the daily source sync while avoiding the top of the hour.
+    - cron: "47 5 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Maximum records to classify
+        required: true
+        default: "100"
+        type: number
+      lookback_days:
+        description: Only classify records updated within this many days
+        required: true
+        default: "90"
+        type: number
+      record_type:
+        description: Record type to classify
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - agency_document
+          - cluster
+
+permissions:
+  contents: read
+
+# Share the data-sync lock so classification never races source ingestion.
+concurrency:
+  group: govsource-data-sync
+  cancel-in-progress: false
+
+jobs:
+  classify-recent-records:
+    name: Classify recent unclassified records
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONUNBUFFERED: "1"
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_TOPIC_MODEL: ${{ vars.OPENAI_TOPIC_MODEL || 'gpt-5-nano' }}
+      AI_CLASSIFICATION_LIMIT: ${{ inputs.limit || '100' }}
+      AI_CLASSIFICATION_LOOKBACK_DAYS: ${{ inputs.lookback_days || '90' }}
+      AI_CLASSIFICATION_RECORD_TYPE: ${{ inputs.record_type || 'all' }}
+    defaults:
+      run:
+        working-directory: services/data-sync
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/data-sync/requirements.runtime.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.runtime.txt
+
+      - name: Verify required secrets
+        shell: bash
+        run: |
+          missing=0
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY OPENAI_API_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Actions secret: ${name}"
+              missing=1
+            fi
+          done
+          exit "${missing}"
+
+      - name: Classify recent records
+        run: >-
+          python scripts/classify_topics.py
+          --limit "${AI_CLASSIFICATION_LIMIT}"
+          --lookback-days "${AI_CLASSIFICATION_LOOKBACK_DAYS}"
+          --record-type "${AI_CLASSIFICATION_RECORD_TYPE}"
+          --model "${OPENAI_TOPIC_MODEL}"
+          --write

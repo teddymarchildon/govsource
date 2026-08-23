@@ -19,6 +19,7 @@ Required environment variables:
   accepted temporarily with a warning)
 - `CONGRESS_API_KEY` for Congress jobs
 - `COURT_LISTENER_API_KEY` for CourtListener jobs
+- `OPENAI_API_KEY` for AI topic classification
 
 Apply the migrations under `apps/web/supabase/migrations` to the hosted
 Supabase project before running the jobs. The integrity migration adds the
@@ -53,9 +54,28 @@ Run the test suite with:
 pytest -q
 ```
 
+Classify the most recently updated, currently unclassified agency documents
+and Supreme Court clusters from the last 90 days. Classification is a dry run
+unless `--write` is supplied. Use `--list-only` to inspect the bounded queue
+without making OpenAI requests.
+
+```bash
+python scripts/classify_topics.py --list-only
+python scripts/classify_topics.py --limit 100 --lookback-days 90
+python scripts/classify_topics.py --limit 100 --lookback-days 90 --write
+python scripts/classify_topics.py --record-type cluster --limit 25 --write
+```
+
+The default model is `gpt-5-nano`; override it with `--model` or the
+`OPENAI_TOPIC_MODEL` environment variable. Each successful classification is
+immediately stored as an approved primary topic plus up to two approved
+secondary topics. The job records the model, prompt version, response ID,
+token usage, source timestamp, and a content fingerprint in assignment
+evidence.
+
 ## Scheduled GitHub Actions
 
-Two workflows under `.github/workflows` run bounded synchronization jobs:
+Three workflows under `.github/workflows` run bounded synchronization jobs:
 
 - `data-sync-daily.yml` refreshes recent bills and their actions, Federal
   Register documents, and Supreme Court opinions at 04:17 UTC each day. Each
@@ -63,8 +83,12 @@ Two workflows under `.github/workflows` run bounded synchronization jobs:
   in the database.
 - `data-sync-weekly.yml` refreshes courts, Congress members, Federal Register
   agencies, and agency relationships at 06:43 UTC each Sunday.
+- `topic-classification.yml` classifies up to 100 of the most recently updated
+  unclassified agency documents and court clusters from the prior 90 days at
+  05:47 UTC each day. Its manual trigger exposes the batch size, lookback, and
+  record type.
 
-Both workflows can also be started from the repository's **Actions** tab with
+All three workflows can also be started from the repository's **Actions** tab with
 the **Run workflow** button. They share a concurrency group, so a scheduled run
 waits rather than overlapping another data sync.
 
@@ -78,6 +102,7 @@ Configure these repository Actions secrets before the first run:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `CONGRESS_API_KEY`
 - `COURT_LISTENER_API_KEY`
+- `OPENAI_API_KEY`
 
 Keep the service-role key in Actions secrets only. Never commit it or expose it
 to frontend code. Apply the Supabase migrations before enabling the schedules.
