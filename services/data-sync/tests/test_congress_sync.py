@@ -106,3 +106,36 @@ def test_undated_bill_text_key_is_stable():
     assert sync_bills_supabase._text_fallback_key(
         item
     ) == sync_bills_supabase._text_fallback_key(item)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("HR6644", ("HR", 6644)),
+        ("hr-6633", ("HR", 6633)),
+        ("S 98", ("S", 98)),
+    ],
+)
+def test_parse_bill_reference(value, expected):
+    assert sync_bills_supabase.parse_bill_reference(value) == expected
+
+
+def test_parse_bill_reference_rejects_invalid_value():
+    with pytest.raises(Exception):
+        sync_bills_supabase.parse_bill_reference("119-HR-6644")
+
+
+def test_targeted_bill_sync_builds_exact_detail_url(monkeypatch):
+    captured = {}
+
+    def fake_sync(supabase, client, detail_url):
+        captured["detail_url"] = detail_url
+        return {"bill_unique_id": "hr6644-119"}
+
+    monkeypatch.setattr(sync_bills_supabase, "sync_bill", fake_sync)
+    result = sync_bills_supabase.sync_bill_by_reference(
+        object(), object(), 119, "HR", 6644
+    )
+
+    assert result["bill_unique_id"] == "hr6644-119"
+    assert captured["detail_url"].endswith("/bill/119/hr/6644")

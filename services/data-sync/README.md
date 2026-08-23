@@ -54,6 +54,25 @@ Run the test suite with:
 pytest -q
 ```
 
+### Targeted source refreshes and Brief imports
+
+Refresh exact Congress records without depending on the bounded newest-first
+daily window:
+
+```bash
+python scripts/sync_bills_supabase.py --bill HR-6644 --bill HR-6633
+```
+
+Brief manifests are validated and resolved without writes by default. Pass
+`--write` only after the dry run succeeds; imported Briefs are forced to
+`review` status and remain hidden from public readers until an editor publishes
+them through the admin UI.
+
+```bash
+python scripts/import_briefs_supabase.py /path/to/brief-manifest.json
+python scripts/import_briefs_supabase.py /path/to/brief-manifest.json --write
+```
+
 Classify the most recently updated, currently unclassified agency documents
 and Supreme Court clusters from the last 90 days. Classification is a dry run
 unless `--write` is supplied. Use `--list-only` to inspect the bounded queue

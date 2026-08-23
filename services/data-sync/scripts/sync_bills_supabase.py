@@ -355,6 +355,26 @@ def sync_single_bill_by_id(supabase: Any, client: CongressClient, bill_id: str) 
     return True
 
 
+def parse_bill_reference(value: str) -> tuple[str, int]:
+    match = re.fullmatch(r"([A-Za-z]+)[- ]?(\d+)", value.strip())
+    if not match:
+        raise argparse.ArgumentTypeError(
+            "Bill references must look like HR6644, HR-6644, or S98"
+        )
+    return match.group(1).upper(), int(match.group(2))
+
+
+def sync_bill_by_reference(
+    supabase: Any,
+    client: CongressClient,
+    congress: int,
+    bill_type: str,
+    number: int,
+) -> Dict[str, Any]:
+    detail_url = f"{BASE_URL}/bill/{congress}/{bill_type.lower()}/{number}"
+    return sync_bill(supabase, client, detail_url)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--congress", type=int, default=119)
@@ -364,7 +384,18 @@ def main() -> int:
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--max-batches", type=int, default=100)
     parser.add_argument("--bill-id")
+    parser.add_argument(
+        "--bill",
+        action="append",
+        type=parse_bill_reference,
+        default=[],
+        metavar="TYPE-NUMBER",
+        help="Sync an exact bill such as HR-6644; may be repeated",
+    )
     args = parser.parse_args()
+
+    if args.bill_id and args.bill:
+        parser.error("--bill-id and --bill cannot be used together")
 
     load_dotenv()
     try:
@@ -381,6 +412,26 @@ def main() -> int:
         except Exception as exc:
             logger.exception("Single-bill sync failed: %s", exc)
             return 1
+
+    if args.bill:
+        stats.fetched = len(args.bill)
+        for bill_type, number in args.bill:
+            try:
+                sync_bill_by_reference(
+                    supabase, client, args.congress, bill_type, number
+                )
+                stats.written += 1
+            except Exception as exc:
+                stats.failed += 1
+                logger.exception(
+                    "Failed to sync %s-%s in Congress %s: %s",
+                    bill_type,
+                    number,
+                    args.congress,
+                    exc,
+                )
+        stats.log("bills-targeted")
+        return 1 if stats.failed else 0
 
     requested_limit = None if args.limit == -1 else max(0, args.limit)
     max_pages = args.max_batches if args.limit == -1 else None
