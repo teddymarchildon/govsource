@@ -7,6 +7,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { NavigationProvider } from '../contexts/NavigationContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { getTopics } from '@/lib/repositories/topics';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -45,6 +46,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const topics = await getTopics();
 
   return (
     <html lang="en" className={`${inter.variable}`}>
@@ -53,7 +55,7 @@ export default async function RootLayout({
           <NavigationProvider>
             <div className="min-h-screen bg-background">
               <Header />
-              <TopNav />
+              <TopNav topics={topics.map(({ id, slug, name }) => ({ id, slug, name }))} />
               <main className="p-4 pt-16 md:p-6 md:pt-[7.5rem]">
                 {children}
               </main>

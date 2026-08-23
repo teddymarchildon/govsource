@@ -52,7 +52,7 @@ function sitemapRecord(path, ...lastModifiedCandidates) {
   };
 }
 
-function buildSitemapRecords({ bills, agencyDocuments, briefs, agencies, members, judges, clusters }) {
+function buildSitemapRecords({ bills, agencyDocuments, briefs, agencies, members, judges, clusters, topics = [] }) {
   const records = [
     ...bills.map((bill) => sitemapRecord(
       `/${bill.law_enacted_date ? 'laws' : 'bills'}/${bill.id}`,
@@ -81,6 +81,11 @@ function buildSitemapRecords({ bills, agencyDocuments, briefs, agencies, members
       cluster.created_at,
       cluster.date_filed,
     )),
+    ...topics.map((topic) => sitemapRecord(
+      `/topics/${encodeURIComponent(topic.slug)}`,
+      topic.updated_at,
+      topic.created_at,
+    )),
   ];
 
   return [...new Map(records.map((record) => [record.path, record])).values()];
@@ -93,7 +98,7 @@ async function getSitemapRecords(client = createSitemapClient()) {
   }
 
   const now = new Date().toISOString();
-  const [bills, agencyDocuments, briefs, agencies, members, judges, clusters] = await Promise.all([
+  const [bills, agencyDocuments, briefs, agencies, members, judges, clusters, topics] = await Promise.all([
     fetchAllRows('bills and laws', () => client
       .from('bill')
       .select('id,updated_at,created_at,introduced_date,law_enacted_date')
@@ -127,6 +132,11 @@ async function getSitemapRecords(client = createSitemapClient()) {
       .select('id,updated_at,created_at,date_filed,court:court!inner(remote_id)')
       .eq('court.remote_id', 'scotus')
       .order('id', { ascending: true })),
+    fetchAllRows('policy topics', () => client
+      .from('topic')
+      .select('slug,updated_at,created_at')
+      .eq('status', 'active')
+      .order('display_order', { ascending: true })),
   ]);
 
   return buildSitemapRecords({
@@ -137,6 +147,7 @@ async function getSitemapRecords(client = createSitemapClient()) {
     members,
     judges,
     clusters,
+    topics,
   });
 }
 

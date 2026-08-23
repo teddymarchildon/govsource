@@ -15,6 +15,7 @@ export default function HomeClient({
   bills,
   popularItems,
   recentExecutiveOrders,
+  topics,
 }: HomepagePublicData) {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -65,6 +66,7 @@ export default function HomeClient({
       popularItems={popularItems}
       popularLoading={false}
       recentExecutiveOrders={recentExecutiveOrders}
+      topics={topics}
     />
   );
 }

@@ -36,6 +36,7 @@ test('buildSitemapRecords routes each public record to its canonical detail page
     members: [{ id: 7 }],
     judges: [{ id: 8 }],
     clusters: [{ id: 9, date_filed: '2026-06-07' }],
+    topics: [{ slug: 'health', updated_at: '2026-06-08' }],
   });
 
   assert.deepEqual(records.map(({ path }) => path), [
@@ -48,6 +49,7 @@ test('buildSitemapRecords routes each public record to its canonical detail page
     '/congress-members/7',
     '/judges/8',
     '/supreme-court-cases/9',
+    '/topics/health',
   ]);
 });
 

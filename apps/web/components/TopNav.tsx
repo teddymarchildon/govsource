@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ArrowRight,
   BookOpenText,
   Building2,
   ChevronDown,
   FileText,
   Gavel,
   Landmark,
+  Layers3,
   PenLine,
   Scale,
   Users,
@@ -26,6 +28,9 @@ import {
   getSavedJudges,
 } from '../services/api';
 import LoadingIndicator from './ui/LoadingIndicator';
+import type { Topic } from '@/types/topic';
+
+type TopicLink = Pick<Topic, 'id' | 'slug' | 'name'>;
 
 const sectionItems = [
   { href: '/', label: 'Today', paths: ['/', '/briefs'] },
@@ -68,13 +73,14 @@ type WatchedItem = {
   timestamp?: string;
 };
 
-export default function TopNav() {
+export default function TopNav({ topics }: { topics: TopicLink[] }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { isMobileNavOpen, setIsMobileNavOpen } = useNavigationMenu();
   const [watchedItems, setWatchedItems] = useState<WatchedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [topicsOpen, setTopicsOpen] = useState(false);
   const [watchingOpen, setWatchingOpen] = useState(false);
   const desktopMenusRef = useRef<HTMLDivElement>(null);
 
@@ -125,6 +131,7 @@ export default function TopNav() {
   useEffect(() => {
     setIsMobileNavOpen(false);
     setSourcesOpen(false);
+    setTopicsOpen(false);
     setWatchingOpen(false);
   }, [pathname, setIsMobileNavOpen]);
 
@@ -136,6 +143,7 @@ export default function TopNav() {
 
       if (desktopMenusRef.current && !desktopMenusRef.current.contains(target)) {
         setSourcesOpen(false);
+        setTopicsOpen(false);
         setWatchingOpen(false);
       }
 
@@ -152,6 +160,7 @@ export default function TopNav() {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setSourcesOpen(false);
+        setTopicsOpen(false);
         setWatchingOpen(false);
       }
     };
@@ -207,7 +216,44 @@ export default function TopNav() {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => { setSourcesOpen((open) => !open); setWatchingOpen(false); }}
+                onClick={() => { setTopicsOpen((open) => !open); setSourcesOpen(false); setWatchingOpen(false); }}
+                className={`relative inline-flex h-14 items-center gap-1 whitespace-nowrap text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary ${topicsOpen || pathname.startsWith('/topics') ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
+                aria-expanded={topicsOpen}
+                aria-haspopup="menu"
+              >
+                Topics
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${topicsOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {topicsOpen ? (
+                <div className="absolute left-1/2 mt-2 w-[44rem] -translate-x-1/2 rounded-xl border border-border/80 bg-card/95 p-4 shadow-xl backdrop-blur-sm" role="menu">
+                  <div className="mb-3 flex items-center justify-between border-b border-border pb-3">
+                    <div>
+                      <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Explore policy</p>
+                      <p className="mt-1 text-sm text-foreground">Follow an issue across every branch.</p>
+                    </div>
+                    <Link href="/topics" role="menuitem" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+                      All topics <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                  <ul className="grid grid-cols-3 gap-1">
+                    {topics.map((topic) => (
+                      <li key={topic.id}>
+                        <Link href={`/topics/${topic.slug}`} role="menuitem" className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-foreground/90 transition-colors hover:bg-muted hover:text-primary">
+                          <Layers3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="truncate">{topic.name}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setSourcesOpen((open) => !open); setTopicsOpen(false); setWatchingOpen(false); }}
                 className={`inline-flex h-14 items-center gap-1 text-sm font-semibold transition-colors ${sourcesOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                 aria-expanded={sourcesOpen}
                 aria-haspopup="menu"
@@ -246,7 +292,7 @@ export default function TopNav() {
           <div className="relative justify-self-end">
             <button
               type="button"
-              onClick={() => { setWatchingOpen((open) => !open); setSourcesOpen(false); }}
+              onClick={() => { setWatchingOpen((open) => !open); setSourcesOpen(false); setTopicsOpen(false); }}
               className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-expanded={watchingOpen}
               aria-haspopup="menu"
@@ -279,6 +325,22 @@ export default function TopNav() {
                       className={`flex rounded-md px-3 py-2 text-sm font-medium transition-colors ${isSectionActive(item.paths) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
                     >
                       {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="border-t border-border px-4 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Policy topics</h2>
+                <Link href="/topics" className="text-xs font-semibold text-primary">View all</Link>
+              </div>
+              <ul className="grid grid-cols-2 gap-1">
+                {topics.map((topic) => (
+                  <li key={topic.id}>
+                    <Link href={`/topics/${topic.slug}`} className="block rounded-md px-2 py-2 text-xs font-medium leading-4 text-foreground/90 transition-colors hover:bg-muted hover:text-primary">
+                      {topic.name}
                     </Link>
                   </li>
                 ))}

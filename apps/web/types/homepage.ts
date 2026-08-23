@@ -1,5 +1,6 @@
 import type { AgencyDocument, Bill, Cluster, Law } from './types';
 import type { Brief } from './brief';
+import type { Topic } from './topic';
 
 export type PopularHomepageItem =
   | { id?: string; item_type: 'bill'; data: Bill }
@@ -16,4 +17,5 @@ export type HomepagePublicData = {
   bills: Bill[];
   popularItems: PopularHomepageItem[];
   recentExecutiveOrders: AgencyDocument[];
+  topics: Topic[];
 };

@@ -33,6 +33,7 @@ module.exports = {
       '/judges',
       '/laws',
       '/supreme-court-cases',
+      '/topics',
     ];
 
     const [indexEntries, records] = await Promise.all([

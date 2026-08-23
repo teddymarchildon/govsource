@@ -4,6 +4,7 @@ import { cache } from 'react';
 import { createClient } from '@/utils/supabase/server';
 import { getPublishedBriefs } from './briefs';
 import { getRecentExecutiveOrders } from './agencyDocuments';
+import { getTopics } from './topics';
 import type { AgencyDocument, Bill, Cluster, Law } from '@/types/types';
 import type { HomepagePublicData, PopularHomepageItem } from '@/types/homepage';
 
@@ -35,7 +36,7 @@ function normalizeBill(row: BillRow): Bill | Law {
 export const getHomepagePublicData = cache(async (): Promise<HomepagePublicData> => {
   const supabase = await createClient();
   const now = new Date().toISOString();
-  const [briefs, billsResult, recentExecutiveOrders, rankedResult] = await Promise.all([
+  const [briefs, billsResult, recentExecutiveOrders, rankedResult, topics] = await Promise.all([
     getPublishedBriefs(24),
     supabase
       .from('bill')
@@ -50,6 +51,7 @@ export const getHomepagePublicData = cache(async (): Promise<HomepagePublicData>
       .or(`effectively_ranked_at.is.null,effectively_ranked_at.lte.${now}`)
       .order('rank', { ascending: true })
       .limit(24),
+    getTopics(),
   ]);
 
   const firstError = [billsResult.error, rankedResult.error].find(Boolean);
@@ -124,5 +126,6 @@ export const getHomepagePublicData = cache(async (): Promise<HomepagePublicData>
     bills: ((billsResult.data ?? []) as unknown as BillRow[]).map((row) => normalizeBill(row) as Bill),
     popularItems,
     recentExecutiveOrders,
+    topics,
   };
 });

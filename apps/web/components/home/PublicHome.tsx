@@ -12,6 +12,7 @@ import {
   PenLine,
   Scale,
   Sparkles,
+  Tags,
 } from 'lucide-react';
 
 import { buttonVariants } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 import type { Brief } from '@/types/brief';
 import type { AgencyDocument, Bill } from '@/types/types';
 import type { PersonalizedHomepageItem, PopularHomepageItem } from '@/types/homepage';
+import type { Topic } from '@/types/topic';
 import { getContentTypeLabel } from '@/utils/contentReferences';
 
 type PopularItemType = 'bill' | 'law' | 'agency_document' | 'executive_order' | 'cluster';
@@ -52,6 +54,7 @@ interface PublicHomeProps {
   popularItems: PopularHomepageItem[];
   popularLoading: boolean;
   recentExecutiveOrders: AgencyDocument[];
+  topics: Topic[];
 }
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -149,6 +152,7 @@ export default function PublicHome({
   popularItems,
   popularLoading,
   recentExecutiveOrders,
+  topics,
 }: PublicHomeProps) {
   const activeFeatured = briefs.find((brief) => brief.is_featured && (!brief.featured_until || new Date(brief.featured_until) > new Date()));
   const leadBrief = activeFeatured || briefs[0];
@@ -333,6 +337,46 @@ export default function PublicHome({
                 );
               })}
             </div>
+          </div>
+        </section>
+      ) : null}
+
+      {topics.length > 0 ? (
+        <section className="border-b border-border bg-background py-14 md:py-20">
+          <div className="container mx-auto px-4">
+            <SectionHeading
+              eyebrow="Across government"
+              title="Explore by topic"
+              action={(
+                <Link href="/topics" className="hidden items-center gap-2 text-sm font-semibold text-primary hover:underline sm:inline-flex">
+                  View all topics <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+            />
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Follow one policy area across Congress, the White House, federal agencies, and the courts.
+            </p>
+
+            <div className="mt-8 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {topics.map((topic) => (
+                <Link
+                  key={topic.id}
+                  href={`/topics/${topic.slug}`}
+                  className="group flex min-h-28 items-start gap-3 bg-card px-5 py-5 transition-colors hover:bg-secondary/55"
+                >
+                  <Tags className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <span className="min-w-0">
+                    <span className="block font-serif text-lg font-semibold leading-6 transition-colors group-hover:text-primary">{topic.name}</span>
+                    <span className="mt-1.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">{topic.description}</span>
+                  </span>
+                  <ArrowRight className="ml-auto mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                </Link>
+              ))}
+            </div>
+
+            <Link href="/topics" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline sm:hidden">
+              View all topics <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </section>
       ) : null}
