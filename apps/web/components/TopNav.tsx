@@ -34,10 +34,10 @@ type TopicLink = Pick<Topic, 'id' | 'slug' | 'name'>;
 
 const sectionItems = [
   { href: '/', label: 'Today', paths: ['/', '/briefs'] },
-  { href: '/bills', label: 'Congress', paths: ['/bills', '/laws', '/congress-members'] },
-  { href: '/executive-orders', label: 'White House', paths: ['/executive-orders'] },
-  { href: '/agency-rules', label: 'Agencies', paths: ['/agency-rules', '/agencies'] },
-  { href: '/supreme-court-cases', label: 'Courts', paths: ['/supreme-court-cases', '/judges'] },
+  { href: '/congress', label: 'Congress', paths: ['/congress', '/bills', '/laws', '/congress-members'] },
+  { href: '/white-house', label: 'White House', paths: ['/white-house', '/executive-orders'] },
+  { href: '/agencies', label: 'Agencies', paths: ['/agencies', '/agency-rules'] },
+  { href: '/courts', label: 'Courts', paths: ['/courts', '/supreme-court-cases', '/judges'] },
 ] as const;
 
 const archiveGroups = [

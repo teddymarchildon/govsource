@@ -10,7 +10,13 @@ import {
 } from "@/components/listing/FilterToolbar";
 import { FilterPopover } from "@/components/listing/FilterPopover";
 
-export default function AgenciesClient({ initialAgencies }: { initialAgencies: Agency[] }) {
+export default function AgenciesClient({
+  initialAgencies,
+  embedded = false,
+}: {
+  initialAgencies: Agency[];
+  embedded?: boolean;
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [parentAgenciesOnly, setParentAgenciesOnly] = useState(false);
 
@@ -72,8 +78,12 @@ export default function AgenciesClient({ initialAgencies }: { initialAgencies: A
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Federal Agencies</h1>
+    <div className={`container mx-auto px-4 ${embedded ? 'py-12 md:py-16' : 'py-8'}`}>
+      {embedded ? (
+        <h2 className="mb-2 font-serif text-3xl font-semibold md:text-4xl">Federal agency directory</h2>
+      ) : (
+        <h1 className="mb-2 text-3xl font-bold">Federal Agencies</h1>
+      )}
       <p className="text-gray-600 text-sm mb-6">
         Explore cabinet departments, independent agencies, and offices that carry out federal policy.
       </p>

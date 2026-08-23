@@ -22,6 +22,7 @@ import type { AgencyDocument, Bill } from '@/types/types';
 import type { PersonalizedHomepageItem, PopularHomepageItem } from '@/types/homepage';
 import type { Topic } from '@/types/topic';
 import { getContentTypeLabel } from '@/utils/contentReferences';
+import { briefBelongsToSection } from '@/utils/briefSections';
 
 type PopularItemType = 'bill' | 'law' | 'agency_document' | 'executive_order' | 'cluster';
 
@@ -64,17 +65,17 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 });
 
 const sourceLinks = [
-  { description: 'Bills, laws, sponsors, and every legislative action.', href: '/bills', icon: Landmark, label: 'Congress' },
-  { description: 'Executive orders and presidential actions.', href: '/executive-orders', icon: PenLine, label: 'White House' },
-  { description: 'Rules, notices, and federal agency documents.', href: '/agency-rules', icon: Building2, label: 'Agencies' },
-  { description: 'Supreme Court cases, opinions, and justices.', href: '/supreme-court-cases', icon: Scale, label: 'Courts' },
+  { description: 'Bills, laws, sponsors, and every legislative action.', href: '/congress', icon: Landmark, label: 'Congress' },
+  { description: 'Executive orders and presidential actions.', href: '/white-house', icon: PenLine, label: 'White House' },
+  { description: 'Rules, notices, and federal agency documents.', href: '/agencies', icon: Building2, label: 'Agencies' },
+  { description: 'Supreme Court cases, opinions, and justices.', href: '/courts', icon: Scale, label: 'Courts' },
 ] as const;
 
 const briefLanes = [
-  { label: 'Congress', types: ['bill', 'law'] },
-  { label: 'White House', types: ['executive_order'] },
-  { label: 'Agencies', types: ['agency_document'] },
-  { label: 'Courts', types: ['cluster'] },
+  { label: 'Congress', section: 'congress' },
+  { label: 'White House', section: 'white-house' },
+  { label: 'Agencies', section: 'agencies' },
+  { label: 'Courts', section: 'courts' },
 ] as const;
 
 function formatDate(value?: string | null) {
@@ -324,7 +325,7 @@ export default function PublicHome({
             <SectionHeading eyebrow="By institution" title="Follow the federal government" />
             <div className="mt-9 grid gap-8 lg:grid-cols-2">
               {briefLanes.map((lane) => {
-                const laneBriefs = briefs.filter((brief) => (lane.types as readonly string[]).includes(brief.primary_item_type)).slice(0, 3);
+                const laneBriefs = briefs.filter((brief) => briefBelongsToSection(brief, lane.section)).slice(0, 3);
                 if (laneBriefs.length === 0) return null;
                 return (
                   <div key={lane.label} className="border-t-4 border-foreground pt-4">
