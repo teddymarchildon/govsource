@@ -16,6 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.govsrc.com'),
   title: {
     default: 'GovSource - Federal Public Records, Made Clear',
     template: '%s | GovSource',

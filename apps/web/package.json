@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test:sitemap": "node --test scripts/sitemap-records.test.js",
     "postbuild": "next-sitemap"
   },
   "dependencies": {
