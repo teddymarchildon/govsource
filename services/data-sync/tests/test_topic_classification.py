@@ -19,9 +19,20 @@ TOPICS = [
 ]
 
 
-def completed_response():
+def completed_response(classification=None, *, response_id="resp_test"):
+    if classification is None:
+        classification = {
+            "primary_topic": "health",
+            "topics": [
+                {
+                    "slug": "health",
+                    "confidence": 0.94,
+                    "rationale": "The rule governs health coverage.",
+                }
+            ],
+        }
     return {
-        "id": "resp_test",
+        "id": response_id,
         "status": "completed",
         "usage": {"input_tokens": 100, "output_tokens": 20, "total_tokens": 120},
         "output": [
@@ -30,18 +41,7 @@ def completed_response():
                 "content": [
                     {
                         "type": "output_text",
-                        "text": json.dumps(
-                            {
-                                "primary_topic": "health",
-                                "topics": [
-                                    {
-                                        "slug": "health",
-                                        "confidence": 0.94,
-                                        "rationale": "The rule governs health coverage.",
-                                    }
-                                ],
-                            }
-                        ),
+                        "text": json.dumps(classification),
                     }
                 ],
             }
@@ -69,6 +69,15 @@ def test_response_payload_uses_strict_canonical_topic_schema():
     assert output_format["schema"]["properties"]["topics"]["items"]["properties"][
         "slug"
     ]["enum"] == ["health", "taxes"]
+    assert "must also appear once" in output_format["schema"]["properties"][
+        "primary_topic"
+    ]["description"]
+
+
+def test_system_prompt_requires_primary_topic_in_topics_array():
+    prompt = classify_topics.build_system_prompt(TOPICS)
+
+    assert "topics array must include the primary topic exactly once" in prompt
 
 
 def test_validate_classification_marks_exactly_one_primary():
@@ -161,6 +170,101 @@ def test_openai_client_parses_structured_response_without_sdk_dependency():
     assert result.assignments[0]["slug"] == "health"
     assert result.assignments[0]["is_primary"] is True
     assert result.usage["total_tokens"] == 120
+
+
+def test_openai_client_retries_semantically_invalid_classification():
+    invalid = {
+        "primary_topic": "health",
+        "topics": [
+            {"slug": "taxes", "confidence": 0.6, "rationale": "Tax policy."}
+        ],
+    }
+    responses = [
+        completed_response(invalid, response_id="resp_invalid"),
+        completed_response(response_id="resp_corrected"),
+    ]
+
+    class Response:
+        ok = True
+        status_code = 200
+        headers = {}
+
+        def __init__(self, body):
+            self.body = body
+
+        def json(self):
+            return self.body
+
+    class Session:
+        def __init__(self):
+            self.payloads = []
+
+        def post(self, url, **kwargs):
+            self.payloads.append(kwargs["json"])
+            return Response(responses[len(self.payloads) - 1])
+
+    session = Session()
+    result = classify_topics.OpenAIResponsesClient(
+        "secret",
+        "gpt-5-nano",
+        session=session,
+        max_validation_attempts=3,
+    ).classify(
+        system_prompt="Classify",
+        record={"title": "Health coverage rule"},
+        topic_slugs=["health", "taxes"],
+    )
+
+    assert len(session.payloads) == 2
+    retry_content = session.payloads[1]["input"][1]["content"]
+    assert "Primary topic is absent from the topics array" in retry_content
+    assert result.response_id == "resp_corrected"
+    assert result.assignments[0]["is_primary"] is True
+
+
+def test_openai_client_stops_after_validation_attempt_limit():
+    invalid = {
+        "primary_topic": "health",
+        "topics": [
+            {"slug": "taxes", "confidence": 0.6, "rationale": "Tax policy."}
+        ],
+    }
+
+    class Response:
+        ok = True
+        status_code = 200
+        headers = {}
+
+        @staticmethod
+        def json():
+            return completed_response(invalid)
+
+    class Session:
+        calls = 0
+
+        def post(self, url, **kwargs):
+            self.calls += 1
+            return Response()
+
+    session = Session()
+    client = classify_topics.OpenAIResponsesClient(
+        "secret",
+        "gpt-5-nano",
+        session=session,
+        max_validation_attempts=2,
+    )
+
+    with pytest.raises(
+        classify_topics.ClassificationError,
+        match="Primary topic is absent from the topics array",
+    ):
+        client.classify(
+            system_prompt="Classify",
+            record={"title": "Health coverage rule"},
+            topic_slugs=["health", "taxes"],
+        )
+
+    assert session.calls == 2
 
 
 def test_agency_source_excerpt_combines_abstract_and_stored_html():
