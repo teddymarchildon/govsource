@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   sync-recent-data:
+    if: ${{ vars.BRIEF_PIPELINE_ENABLED != 'true' }}
     name: Sync recent government data
     runs-on: ubuntu-latest
     timeout-minutes: 300

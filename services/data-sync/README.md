@@ -108,12 +108,12 @@ Three scheduled workflows under `.github/workflows` run bounded synchronization 
   05:47 UTC each day. Its manual trigger exposes the batch size, lookback, and
   record type.
 
-All three workflows can also be started from the repository's **Actions** tab with
-the **Run workflow** button. They share a concurrency group, so a scheduled run
-waits rather than overlapping another data sync.
+These workflows can also be started from the repository's **Actions** tab with
+the **Run workflow** button. The continuous pipeline uses separate source locks;
+see BRIEF_PIPELINE.md for the current schedule and activation rules.
 
 The manual **Recover Federal Register documents** workflow (`data-sync-recovery.yml`)
-uses the same lock and accepts up to 100 space-separated document numbers. Use it
+uses the Federal Register lock and accepts up to 100 space-separated document numbers. Use it
 to recover older failures outside the daily window, such as
 `2026-17366 X26-20831 X26-10831`. It forces a fresh attempt for each requested
 record. The equivalent local command, with server credentials configured, is:
@@ -155,3 +155,7 @@ For initial setup, manually run **Weekly reference data sync** first so court
 and agency reference rows exist, then manually run **Daily data sync**. Review
 the first few run durations and upstream request volumes before increasing the
 bounded page and record limits in the workflow files.
+
+## Continuous brief generation
+
+See [BRIEF_PIPELINE.md](BRIEF_PIPELINE.md) for the new models, split ingestion workflows, evidence verification, admin controls, activation steps and recovery procedures. The legacy daily workflow remains available until `BRIEF_PIPELINE_ENABLED=true`; automatic publication starts paused independently.

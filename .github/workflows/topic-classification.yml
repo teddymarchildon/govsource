@@ -29,9 +29,9 @@ on:
 permissions:
   contents: read
 
-# Share the data-sync lock so classification never races source ingestion.
+# Topic classification is independent of brief publication; source evidence is versioned.
 concurrency:
-  group: govsource-data-sync
+  group: govsource-topic-classification
   cancel-in-progress: false
 
 jobs:

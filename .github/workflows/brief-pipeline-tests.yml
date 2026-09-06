@@ -1,0 +1,29 @@
+name: Test brief pipeline
+on:
+  pull_request:
+    paths: ['services/data-sync/**', 'apps/web/supabase/migrations/**', '.github/workflows/**']
+  push:
+    branches: [main]
+    paths: ['services/data-sync/**', 'apps/web/supabase/migrations/**', '.github/workflows/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/data-sync
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: pip install -r requirements.runtime.txt pytest==8.3.5
+      - run: pytest -q
+      - run: npm ci --ignore-scripts
+      - run: npm run test:database

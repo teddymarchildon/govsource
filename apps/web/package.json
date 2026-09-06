@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:briefs": "node --test scripts/brief-selection.test.mjs scripts/brief-reading.test.mjs",
+    "test:briefs": "node --test scripts/brief-selection.test.mjs scripts/brief-reading.test.mjs scripts/brief-pipeline-api.test.mjs",
     "test:sitemap": "node --test scripts/sitemap-records.test.js",
     "postbuild": "next-sitemap"
   },

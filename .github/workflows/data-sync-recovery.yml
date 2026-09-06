@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: govsource-data-sync
+  group: govsource-federal-register
   cancel-in-progress: false
 
 jobs:
@@ -23,6 +23,7 @@ jobs:
       PYTHONUNBUFFERED: "1"
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BRIEF_PIPELINE_ENABLED: ${{ vars.BRIEF_PIPELINE_ENABLED }}
       DOCUMENT_NUMBERS: ${{ inputs.document_numbers }}
     defaults:
       run:
@@ -62,7 +63,9 @@ jobs:
               for number in numbers
           ):
               sys.exit("Provide 1–100 space-separated document numbers.")
-          command = [sys.executable, "scripts/sync_federal_register_docs.py"]
+          command = ([sys.executable, "scripts/run_pipeline_source.py", "federal_register"]
+                     if os.environ.get("BRIEF_PIPELINE_ENABLED") == "true"
+                     else [sys.executable, "scripts/sync_federal_register_docs.py"])
           for number in numbers:
               command.extend(["--document-number", number])
           subprocess.run(command, check=True)

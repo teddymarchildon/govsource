@@ -28,6 +28,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
           {hasDate ? <><span aria-hidden="true">·</span><time dateTime={brief.published_at!}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(published)}</time></> : null}
           <span aria-hidden="true">·</span><span>{getBriefReadingMinutes(brief)} min read</span>
           {brief.author_name ? <span>· By {brief.author_name}</span> : null}
+          {brief.version > 1 && brief.updated_at ? <span>· Updated <time dateTime={brief.updated_at}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(brief.updated_at))}</time></span> : null}
         </div>
         <h1 className="mt-3 break-words font-serif text-[28px] font-semibold leading-[1.15] tracking-[-0.025em] md:text-[38px]">{brief.title}</h1>
         {brief.dek ? <p className="mt-3 max-w-[70ch] text-base leading-[1.6] text-muted-foreground">{brief.dek}</p> : null}

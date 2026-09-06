@@ -1,0 +1,124 @@
+from copy import deepcopy
+from types import SimpleNamespace
+import pytest
+from brief_evidence import chunks, build_packet, EvidenceUnavailable, fingerprint
+from process_briefs import citation_errors, validate_draft, verification_passes, draft_claims, process
+from check_brief_pipeline import problems
+
+TEXT='The proposed rule would require annual reporting for large operators. Comments close on October 1, 2026. Small operators are exempt.'
+PASSAGE={'id':'s1','source_id':'source_1','text':TEXT}
+
+
+def claim(text='The agency proposes annual reporting.'):
+    return {'text':text,'evidence':[{'passage_id':'s1','quote':TEXT}]}
+
+
+def draft():
+    return {'title':claim('Agency proposes annual reporting'), 'dek':claim(), 'points':[claim(),claim('Comments close on October 1, 2026.'),claim('Small operators are exempt.')], 'context':{'text':'','evidence':[]},'policy_areas':['Government']}
+
+
+def report(d):
+    return {'passed':True,'status_correct':True,'material_omissions':[],'issues':[],
+            'claims':[{'field':k,'supported':True,'reason':'Supported'} for k,v in draft_claims(d).items() if v['text']]}
+
+
+def test_chunks_preserve_entire_source_including_final_exception():
+    text=('A long section.\n'*4000)+'FINAL EXCEPTION: small operators are exempt.'
+    assert ''.join(chunks(text))==text
+    assert 'FINAL EXCEPTION' in chunks(text)[-1]
+
+
+def test_exact_quotes_and_numbers_are_checked():
+    assert citation_errors(claim(),[PASSAGE])==[]
+    bad=claim('The rule costs 900 million dollars.')
+    assert any('Unsupported number' in e for e in citation_errors(bad,[PASSAGE]))
+    bad=claim();bad['evidence'][0]['quote']='Invented quotation.'
+    assert citation_errors(bad,[PASSAGE])
+
+
+def test_all_prose_including_headline_needs_evidence():
+    d=draft();assert validate_draft(d,{'passages':[PASSAGE]})==[]
+    d['title']['evidence']=[]
+    assert any(e.startswith('title:') for e in validate_draft(d,{'passages':[PASSAGE]}))
+
+
+@pytest.mark.parametrize('mutation',[lambda r:r.update(status_correct=False),lambda r:r.update(material_omissions=['Missing exemption']),lambda r:r['claims'].pop(),lambda r:r['claims'].append(r['claims'][0]),lambda r:r['claims'][0].update(supported=False)])
+def test_verifier_cannot_pass_with_missing_checks_or_contradictions(mutation):
+    d=draft();r=report(d);assert verification_passes(r,d)
+    mutation(r);assert not verification_passes(r,d)
+
+
+def test_enacted_bill_requires_matching_text():
+    with pytest.raises(EvidenceUnavailable,match='enrolled'):
+        build_packet(None,'bill',{'law_enacted_date':'2026-09-01','texts':[{'type':'Introduced in House','date':'2026-01-01'}]})
+
+
+def test_court_requires_lead_opinion():
+    with pytest.raises(EvidenceUnavailable,match='Lead'):
+        build_packet(None,'cluster',{'court':'scotus','opinions':[{'type':'040dissent'}]})
+
+
+def test_fingerprint_is_order_independent_but_content_sensitive():
+    assert fingerprint({'a':1,'b':2})==fingerprint({'b':2,'a':1})
+    assert fingerprint({'a':1})!=fingerprint({'a':2})
+
+
+class DB:
+    def __init__(self): self.calls=[]
+    def table(self,name): return self
+    def select(self,*a): return self
+    def eq(self,*a): return self
+    def in_(self,*a): return self
+    def order(self,*a,**kw): return self
+    def limit(self,*a): return self
+    def rpc(self,name,args): self.calls.append((name,deepcopy(args))); return self
+    def execute(self): return SimpleNamespace(data=[])
+
+
+class FakeAI:
+    writer='writer';verifier='verifier'
+    def __init__(self,db,job): self.stages=[]
+    def call(self,stage,*args,**kwargs):
+        self.stages.append(stage)
+        if stage=='selection': return {'important':True,'new_development':True,'reason':'Consequential rule'}
+        if stage=='extract': return {'facts':[claim()],'qualifications':['Small operators are exempt.']}
+        if stage=='write': return draft()
+        if stage=='verify': return report(draft())
+
+
+def job():
+    return {'id':1,'item_id':7,'item_type':'agency_document','source_type':'agency_document','source_metadata':{},'evidence':{'passages':[PASSAGE],'sources':[{'id':'source_1','label':'Federal Register','url':'https://www.federalregister.gov/d/example'}]}}
+
+
+def test_complete_pipeline_verifies_without_publishing_and_persists_checkpoint():
+    db=DB()
+    assert process(db,job(),'lease',ai_factory=FakeAI)=='verified'
+    assert any(name=='save_brief_work' and args['p_work'].get('extracted') for name,args in db.calls)
+    finish=[args for name,args in db.calls if name=='finish_brief_job'][0]
+    assert finish['p_verification']['passed'] and finish['p_verification']['deterministic_passed']
+    assert finish['p_draft']['points'][0]['source_refs']==['source_1']
+    assert not any(name=='publish_verified_brief' for name,args in db.calls)
+
+
+def test_failed_independent_verification_repairs_twice_then_withholds():
+    class RejectAI(FakeAI):
+        def call(self,stage,*a,**kw):
+            result=super().call(stage,*a,**kw)
+            if stage=='verify': result.update(passed=False,material_omissions=['Scope was overstated'])
+            return result
+    ai=RejectAI(None,None);db=DB()
+    assert process(db,job(),'lease',ai_factory=lambda *a:ai)=='withheld'
+    assert ai.stages.count('write')==3
+    assert ai.stages.count('verify')==3
+
+
+def test_resume_reuses_completed_extractions():
+    j=job();j['work']={'selection':{'important':True,'new_development':True,'reason':'Important'},'extracted':[{'passage_id':'s1','facts':[claim()],'qualifications':[]}]}
+    ai=FakeAI(None,None)
+    process(DB(),j,'lease',ai_factory=lambda *a:ai)
+    assert 'selection' not in ai.stages and 'extract' not in ai.stages
+
+
+def test_health_alerts_when_sources_never_ran():
+    overview={'sources':[{'source':'congress','last_success_at':None,'status':'idle'}],'source_errors':[],'oldest_waiting':None}
+    assert 'congress' in problems(overview)[0]

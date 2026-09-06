@@ -1,0 +1,6 @@
+{
+  "name": "govsource-data-sync-tests",
+  "private": true,
+  "scripts": { "test:database": "node tests/database/brief_pipeline.mjs" },
+  "devDependencies": { "@electric-sql/pglite": "0.5.8" }
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from datetime import date, datetime
 from typing import Any, Dict, Iterator, List, Optional
@@ -308,6 +309,10 @@ def sync_documents_to_supabase(
                     "p_agency_ids": agency_ids_for_document(supabase, detail),
                 },
             ).execute()
+            if os.getenv('BRIEF_PIPELINE_TRACKING') == '1':
+                supabase.rpc('note_brief_source_refresh', {
+                    'p_type': 'agency_document', 'p_id': result.data[0]['id'],
+                }).execute()
             stats.written += 1
         except Exception as exc:
             stats.failed += 1

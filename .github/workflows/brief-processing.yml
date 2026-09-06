@@ -1,0 +1,42 @@
+name: Generate and verify briefs
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: govsource-brief-processing
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: ${{ vars.BRIEF_PIPELINE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: services/data-sync
+    env:
+      PYTHONUNBUFFERED: '1'
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BRIEF_MODEL: ${{ vars.OPENAI_BRIEF_MODEL || 'gpt-5-mini' }}
+      OPENAI_BRIEF_VERIFIER_MODEL: ${{ vars.OPENAI_BRIEF_VERIFIER_MODEL || 'gpt-5-mini' }}
+      BRIEF_PRICING_MODELS: ${{ vars.BRIEF_PRICING_MODELS || 'gpt-5-mini' }}
+      BRIEF_INPUT_USD_PER_MILLION: ${{ vars.BRIEF_INPUT_USD_PER_MILLION || '0.25' }}
+      BRIEF_OUTPUT_USD_PER_MILLION: ${{ vars.BRIEF_OUTPUT_USD_PER_MILLION || '2.00' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/data-sync/requirements.runtime.txt
+      - run: pip install -r requirements.runtime.txt
+      - name: Process durable jobs and publish only verified results
+        run: python scripts/run_pipeline_source.py processor -- --limit 10 --max-minutes 20 --publish
