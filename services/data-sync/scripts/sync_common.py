@@ -12,6 +12,7 @@ from typing import Any, Dict, Iterator, Mapping, Optional, Tuple
 from uuid import uuid4
 
 import requests
+import httpx
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -19,6 +20,62 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT: Tuple[float, float] = (10.0, 60.0)
 RETRYABLE_STATUS_CODES = (429, 500, 502, 503, 504)
+
+
+def error_status(exc: BaseException) -> Optional[int]:
+    """Find HTTP status even when the storage SDK masks it with a JSON error."""
+    seen = set()
+    while exc is not None and id(exc) not in seen:
+        seen.add(id(exc))
+        response = getattr(exc, "response", None)
+        status = getattr(response, "status_code", None)
+        status = (
+            status or getattr(exc, "status", None) or getattr(exc, "status_code", None)
+        )
+        try:
+            if status is not None:
+                return int(status)
+        except (TypeError, ValueError):
+            pass
+        exc = exc.__cause__ or exc.__context__
+    return None
+
+
+def retryable_transfer_error(exc: BaseException) -> bool:
+    status = error_status(exc)
+    if status is not None:
+        return status == 429 or 500 <= status < 600
+    return isinstance(
+        exc,
+        (
+            requests.ConnectionError,
+            requests.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+            httpx.TransportError,
+        ),
+    )
+
+
+def download_bytes(session: Any, url: str, *, rate_limiter=None) -> Tuple[bytes, str]:
+    """Retry the entire body read; adapter retries do not cover interrupted bodies."""
+    for attempt in range(3):
+        response = None
+        try:
+            if rate_limiter:
+                rate_limiter.wait()
+            response = session.get(url, timeout=DEFAULT_TIMEOUT)
+            response.raise_for_status()
+            return response.content, response.headers.get(
+                "content-type", "application/octet-stream"
+            )
+        except Exception as exc:
+            if attempt == 2 or not retryable_transfer_error(exc):
+                raise UpstreamAPIError(f"Failed to download {url}: {exc}") from exc
+            logger.warning("Retrying interrupted download (attempt %d/3)", attempt + 2)
+            time.sleep(2 ** (attempt + 1))
+        finally:
+            if response is not None:
+                response.close()
 
 
 class SyncError(RuntimeError):
@@ -249,9 +306,21 @@ def upload_bytes(
     content_type: str,
 ) -> str:
     """Idempotently upload an object and return its path only after success."""
-    supabase.storage.from_(bucket).upload(
-        path=path,
-        file=content,
-        file_options={"content-type": content_type, "upsert": "true"},
-    )
-    return path
+    for attempt in range(3):
+        try:
+            supabase.storage.from_(bucket).upload(
+                path=path,
+                file=content,
+                file_options={"content-type": content_type, "upsert": "true"},
+            )
+            return path
+        except Exception as exc:
+            if attempt == 2 or not retryable_transfer_error(exc):
+                raise
+            logger.warning(
+                "Retrying storage upload %s/%s (attempt %d/3)",
+                bucket,
+                path,
+                attempt + 2,
+            )
+            time.sleep(2 ** (attempt + 1))

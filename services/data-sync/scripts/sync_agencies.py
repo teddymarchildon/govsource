@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import time
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -15,6 +16,8 @@ from sync_common import (
     build_http_session,
     create_supabase_client,
     get_json,
+    error_status,
+    UpstreamAPIError,
     upsert_preserving_missing,
 )
 
@@ -24,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.federalregister.gov/api/v1"
-RATE_LIMITER = RateLimiter(0.1)
+RATE_LIMITER = RateLimiter(3.6)
 
 
 def fetch_agencies_array(session: Any) -> List[Dict[str, Any]]:
@@ -38,11 +41,22 @@ def fetch_agencies_array(session: Any) -> List[Dict[str, Any]]:
 
 
 def fetch_agency_detail(session: Any, agency_id_or_slug: str) -> Dict[str, Any]:
-    return get_json(
-        session,
-        f"{BASE_URL}/agencies/{agency_id_or_slug}.json",
-        rate_limiter=RATE_LIMITER,
-    )
+    # These waits follow the HTTP adapter's Retry-After-aware retry budget.
+    for attempt in range(3):
+        try:
+            return get_json(
+                session,
+                f"{BASE_URL}/agencies/{agency_id_or_slug}.json",
+                rate_limiter=RATE_LIMITER,
+            )
+        except UpstreamAPIError as exc:
+            if error_status(exc) != 429 or attempt == 2:
+                raise
+            delay = 60 * (attempt + 1)
+            logger.warning(
+                "Agency %s rate limited; cooling down for %ds", agency_id_or_slug, delay
+            )
+            time.sleep(delay)
 
 
 def transform_agency(

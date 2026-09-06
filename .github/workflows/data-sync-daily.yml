@@ -69,7 +69,7 @@ jobs:
               --document-type "${document_type}" \
               --per-page 100 \
               --max-pages 2 \
-              --stop-on-existing
+              --skip-complete
           done
 
       - name: Sync recent Supreme Court opinions

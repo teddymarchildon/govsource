@@ -94,12 +94,13 @@ evidence.
 
 ## Scheduled GitHub Actions
 
-Three workflows under `.github/workflows` run bounded synchronization jobs:
+Three scheduled workflows under `.github/workflows` run bounded synchronization jobs:
 
 - `data-sync-daily.yml` refreshes recent bills and their actions, Federal
   Register documents, and Supreme Court opinions at 04:17 UTC each day. Each
-  newest-first Federal Register sync stops when it reaches a document already
-  in the database.
+  Federal Register sync scans up to two pages of 100 records per document type.
+  It skips records with all advertised formats stored, continues past existing
+  records, and retries gaps and missing formats within that window.
 - `data-sync-weekly.yml` refreshes courts, Congress members, Federal Register
   agencies, and agency relationships at 06:43 UTC each Sunday.
 - `topic-classification.yml` classifies up to 100 of the most recently updated
@@ -110,6 +111,30 @@ Three workflows under `.github/workflows` run bounded synchronization jobs:
 All three workflows can also be started from the repository's **Actions** tab with
 the **Run workflow** button. They share a concurrency group, so a scheduled run
 waits rather than overlapping another data sync.
+
+The manual **Recover Federal Register documents** workflow (`data-sync-recovery.yml`)
+uses the same lock and accepts up to 100 space-separated document numbers. Use it
+to recover older failures outside the daily window, such as
+`2026-17366 X26-20831 X26-10831`. It forces a fresh attempt for each requested
+record. The equivalent local command, with server credentials configured, is:
+
+```bash
+python scripts/sync_federal_register_docs.py \
+  --document-number 2026-17366 \
+  --document-number X26-20831 \
+  --document-number X26-10831
+```
+
+Agency detail requests are paced at 3.6 seconds, with 60- and 120-second cooldowns
+if HTTP 429 persists after the HTTP client's retries. File downloads and
+idempotent uploads have three complete-transfer attempts for transient failures.
+Authorization errors and exhausted retries still fail the job.
+
+Federal Register 404/410 responses for alternate file formats are warnings when
+another format is available. Existing storage paths are preserved; missing
+paths and their source URLs remain on the record for recovery scans. A record
+whose advertised content is entirely unavailable still fails. Daily recovery is
+bounded by its scan window; use the manual workflow for older incomplete records.
 
 Scheduled jobs install the minimal pinned dependency set in
 `requirements.runtime.txt`; development and test tools are intentionally not

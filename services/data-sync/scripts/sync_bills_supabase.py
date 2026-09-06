@@ -14,10 +14,10 @@ from typing import Any, Dict, Iterable, List, Optional
 import html2text
 from dotenv import load_dotenv
 from sync_common import (
-    DEFAULT_TIMEOUT,
     RunStats,
     UpstreamAPIError,
     build_http_session,
+    download_bytes,
     create_supabase_client,
     get_json,
     iter_paginated_items,
@@ -95,14 +95,7 @@ class CongressClient:
         return actions
 
     def download(self, url: str) -> tuple[bytes, str]:
-        try:
-            response = self.session.get(url, timeout=DEFAULT_TIMEOUT)
-            response.raise_for_status()
-        except Exception as exc:
-            raise UpstreamAPIError(f"Failed to download {url}: {exc}") from exc
-        return response.content, response.headers.get(
-            "content-type", "application/octet-stream"
-        )
+        return download_bytes(self.session, url)
 
 
 def _parse_date(value: Optional[str]) -> Optional[str]:

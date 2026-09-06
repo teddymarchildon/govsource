@@ -14,12 +14,12 @@ from urllib.parse import urljoin
 
 from dotenv import load_dotenv
 from sync_common import (
-    DEFAULT_TIMEOUT,
     RateLimiter,
     RunStats,
     UpstreamAPIError,
     build_http_session,
     create_supabase_client,
+    download_bytes,
     get_json,
     iter_next_paginated_items,
     require_env,
@@ -170,14 +170,7 @@ class CourtListenerClient:
         return self._people[person_id]
 
     def download(self, url: str) -> tuple[bytes, str]:
-        try:
-            response = self.download_session.get(url, timeout=DEFAULT_TIMEOUT)
-            response.raise_for_status()
-        except Exception as exc:
-            raise UpstreamAPIError(f"Failed to download {url}: {exc}") from exc
-        return response.content, response.headers.get(
-            "content-type", "application/octet-stream"
-        )
+        return download_bytes(self.download_session, url)
 
 
 def remote_id_from_url(url: str) -> str:

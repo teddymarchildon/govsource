@@ -11,11 +11,12 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from dotenv import load_dotenv
 from sync_common import (
-    DEFAULT_TIMEOUT,
     RateLimiter,
     RunStats,
     UpstreamAPIError,
     build_http_session,
+    download_bytes,
+    error_status,
     create_supabase_client,
     get_json,
     upload_bytes,
@@ -109,22 +110,19 @@ class FederalRegisterClient:
         )
 
     def download(self, url: str) -> tuple[bytes, str]:
-        RATE_LIMITER.wait()
-        try:
-            response = self.session.get(url, timeout=DEFAULT_TIMEOUT)
-            response.raise_for_status()
-        except Exception as exc:
-            raise UpstreamAPIError(f"Failed to download {url}: {exc}") from exc
-        return response.content, response.headers.get(
-            "content-type", "application/octet-stream"
-        )
+        return download_bytes(self.session, url, rate_limiter=RATE_LIMITER)
 
 
 def upload_document_files(
-    supabase: Any, client: FederalRegisterClient, detail: Dict[str, Any]
+    supabase: Any,
+    client: FederalRegisterClient,
+    detail: Dict[str, Any],
+    existing: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, str]:
     number = detail["document_number"]
     paths: Dict[str, str] = {}
+    existing = existing or {}
+    missing = []
     for source_key, path_key, folder, extension, default_type in (
         ("pdf_url", "pdf_file_path", "pdfs", "pdf", "application/pdf"),
         ("body_html_url", "html_file_path", "html", "html", "text/html"),
@@ -133,7 +131,26 @@ def upload_document_files(
         url = detail.get(source_key)
         if not url:
             continue
-        content, content_type = client.download(url)
+        stored_url_key = {
+            "pdf_url": "pdf_url",
+            "body_html_url": "html_url",
+            "full_text_xml_url": "xml_url",
+        }[source_key]
+        if existing.get(path_key) and existing.get(stored_url_key) == url:
+            paths[path_key] = existing[path_key]
+            continue
+        try:
+            content, content_type = client.download(url)
+        except UpstreamAPIError as exc:
+            if error_status(exc) not in (404, 410):
+                raise
+            missing.append(source_key)
+            logger.warning(
+                "Document %s: unavailable %s; will retry on recovery scans",
+                number,
+                source_key,
+            )
+            continue
         path = f"{folder}/{number}.{extension}"
         paths[path_key] = upload_bytes(
             supabase,
@@ -142,7 +159,40 @@ def upload_document_files(
             content,
             content_type or default_type,
         )
+    if (
+        missing
+        and not paths
+        and not any(
+            existing.get(key)
+            for key in ("pdf_file_path", "html_file_path", "xml_file_path")
+        )
+    ):
+        raise UpstreamAPIError(f"No usable content available for document {number}")
     return paths
+
+
+def stored_document(supabase: Any, number: str) -> Optional[Dict[str, Any]]:
+    result = (
+        supabase.table("agency_document")
+        .select(
+            "id,pdf_url,html_url,xml_url,pdf_file_path,html_file_path,xml_file_path"
+        )
+        .eq("remote_document_number", number)
+        .limit(1)
+        .execute()
+    )
+    return result.data[0] if result.data else None
+
+
+def stored_content_complete(row: Dict[str, Any]) -> bool:
+    formats = (
+        ("pdf_url", "pdf_file_path"),
+        ("html_url", "html_file_path"),
+        ("xml_url", "xml_file_path"),
+    )
+    return any(row.get(path) for _, path in formats) and all(
+        not row.get(url) or row.get(path) for url, path in formats
+    )
 
 
 def agency_ids_for_document(supabase: Any, detail: Dict[str, Any]) -> List[str]:
@@ -206,13 +256,19 @@ def sync_documents_to_supabase(
     skip_storage: bool = False,
     start_page: int = 1,
     stop_on_existing: bool = False,
+    skip_complete: bool = False,
+    document_numbers: Optional[List[str]] = None,
 ) -> RunStats:
-    documents = client.documents(
-        agency_id=agency_id,
-        document_type=document_type,
-        page_size=per_page,
-        max_pages=max_pages,
-        start_page=start_page,
+    documents = (
+        [{"document_number": number} for number in document_numbers]
+        if document_numbers
+        else client.documents(
+            agency_id=agency_id,
+            document_type=document_type,
+            page_size=per_page,
+            max_pages=max_pages,
+            start_page=start_page,
+        )
     )
     stats = RunStats()
     for document in documents:
@@ -223,10 +279,12 @@ def sync_documents_to_supabase(
                 raise UpstreamAPIError("Document is missing document_number")
             if stop_on_existing and document_exists(supabase, number):
                 stats.skipped += 1
-                logger.info(
-                    "Stopping at existing Federal Register document %s", number
-                )
+                logger.info("Stopping at existing Federal Register document %s", number)
                 break
+            existing = stored_document(supabase, number) if skip_complete else None
+            if existing and stored_content_complete(existing):
+                stats.skipped += 1
+                continue
             detail = client.detail(number)
             row = document_row(detail)
             if not row["remote_document_number"]:
@@ -234,7 +292,7 @@ def sync_documents_to_supabase(
                     f"Detail response for {number} is missing its number"
                 )
             if not skip_storage:
-                row.update(upload_document_files(supabase, client, detail))
+                row.update(upload_document_files(supabase, client, detail, existing))
             result = upsert_preserving_missing(
                 supabase,
                 "agency_document",
@@ -272,6 +330,16 @@ def main() -> int:
     parser.add_argument("--start-page", type=int, default=1)
     parser.add_argument("--skip-storage", action="store_true")
     parser.add_argument(
+        "--skip-complete",
+        action="store_true",
+        help="Scan every bounded page, skipping records whose advertised formats are already stored",
+    )
+    parser.add_argument(
+        "--document-number",
+        action="append",
+        help="Recover this document directly; repeat for multiple documents, bypassing listing pagination",
+    )
+    parser.add_argument(
         "--stop-on-existing",
         action="store_true",
         help=(
@@ -280,6 +348,10 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+    if args.skip_complete and args.stop_on_existing:
+        parser.error("--skip-complete and --stop-on-existing are mutually exclusive")
+    if args.document_number and args.stop_on_existing:
+        parser.error("--document-number cannot be combined with --stop-on-existing")
 
     load_dotenv()
     try:
@@ -293,6 +365,8 @@ def main() -> int:
             skip_storage=args.skip_storage,
             start_page=args.start_page,
             stop_on_existing=args.stop_on_existing,
+            skip_complete=args.skip_complete,
+            document_numbers=args.document_number,
         )
     except Exception as exc:
         logger.exception("Federal Register sync failed: %s", exc)
