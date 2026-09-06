@@ -12,6 +12,7 @@ type AdminBrief = {
   version: number;
   status: BriefStatus;
   title: string;
+  display_title: string | null;
   slug: string | null;
   dek: string | null;
   points: BriefPoint[];
@@ -31,6 +32,7 @@ type AdminBrief = {
 
 type FormState = {
   title: string;
+  display_title: string;
   slug: string;
   dek: string;
   points: string[];
@@ -49,6 +51,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   title: '',
+  display_title: '',
   slug: '',
   dek: '',
   points: ['', '', ''],
@@ -95,6 +98,7 @@ function toIsoDateTime(value: string) {
 function buildForm(brief: AdminBrief): FormState {
   return {
     title: brief.title,
+    display_title: brief.display_title || '',
     slug: brief.slug || '',
     dek: brief.dek || '',
     points: brief.points.length ? brief.points.map((point) => point.text) : ['', '', ''],
@@ -199,6 +203,7 @@ export default function BriefsAdminPage({
     const payload = {
       ...(selected ? { id: selected.id, version: selected.version } : {}),
       title: form.title,
+      display_title: form.display_title || null,
       slug: form.slug || null,
       dek: form.dek || null,
       points: form.points.map((text, index) => ({ id: `point_${index + 1}`, text, source_refs: ['primary'] })),
@@ -293,6 +298,7 @@ export default function BriefsAdminPage({
             <div className="mt-6 space-y-5">
               <label className="block text-sm font-medium">Headline<Input className="mt-1" value={form.title} onChange={(event) => setField('title', event.target.value)} /></label>
               <label className="block text-sm font-medium">Dek<textarea className="mt-1 min-h-20 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={form.dek} onChange={(event) => setField('dek', event.target.value)} maxLength={360} /></label>
+              <label className="block text-sm font-medium">Display headline (optional)<Input className="mt-1" maxLength={100} value={form.display_title} onChange={(event) => setField('display_title', event.target.value)} placeholder="A short, accurate headline for listings" /><span className="mt-1 block text-xs font-normal text-muted-foreground">{form.display_title.length}/100 characters. Aim for 8–14 words; preserve the proposal or decision’s meaning. The full title remains inside the Brief.</span></label>
               <label className="block text-sm font-medium">Slug<Input className="mt-1" value={form.slug} onChange={(event) => setField('slug', event.target.value)} placeholder="Generated when published if blank" /></label>
 
               <div>

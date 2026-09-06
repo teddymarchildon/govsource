@@ -162,12 +162,16 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
         setSourcesOpen(false);
         setTopicsOpen(false);
         setWatchingOpen(false);
+        if (isMobileNavOpen) {
+          setIsMobileNavOpen(false);
+          document.getElementById('nav-toggle')?.focus();
+        }
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, []);
+  }, [isMobileNavOpen, setIsMobileNavOpen]);
 
   const isSectionActive = (paths: readonly string[]) =>
     paths.some((path) => (path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`)));
@@ -197,27 +201,26 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
 
   return (
     <>
-      <nav className="fixed left-0 right-0 top-16 z-[9] hidden h-14 border-b border-border/70 bg-card/95 backdrop-blur md:block" aria-label="Primary navigation">
-        <div ref={desktopMenusRef} className="container mx-auto grid h-full grid-cols-[1fr_auto_1fr] items-center px-4">
-          <div aria-hidden="true" />
+      <nav className="fixed left-0 right-0 top-12 z-[9] hidden h-12 border-b border-border/70 bg-card/95 backdrop-blur md:block" aria-label="Primary navigation">
+        <div ref={desktopMenusRef} className="relative container mx-auto grid h-full grid-cols-[1fr_auto] items-center px-4">
 
-          <div className="flex items-center justify-center gap-7 lg:gap-9">
+          <div className="flex items-center justify-start gap-4 lg:gap-7">
             {sectionItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={isSectionActive(item.paths) ? 'page' : undefined}
-                className={`relative inline-flex h-14 items-center whitespace-nowrap text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary after:transition-opacity ${isSectionActive(item.paths) ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
+                className={`relative inline-flex h-12 items-center whitespace-nowrap text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary after:transition-opacity ${isSectionActive(item.paths) ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
               >
                 {item.label}
               </Link>
             ))}
 
-            <div className="relative">
+            <div className="static">
               <button
                 type="button"
                 onClick={() => { setTopicsOpen((open) => !open); setSourcesOpen(false); setWatchingOpen(false); }}
-                className={`relative inline-flex h-14 items-center gap-1 whitespace-nowrap text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary ${topicsOpen || pathname.startsWith('/topics') ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
+                className={`relative inline-flex h-12 items-center gap-1 whitespace-nowrap text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary ${topicsOpen || pathname.startsWith('/topics') ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
                 aria-expanded={topicsOpen}
                 aria-haspopup="menu"
               >
@@ -226,7 +229,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               </button>
 
               {topicsOpen ? (
-                <div className="absolute left-1/2 mt-2 w-[44rem] -translate-x-1/2 rounded-xl border border-border/80 bg-card/95 p-4 shadow-xl backdrop-blur-sm" role="menu">
+                <div className="absolute inset-x-4 top-full mx-auto mt-2 max-h-[calc(100dvh-7rem)] max-w-[44rem] overflow-y-auto rounded-xl border border-border/80 bg-card p-4 shadow-xl backdrop-blur-sm" role="menu">
                   <div className="mb-3 flex items-center justify-between border-b border-border pb-3">
                     <div>
                       <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Explore policy</p>
@@ -250,11 +253,11 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               ) : null}
             </div>
 
-            <div className="relative">
+            <div className="static">
               <button
                 type="button"
                 onClick={() => { setSourcesOpen((open) => !open); setTopicsOpen(false); setWatchingOpen(false); }}
-                className={`inline-flex h-14 items-center gap-1 text-sm font-semibold transition-colors ${sourcesOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`inline-flex h-12 items-center gap-1 text-sm font-semibold transition-colors ${sourcesOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                 aria-expanded={sourcesOpen}
                 aria-haspopup="menu"
               >
@@ -263,7 +266,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               </button>
 
               {sourcesOpen && (
-                <div className="absolute left-1/2 mt-2 w-[36rem] -translate-x-1/2 rounded-xl border border-border/80 bg-card/95 p-4 shadow-xl backdrop-blur-sm" role="menu">
+                <div className="absolute inset-x-4 top-full mx-auto mt-2 max-h-[calc(100dvh-7rem)] max-w-[36rem] overflow-y-auto rounded-xl border border-border/80 bg-card p-4 shadow-xl backdrop-blur-sm" role="menu">
                   <div className="grid grid-cols-3 gap-5">
                     {archiveGroups.map((group) => (
                       <div key={group.label}>
@@ -312,7 +315,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
       </nav>
 
       {isMobileNavOpen && (
-        <div className="fixed inset-0 top-16 z-20 bg-black/35 md:hidden">
+        <div className="fixed inset-0 top-14 z-20 bg-black/35 md:hidden">
           <aside id="mobile-nav" className="h-full w-[85%] max-w-xs overflow-y-auto border-r border-border/70 bg-background shadow-xl">
             <div className="p-4">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sections</h2>

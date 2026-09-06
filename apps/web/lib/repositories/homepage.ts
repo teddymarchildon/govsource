@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 import { createClient } from '@/utils/supabase/server';
-import { getPublishedBriefs } from './briefs';
+import { getHomepageBriefs } from './briefs';
 import { getRecentExecutiveOrders } from './agencyDocuments';
 import { getTopics } from './topics';
 import type { AgencyDocument, Bill, Cluster, Law } from '@/types/types';
@@ -37,7 +37,7 @@ export const getHomepagePublicData = cache(async (): Promise<HomepagePublicData>
   const supabase = await createClient();
   const now = new Date().toISOString();
   const [briefs, billsResult, recentExecutiveOrders, rankedResult, topics] = await Promise.all([
-    getPublishedBriefs(24),
+    getHomepageBriefs(),
     supabase
       .from('bill')
       .select('*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)')

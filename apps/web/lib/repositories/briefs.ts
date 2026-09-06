@@ -5,7 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 import { isContentType } from '@/utils/contentReferences';
 import type { Brief } from '@/types/brief';
 import type { ContentReference } from '@/types/content';
-import { SECTION_CONTENT_TYPES, type GovernmentSection } from '@/types/section';
+import { GOVERNMENT_SECTIONS, SECTION_CONTENT_TYPES, type GovernmentSection } from '@/types/section';
 
 type BriefRow = Omit<Brief, 'id' | 'primary_item_id' | 'related_items'> & {
   id: string | number;
@@ -132,4 +132,29 @@ export const getPublishedBriefBySlug = cache(async (slug: string): Promise<Brief
 
   const row = data as BriefRow & { related_items?: RelatedItemRow[] };
   return normalizeBrief(row, row.related_items ?? []);
+});
+
+// Sample each primary institution as well as the chronological feed so a bulk
+// publication from one desk cannot hide every other desk on the front page.
+export const getHomepageBriefs = cache(async (): Promise<Brief[]> => {
+  const now = new Date().toISOString();
+  const results = await Promise.all([
+    liveBriefWithRelationsQuery().order('published_at', { ascending: false }).order('id', { ascending: false }).limit(24),
+    liveBriefWithRelationsQuery().eq('is_featured', true)
+      .or(`featured_until.is.null,featured_until.gt.${now}`)
+      .order('published_at', { ascending: false }).order('id', { ascending: false }).limit(1),
+    ...GOVERNMENT_SECTIONS.map((section) => liveBriefWithRelationsQuery()
+      .in('primary_item_type', SECTION_CONTENT_TYPES[section])
+      .order('published_at', { ascending: false }).order('id', { ascending: false }).limit(8)),
+  ]);
+  const briefs = new Map<string, Brief>();
+  for (const result of results) {
+    if (result.error) throw result.error;
+    for (const row of result.data ?? []) {
+      const typed = row as unknown as BriefRow & { related_items?: RelatedItemRow[] };
+      const brief = normalizeBrief(typed, typed.related_items ?? []);
+      briefs.set(brief.id, brief);
+    }
+  }
+  return [...briefs.values()];
 });

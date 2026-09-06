@@ -10,16 +10,17 @@ import { getLoginUrl } from '@/utils/utils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useNavigationMenu } from '../contexts/NavigationContext';
-import { Landmark, Menu } from 'lucide-react';
+import { Landmark, Menu, Search, X } from 'lucide-react';
 
 export default function Header() {
   const { user, signOut, loading } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const searchToggleRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { isMobileNavOpen, setIsMobileNavOpen } = useNavigationMenu();
 
@@ -39,7 +40,7 @@ export default function Header() {
       await signOut();
       setDropdownOpen(false);
       setMobileDropdownOpen(false);
-      setMobileMenuOpen(false);
+      setMobileSearchOpen(false);
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -71,8 +72,14 @@ export default function Header() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Close search results on Escape key
-      if (e.key === 'Escape' && showResults) {
+      if (e.key === 'Escape') {
         closeResults();
+        if (mobileSearchOpen) {
+          setMobileSearchOpen(false);
+          searchToggleRef.current?.focus();
+        }
+        setDropdownOpen(false);
+        setMobileDropdownOpen(false);
       }
     };
 
@@ -80,41 +87,27 @@ export default function Header() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showResults, closeResults]);
+  }, [mobileSearchOpen, closeResults]);
 
-  // Close mobile menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const mobileMenuButton = document.getElementById('mobile-menu-button');
-      if (mobileMenuOpen && mobileMenuButton && !mobileMenuButton.contains(target)) {
-        // Check if the click is outside the mobile menu
-        const mobileMenu = document.getElementById('mobile-menu');
-        if (mobileMenu && !mobileMenu.contains(target)) {
-          setMobileMenuOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [mobileMenuOpen]);
+    if (mobileSearchOpen) mobileSearchInputRef.current?.focus();
+  }, [mobileSearchOpen]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-10 border-b border-border/70 bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
-      <div className="w-full pl-6 pr-6">
-        <div className="flex items-center justify-between h-16">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-14 md:h-12">
           <div className="flex items-center">
             {/* Hamburger navigation toggle on mobile */}
             <Button
               id="nav-toggle"
               variant="ghost"
               size="icon"
-              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+              onClick={() => { setIsMobileNavOpen(!isMobileNavOpen); setMobileSearchOpen(false); }}
               className="md:hidden mr-2"
               aria-label="Toggle navigation menu"
+              aria-expanded={isMobileNavOpen}
+              aria-controls="mobile-nav"
             >
               <Menu className="h-6 w-6 text-primary" />
             </Button>
@@ -134,6 +127,9 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
+            <Button ref={searchToggleRef} variant="ghost" size="icon" aria-label={mobileSearchOpen ? 'Close search' : 'Open search'} aria-expanded={mobileSearchOpen} aria-controls="mobile-search" onClick={() => { setMobileSearchOpen(!mobileSearchOpen); setIsMobileNavOpen(false); }}>
+              {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+            </Button>
             {/* Show Sign In or Profile icon on mobile, no hamburger */}
             {!loading && !user && (
               <Link
@@ -186,7 +182,7 @@ export default function Header() {
 
           {/* Desktop search and user menu */}
           <div className="hidden md:flex items-center ml-auto">
-            <div className="relative mr-4" ref={searchContainerRef}>
+            <div className="relative mr-4">
               <Input
                 type="text"
                 placeholder="Search public records..."
@@ -282,9 +278,10 @@ export default function Header() {
         </div>
 
         {/* Mobile search */}
-        <div className="md:hidden pb-3">
-          <div className="relative" ref={searchContainerRef}>
+        <div id="mobile-search" className={mobileSearchOpen ? "md:hidden pb-3" : "hidden"}>
+          <div className="relative">
             <Input
+              ref={mobileSearchInputRef}
               type="text"
               placeholder="Search public records..."
               className="w-full rounded-full border-border/80 bg-background/90 py-2 pl-10 pr-4 text-sm shadow-sm"

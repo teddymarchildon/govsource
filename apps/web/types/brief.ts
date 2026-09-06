@@ -21,6 +21,7 @@ export interface Brief {
   version: number;
   status: BriefStatus;
   title: string;
+  display_title?: string | null;
   slug: string | null;
   dek: string | null;
   points: BriefPoint[];

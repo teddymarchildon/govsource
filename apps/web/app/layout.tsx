@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '../components/Header';
+import BriefAnalytics from '@/components/briefs/BriefAnalytics';
 import TopNav from '../components/TopNav';
 import { AuthProvider } from '../contexts/AuthContext';
 import { NavigationProvider } from '../contexts/NavigationContext';
@@ -56,12 +57,13 @@ export default async function RootLayout({
             <div className="min-h-screen bg-background">
               <Header />
               <TopNav topics={topics.map(({ id, slug, name }) => ({ id, slug, name }))} />
-              <main className="p-4 pt-16 md:p-6 md:pt-[7.5rem]">
+              <main className="p-4 pt-14 md:p-6 md:pt-24">
                 {children}
               </main>
             </div>
           </NavigationProvider>
         </AuthProvider>
+        <BriefAnalytics />
         <Analytics />
         <SpeedInsights />
       </body>

@@ -57,6 +57,9 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-padding-top: 7rem;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     background-image:

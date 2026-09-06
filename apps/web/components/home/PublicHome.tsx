@@ -3,15 +3,12 @@
 import Link from 'next/link';
 import {
   ArrowRight,
-  BookOpenText,
   Building2,
   CheckCircle2,
-  Clock3,
   FileCheck2,
   Landmark,
   PenLine,
   Scale,
-  Sparkles,
   Tags,
 } from 'lucide-react';
 
@@ -21,8 +18,9 @@ import type { Brief } from '@/types/brief';
 import type { AgencyDocument, Bill } from '@/types/types';
 import type { PersonalizedHomepageItem, PopularHomepageItem } from '@/types/homepage';
 import type { Topic } from '@/types/topic';
-import { getContentTypeLabel } from '@/utils/contentReferences';
-import { briefBelongsToSection } from '@/utils/briefSections';
+import BriefTeaser from '@/components/briefs/BriefTeaser';
+import BriefFrontPage from '@/components/briefs/BriefFrontPage';
+import { briefInstitution, selectFrontPageBriefs } from '@/utils/briefSelection';
 
 type PopularItemType = 'bill' | 'law' | 'agency_document' | 'executive_order' | 'cluster';
 
@@ -84,10 +82,6 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? null : dateFormatter.format(date);
 }
 
-function getBriefSourceCount(brief: Brief) {
-  return Math.max(1, 1 + (brief.related_items?.length ?? 0) + brief.sources.length);
-}
-
 function getPopularItemDetails(item: PopularHomepageItem) {
   const data = item.data as PopularItemDisplayData;
   const detailByType: Record<PopularItemType, { href: string; label: string }> = {
@@ -105,35 +99,16 @@ function getPopularItemDetails(item: PopularHomepageItem) {
   return { ...detail, context, date: formatDate(date), title };
 }
 
-function StoryMeta({ brief }: { brief: Brief }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-      <span className="text-primary">{getContentTypeLabel(brief.primary_item_type)}</span>
-      {formatDate(brief.published_at) ? <span>{formatDate(brief.published_at)}</span> : null}
-    </div>
-  );
-}
-
 function StoryRow({ brief }: { brief: Brief }) {
-  return (
-    <Link href={`/briefs/${brief.slug}`} className="group block border-t border-border py-5 first:border-t-0 first:pt-0 last:pb-0">
-      <StoryMeta brief={brief} />
-      <h3 className="mt-2 font-serif text-xl font-semibold leading-6 transition-colors group-hover:text-primary">
-        {brief.title}
-      </h3>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-        {brief.dek}
-      </p>
-    </Link>
-  );
+  return <div className="border-t border-border py-4 first:border-t-0 first:pt-0 last:pb-0"><BriefTeaser brief={brief} variant="headline" placement="institution" /></div>;
 }
 
 function SectionHeading({ eyebrow, title, action }: { eyebrow: string; title: string; action?: React.ReactNode }) {
   return (
     <div className="flex items-end justify-between gap-6 border-b-2 border-foreground pb-3">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
-        <h2 className="mt-2 font-serif text-3xl font-semibold leading-tight md:text-4xl">{title}</h2>
+        <p className="sr-only">{eyebrow}</p>
+        <h2 className="font-serif text-2xl font-semibold leading-tight">{title}</h2>
       </div>
       {action}
     </div>
@@ -155,117 +130,69 @@ export default function PublicHome({
   recentExecutiveOrders,
   topics,
 }: PublicHomeProps) {
-  const activeFeatured = briefs.find((brief) => brief.is_featured && (!brief.featured_until || new Date(brief.featured_until) > new Date()));
-  const leadBrief = activeFeatured || briefs[0];
-  const remainingBriefs = briefs.filter((brief) => brief.id !== leadBrief?.id);
-  const latestBriefs = remainingBriefs.slice(0, 4);
-  const moreBriefs = remainingBriefs.slice(4, 10);
+  const { remaining } = selectFrontPageBriefs(briefs);
+  const moreBriefs = remaining.slice(0, 6);
+  const institutionBriefs = remaining.slice(6);
 
   return (
     <div className="-mx-4 -mb-4 overflow-hidden md:-mx-6 md:-mb-6">
-      <section className="border-b border-border bg-background py-10 md:py-14">
+      <section className="border-b border-border bg-background py-5 md:py-6">
         <div className="container mx-auto px-4">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[hsl(var(--trust))]">
-              <CheckCircle2 className="h-4 w-4" />
-              Briefs grounded in official records
-            </div>
-            <p className="text-xs font-medium text-muted-foreground" suppressHydrationWarning>
-              {new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date())}
-            </p>
+          <div className="mb-5 flex items-center justify-between gap-4 border-b border-border pb-3">
+            <p className="text-xs font-bold uppercase tracking-[0.16em]">Top stories</p>
+            <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 text-[hsl(var(--trust))]" /> Grounded in official records</span>
           </div>
-
-          {briefsLoading ? (
-            <div className="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)]">
-              <div className="space-y-5">
-                <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-                <div className="h-24 max-w-3xl animate-pulse rounded bg-muted" />
-                <div className="h-48 animate-pulse rounded bg-muted" />
-              </div>
-              <div className="h-96 animate-pulse rounded bg-muted" />
-            </div>
-          ) : leadBrief ? (
-            <div className="grid gap-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)] lg:gap-12">
-              <article className="lg:border-r lg:border-border lg:pr-12">
-                <StoryMeta brief={leadBrief} />
-                <Link href={`/briefs/${leadBrief.slug}`} className="group block">
-                  <h1 className="mt-5 max-w-4xl text-balance font-serif text-4xl font-semibold leading-[1.04] tracking-[-0.035em] transition-colors group-hover:text-primary md:text-6xl">
-                    {leadBrief.title}
-                  </h1>
-                  <p className="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">
-                    {leadBrief.dek}
-                  </p>
-                </Link>
-
-                <div className="mt-8 border-y border-border bg-card/70 px-5 py-5 md:px-6">
-                  <div className="flex items-center justify-between gap-4">
-                    <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em]">
-                      <BookOpenText className="h-4 w-4 text-primary" />
-                      What to know
-                    </h2>
-                    <span className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
-                      <FileCheck2 className="h-3.5 w-3.5 text-[hsl(var(--trust))]" />
-                      {getBriefSourceCount(leadBrief)} official {getBriefSourceCount(leadBrief) === 1 ? 'source' : 'sources'}
-                    </span>
-                  </div>
-                  <ol className="mt-4 grid gap-4 md:grid-cols-3">
-                    {leadBrief.points.slice(0, 3).map((point, index) => (
-                      <li key={point.id} className="flex gap-3 text-sm leading-6">
-                        <span className="font-mono text-xs font-bold text-primary">0{index + 1}</span>
-                        <span>{point.text}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-
-                <div className="mt-6 flex flex-wrap items-center gap-4">
-                  <Link href={`/briefs/${leadBrief.slug}`} className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}>
-                    Read the Brief <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5" /> Source-linked government context
-                  </span>
-                </div>
-              </article>
-
-              <aside>
-                <div className="mb-5 flex items-center justify-between border-b-2 border-foreground pb-3">
-                  <h2 className="font-serif text-2xl font-semibold">Latest</h2>
-                  <Clock3 className="h-4 w-4 text-muted-foreground" />
-                </div>
-                {latestBriefs.length > 0 ? (
-                  latestBriefs.map((brief) => <StoryRow key={brief.id} brief={brief} />)
-                ) : (
-                  <p className="text-sm leading-6 text-muted-foreground">More source-grounded Briefs will appear here as they are published.</p>
-                )}
-              </aside>
-            </div>
+          {briefsLoading ? <div className="grid gap-6 md:grid-cols-3" aria-label="Loading Briefs">{[0, 1, 2].map((index) => <div key={index} className="h-56 animate-pulse bg-muted" />)}</div> : briefs.length ? (
+            <BriefFrontPage briefs={briefs} home placement="home" />
           ) : (
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.75fr)]">
-              <div className="border-r-0 border-border lg:border-r lg:pr-10">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Today in government</p>
-                <h1 className="mt-4 max-w-3xl font-serif text-4xl font-semibold leading-tight md:text-6xl">The official record, made readable.</h1>
-                <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">Published Briefs will lead this page. Until then, explore the latest verified activity from Congress, agencies, the White House, and the courts.</p>
-                <Link href="/briefs" className={cn(buttonVariants({ size: 'lg' }), 'mt-7')}>Browse Briefs</Link>
-              </div>
-              <div className="space-y-4">
-                {popularLoading ? <div className="h-56 animate-pulse rounded bg-muted" /> : popularItems.slice(0, 3).map((item) => {
-                  const detail = getPopularItemDetails(item);
-                  return (
-                    <Link key={`${item.item_type}-${item.data.id}`} href={detail.href} className="group block border-b border-border pb-4 last:border-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-primary">{detail.label}</p>
-                      <h2 className="mt-2 font-serif text-xl font-semibold group-hover:text-primary">{detail.title}</h2>
-                    </Link>
-                  );
-                })}
-              </div>
+            <div>
+              <h1 className="font-serif text-3xl">The official record, made readable.</h1>
+              <p className="mt-2 text-sm text-muted-foreground">Briefs will appear here as they are published. Explore the latest official records below.</p>
+              <div className="mt-5 grid gap-5 md:grid-cols-3">{!popularLoading && popularItems.slice(0, 3).map((item) => {
+                const detail = getPopularItemDetails(item);
+                return <Link key={item.id} href={detail.href} className="group border-t border-border pt-3"><p className="text-xs text-primary">{detail.label}</p><h2 className="mt-2 font-serif text-xl group-hover:text-primary">{detail.title}</h2></Link>;
+              })}</div>
             </div>
           )}
         </div>
       </section>
 
+      {moreBriefs.length > 0 ? (
+        <section className="border-b border-border bg-card/40 py-7 md:py-9">
+          <div className="container mx-auto px-4">
+            <SectionHeading eyebrow="More to know" title="More Briefs" action={<Link href="/briefs" className="text-sm font-semibold text-primary hover:underline">View all Briefs</Link>} />
+            <div className="mt-5 grid gap-x-6 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
+              {moreBriefs.map((brief) => <BriefTeaser key={brief.id} brief={brief} heading="h3" placement="home:more" />)}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {institutionBriefs.length > 0 ? (
+        <section className="border-b border-border py-7 md:py-9">
+          <div className="container mx-auto px-4">
+            <SectionHeading eyebrow="By institution" title="Follow the federal government" />
+            <div className="mt-5 grid gap-8 lg:grid-cols-2">
+              {briefLanes.map((lane) => {
+                const laneBriefs = institutionBriefs.filter((brief) => briefInstitution(brief) === lane.section).slice(0, 3);
+                if (laneBriefs.length === 0) return null;
+                return (
+                  <div key={lane.label} className="border-t-4 border-foreground pt-4">
+                    <div className="mb-5 flex items-center justify-between">
+                      <h3 className="font-serif text-2xl font-semibold">{lane.label}</h3>
+                      <Link href={`/${lane.section}`} className="text-xs font-semibold text-primary hover:underline">All {lane.label} Briefs →</Link>
+                    </div>
+                    {laneBriefs.map((brief) => <StoryRow key={brief.id} brief={brief} />)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {isSignedIn ? (
-        <section className="border-b border-border bg-[hsl(var(--ink))] py-10 text-[hsl(var(--ink-foreground))]">
+        <section className="border-b border-border bg-[hsl(var(--ink))] py-7 text-[hsl(var(--ink-foreground))]">
           <div className="container mx-auto px-4">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -299,51 +226,8 @@ export default function PublicHome({
         </section>
       ) : null}
 
-      {moreBriefs.length > 0 ? (
-        <section className="border-b border-border bg-card/40 py-14 md:py-20">
-          <div className="container mx-auto px-4">
-            <SectionHeading eyebrow="More to know" title="The latest Briefs" action={<Link href="/briefs" className="hidden text-sm font-semibold text-primary hover:underline sm:block">View all Briefs</Link>} />
-            <div className="mt-8 grid gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
-              {moreBriefs.map((brief) => (
-                <article key={brief.id} className="group border-t border-border pt-5">
-                  <StoryMeta brief={brief} />
-                  <Link href={`/briefs/${brief.slug}`}>
-                    <h3 className="mt-3 font-serif text-2xl font-semibold leading-7 transition-colors group-hover:text-primary">{brief.title}</h3>
-                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{brief.dek}</p>
-                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">Read Brief <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
-                  </Link>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {briefs.length > 1 ? (
-        <section className="border-b border-border py-14 md:py-20">
-          <div className="container mx-auto px-4">
-            <SectionHeading eyebrow="By institution" title="Follow the federal government" />
-            <div className="mt-9 grid gap-8 lg:grid-cols-2">
-              {briefLanes.map((lane) => {
-                const laneBriefs = briefs.filter((brief) => briefBelongsToSection(brief, lane.section)).slice(0, 3);
-                if (laneBriefs.length === 0) return null;
-                return (
-                  <div key={lane.label} className="border-t-4 border-foreground pt-4">
-                    <div className="mb-5 flex items-center justify-between">
-                      <h3 className="font-serif text-2xl font-semibold">{lane.label}</h3>
-                      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source-linked</span>
-                    </div>
-                    {laneBriefs.map((brief) => <StoryRow key={brief.id} brief={brief} />)}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
       {topics.length > 0 ? (
-        <section className="border-b border-border bg-background py-14 md:py-20">
+        <section className="border-b border-border bg-background py-7 md:py-9">
           <div className="container mx-auto px-4">
             <SectionHeading
               eyebrow="Across government"
@@ -358,16 +242,16 @@ export default function PublicHome({
               Follow one policy area across Congress, the White House, federal agencies, and the courts.
             </p>
 
-            <div className="mt-8 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-5 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {topics.map((topic) => (
                 <Link
                   key={topic.id}
                   href={`/topics/${topic.slug}`}
-                  className="group flex min-h-28 items-start gap-3 bg-card px-5 py-5 transition-colors hover:bg-secondary/55"
+                  className="group flex min-h-20 items-start gap-3 bg-card px-4 py-3 transition-colors hover:bg-secondary/55"
                 >
                   <Tags className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <span className="min-w-0">
-                    <span className="block font-serif text-lg font-semibold leading-6 transition-colors group-hover:text-primary">{topic.name}</span>
+                    <span className="block font-serif text-base font-semibold leading-5 transition-colors group-hover:text-primary">{topic.name}</span>
                     <span className="mt-1.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">{topic.description}</span>
                   </span>
                   <ArrowRight className="ml-auto mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
@@ -382,11 +266,11 @@ export default function PublicHome({
         </section>
       ) : null}
 
-      <section className="border-b border-border bg-card/45 py-14 md:py-20">
+      <section className="border-b border-border bg-card/45 py-7 md:py-9">
         <div className="container mx-auto px-4">
           <SectionHeading eyebrow="The evidence layer" title="Go directly to the source" action={<span className="hidden items-center gap-2 text-xs font-medium text-muted-foreground md:flex"><FileCheck2 className="h-4 w-4 text-[hsl(var(--trust))]" /> Official records</span>} />
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-2">
+          <div className="mt-5 grid gap-8 lg:grid-cols-2">
             <div className="border-t border-border">
               <div className="flex items-center justify-between py-4">
                 <h3 className="font-serif text-xl font-semibold">Latest from Congress</h3>
@@ -421,7 +305,7 @@ export default function PublicHome({
             </div>
           </div>
 
-          <div className="mt-10 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
             {sourceLinks.map(({ description, href, icon: Icon, label }) => (
               <Link key={href} href={href} className="group bg-card p-5 transition-colors hover:bg-secondary/55">
                 <Icon className="h-5 w-5 text-primary" />
@@ -435,9 +319,9 @@ export default function PublicHome({
       </section>
 
       {!isSignedIn ? (
-        <section className="py-14 md:py-20">
+        <section className="py-7 md:py-9">
           <div className="container mx-auto px-4">
-            <div className="grid gap-6 border-y border-border py-10 md:grid-cols-[1fr_auto] md:items-center">
+            <div className="grid gap-6 border-y border-border py-7 md:grid-cols-[1fr_auto] md:items-center">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--trust))]">Make it yours</p>
                 <h2 className="mt-2 font-serif text-3xl font-semibold">Follow the policies and institutions that matter to you.</h2>

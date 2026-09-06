@@ -1,11 +1,16 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import type { Brief } from '@/types/brief';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, ExternalLink, FileText } from 'lucide-react';
+import BriefTeaser from '@/components/briefs/BriefTeaser';
+import { BriefReadingAnalytics } from '@/components/briefs/BriefAnalytics';
+import { briefInstitution } from '@/utils/briefSelection';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { getPublishedBriefBySlug } from '@/lib/repositories/briefs';
+import { getPublishedBriefBySlug, getPublishedBriefsBySection } from '@/lib/repositories/briefs';
 import { getContentHref, getContentTypeLabel } from '@/utils/contentReferences';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +31,22 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(value));
 }
 
+async function MoreBriefs({ brief }: { brief: Brief }) {
+  let nextBriefs: Brief[];
+  try {
+    nextBriefs = (await getPublishedBriefsBySection(briefInstitution(brief), 4)).filter((item) => item.id !== brief.id).slice(0, 3);
+  } catch (error) {
+    console.error('[brief-recommendations] Failed to load more Briefs', error);
+    return null;
+  }
+  return (
+      nextBriefs.length ? <section className="mt-10 border-t-2 border-foreground pt-4" aria-label="More Briefs">
+        <div className="mb-5 flex items-center justify-between gap-4"><h2 className="font-serif text-2xl">Keep reading</h2><Link href="/briefs" className="text-sm font-semibold text-primary hover:underline">All Briefs →</Link></div>
+        <div className="grid gap-6 md:grid-cols-3">{nextBriefs.map((next) => <BriefTeaser key={next.id} brief={next} placement="article:keep-reading" />)}</div>
+      </section> : null
+  );
+}
+
 export default async function BriefPage({ params }: BriefPageProps) {
   const { slug } = await params;
   const brief = await getPublishedBriefBySlug(slug);
@@ -36,6 +57,7 @@ export default async function BriefPage({ params }: BriefPageProps) {
 
   return (
     <article className="container mx-auto max-w-6xl px-4 py-10">
+      <BriefReadingAnalytics briefId={brief.id} />
       <Link href="/briefs" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back to Briefs</Link>
 
       <header className="mt-7 max-w-4xl">
@@ -50,7 +72,7 @@ export default async function BriefPage({ params }: BriefPageProps) {
       </header>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div>
+        <div data-brief-body>
           <section className="border-y-2 border-foreground py-2">
             <h2 className="sr-only">Key points</h2>
             <ol className="divide-y divide-border">
@@ -88,6 +110,7 @@ export default async function BriefPage({ params }: BriefPageProps) {
           {brief.related_items?.length ? <Card><CardContent className="space-y-3 p-5"><h2 className="font-semibold">Related records</h2>{brief.related_items.map((item) => <Link key={`${item.type}-${item.id}`} href={getContentHref(item)} className="block text-sm text-primary hover:underline">{getContentTypeLabel(item.type)} #{item.id}</Link>)}</CardContent></Card> : null}
         </aside>
       </div>
+      <Suspense fallback={null}><MoreBriefs brief={brief} /></Suspense>
     </article>
   );
 }

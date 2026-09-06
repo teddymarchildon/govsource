@@ -21,6 +21,7 @@ const BriefSourceSchema = z.object({
 
 const BriefInputSchema = z.object({
   title: z.string().trim().min(1).max(180),
+  display_title: z.string().trim().max(100).nullable().optional(),
   slug: z.string().trim().max(180).nullable().optional(),
   dek: z.string().trim().max(360).nullable().optional(),
   points: z.array(BriefPointSchema).max(5).default([]),
@@ -44,7 +45,7 @@ const UpdateBriefSchema = BriefInputSchema.extend({
 });
 
 const BRIEF_LIST_FIELDS =
-  'id,created_at,updated_at,version,status,title,slug,dek,points,primary_item_type,primary_item_id,policy_areas,sources,author_name,published_at,is_featured,featured_until,auto_generated';
+  'id,created_at,updated_at,version,status,title,display_title,slug,dek,points,primary_item_type,primary_item_id,policy_areas,sources,author_name,published_at,is_featured,featured_until,auto_generated';
 const BRIEF_DETAIL_FIELDS = `${BRIEF_LIST_FIELDS},context_markdown,editor_notes`;
 
 function slugify(value: string) {
@@ -95,6 +96,7 @@ function normalizeInput(input: z.infer<typeof BriefInputSchema>) {
 
   return {
     title: input.title.trim(),
+    ...(input.display_title !== undefined ? { display_title: cleanNullable(input.display_title) } : {}),
     slug,
     dek: cleanNullable(input.dek),
     points,
