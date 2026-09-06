@@ -35,7 +35,7 @@ type FormState = {
   display_title: string;
   slug: string;
   dek: string;
-  points: string[];
+  points: BriefPoint[];
   context_markdown: string;
   primary_item_type: ContentType;
   primary_item_id: string;
@@ -54,7 +54,7 @@ const EMPTY_FORM: FormState = {
   display_title: '',
   slug: '',
   dek: '',
-  points: ['', '', ''],
+  points: [1, 2, 3].map((index) => ({ id: `point_${index}`, text: '', label: '', source_refs: ['primary'] })),
   context_markdown: '',
   primary_item_type: 'bill',
   primary_item_id: '',
@@ -101,7 +101,7 @@ function buildForm(brief: AdminBrief): FormState {
     display_title: brief.display_title || '',
     slug: brief.slug || '',
     dek: brief.dek || '',
-    points: brief.points.length ? brief.points.map((point) => point.text) : ['', '', ''],
+    points: brief.points.length ? brief.points.map((point) => ({ ...point })) : EMPTY_FORM.points,
     context_markdown: brief.context_markdown || '',
     primary_item_type: brief.primary_item_type,
     primary_item_id: String(brief.primary_item_id),
@@ -185,10 +185,10 @@ export default function BriefsAdminPage({
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const setPoint = (index: number, value: string) => {
+  const setPoint = (index: number, field: 'text' | 'label', value: string) => {
     setForm((current) => ({
       ...current,
-      points: current.points.map((point, pointIndex) => pointIndex === index ? value : point),
+      points: current.points.map((point, pointIndex) => pointIndex === index ? { ...point, [field]: value } : point),
     }));
   };
 
@@ -206,12 +206,12 @@ export default function BriefsAdminPage({
       display_title: form.display_title || null,
       slug: form.slug || null,
       dek: form.dek || null,
-      points: form.points.map((text, index) => ({ id: `point_${index + 1}`, text, source_refs: ['primary'] })),
+      points: form.points,
       context_markdown: form.context_markdown || null,
       primary_item_type: form.primary_item_type,
       primary_item_id: primaryItemId,
       policy_areas: form.policy_areas.split(',').map((area) => area.trim()).filter(Boolean),
-      sources: urls.map((url, index) => ({ id: `source_${index + 1}`, label: `Source ${index + 1}`, url })),
+      sources: urls.map((url, index) => selected?.sources.find((source) => source.url === url) || { id: `source_${crypto.randomUUID()}`, label: `Source ${index + 1}`, url }),
       author_name: form.author_name || null,
       editor_notes: form.editor_notes || null,
       status: form.status,
@@ -297,14 +297,21 @@ export default function BriefsAdminPage({
             </div>
             <div className="mt-6 space-y-5">
               <label className="block text-sm font-medium">Headline<Input className="mt-1" value={form.title} onChange={(event) => setField('title', event.target.value)} /></label>
-              <label className="block text-sm font-medium">Dek<textarea className="mt-1 min-h-20 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={form.dek} onChange={(event) => setField('dek', event.target.value)} maxLength={360} /></label>
+              <label className="block text-sm font-medium">Dek<textarea className="mt-1 min-h-20 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={form.dek} onChange={(event) => setField('dek', event.target.value)} maxLength={360} /><span className="mt-1 block text-xs font-normal text-muted-foreground">A concise one- or two-sentence takeaway. Avoid repeating the first point.</span></label>
               <label className="block text-sm font-medium">Display headline (optional)<Input className="mt-1" maxLength={100} value={form.display_title} onChange={(event) => setField('display_title', event.target.value)} placeholder="A short, accurate headline for listings" /><span className="mt-1 block text-xs font-normal text-muted-foreground">{form.display_title.length}/100 characters. Aim for 8–14 words; preserve the proposal or decision’s meaning. The full title remains inside the Brief.</span></label>
               <label className="block text-sm font-medium">Slug<Input className="mt-1" value={form.slug} onChange={(event) => setField('slug', event.target.value)} placeholder="Generated when published if blank" /></label>
 
               <div>
-                <div className="flex items-center justify-between"><span className="text-sm font-medium">Points (3–5 when published)</span>{form.points.length < 5 ? <Button size="sm" variant="outline" onClick={() => setField('points', [...form.points, ''])}>Add point</Button> : null}</div>
+                <div className="flex items-center justify-between"><span className="text-sm font-medium">Points (3–5 when published)</span>{form.points.length < 5 ? <Button size="sm" variant="outline" onClick={() => setField('points', [...form.points, { id: `point_${crypto.randomUUID()}`, label: '', text: '', source_refs: ['primary'] }])}>Add point</Button> : null}</div>
                 <div className="mt-2 space-y-3">{form.points.map((point, index) => (
-                  <div key={index} className="flex gap-2"><span className="pt-2 text-xs font-bold text-gray-500">{index + 1}</span><textarea className="min-h-24 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm" value={point} onChange={(event) => setPoint(index, event.target.value)} />{form.points.length > 3 ? <Button size="sm" variant="ghost" onClick={() => setField('points', form.points.filter((_, pointIndex) => pointIndex !== index))}>Remove</Button> : null}</div>
+                  <div key={point.id} className="flex items-start gap-2">
+                    <span className="pt-2 text-xs font-bold text-gray-500">{index + 1}</span>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <label className="block text-xs font-medium">Point label (optional)<Input className="mt-1" maxLength={60} value={point.label || ''} onChange={(event) => setPoint(index, 'label', event.target.value)} placeholder="e.g. 30-day deadline" /></label>
+                      <label className="block text-xs font-medium">Explanation<textarea className="mt-1 min-h-24 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={point.text} onChange={(event) => setPoint(index, 'text', event.target.value)} /></label>
+                    </div>
+                    {form.points.length > 3 ? <Button size="sm" variant="ghost" onClick={() => setField('points', form.points.filter((_, pointIndex) => pointIndex !== index))}>Remove</Button> : null}
+                  </div>
                 ))}</div>
               </div>
 

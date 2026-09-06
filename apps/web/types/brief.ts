@@ -4,6 +4,7 @@ export type BriefStatus = 'draft' | 'review' | 'scheduled' | 'published' | 'arch
 
 export interface BriefPoint {
   id: string;
+  label?: string | null;
   text: string;
   source_refs: string[];
 }

@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { BriefPointSchema, normalizeBriefPoints } from '@/lib/briefPoints';
 import { getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
 import { createAdminClient } from '@/utils/supabase/admin';
 
 function getAdminClient() {
   return createAdminClient();
 }
-
-const BriefPointSchema = z.object({
-  id: z.string().min(1).max(80).optional(),
-  text: z.string().trim().max(900),
-  source_refs: z.array(z.string().min(1).max(80)).default([]),
-});
 
 const BriefSourceSchema = z.object({
   id: z.string().min(1).max(80).optional(),
@@ -63,13 +58,7 @@ function cleanNullable(value: string | null | undefined) {
 }
 
 function normalizeInput(input: z.infer<typeof BriefInputSchema>) {
-  const points = input.points
-    .map((point, index) => ({
-      id: point.id || `point_${index + 1}`,
-      text: point.text.trim(),
-      source_refs: [...new Set(point.source_refs)],
-    }))
-    .filter((point) => point.text.length > 0);
+  const points = normalizeBriefPoints(input.points);
   const sources = input.sources.map((source, index) => ({
     id: source.id || `source_${index + 1}`,
     label: source.label.trim(),

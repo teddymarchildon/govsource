@@ -32,3 +32,11 @@ Compare clicks / preview views by placement and page, and track engagement along
 - Topic-detail live-data QA is limited by the intentionally read-only local credentials: the existing repository needs server access to `topic_source_mapping`. Its updated UI compiles and uses the same tested Brief components; production permissions were not changed to accommodate the preview.
 
 The local preview runs on port 3100 using read-only public data. The required live database migration is complete; application deployment follows the main-branch release.
+
+## Brief reading view
+
+The article uses a 28px mobile / 38px desktop headline, 16px summary and body, compact metadata with estimated reading time, and visible numbered points. Sources share a desktop rail and follow the body on mobile. Topics appear below the article. Context stays visible up to 120 words; longer background uses a native expandable disclosure. Existing titles, summaries, explanations, citations, and context remain intact.
+
+Editors can add an optional point label of up to 60 characters. Labels live in the existing points JSON; no database migration or content backfill is required. Editing points preserves their IDs and citation references, and unchanged source URLs retain their IDs and labels.
+
+On the AI executive-order Brief, the first point moved from approximately 613px to 393px at 1280 × 720, and from 793px to 433px at 390 × 844. Neither viewport has horizontal overflow. A temporary development fixture verified labeled points and opening/closing long Context without modifying published data; the fixture was removed. Unit coverage verifies optional labels, validation limits, citation preservation, and reading-time calculation. Authenticated live admin saving was not exercised.
