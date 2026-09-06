@@ -13,6 +13,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from brief_ai import AI, BudgetExhausted, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_style import PLAIN_ENGLISH_STYLE
 from brief_evidence import EvidenceUnavailable, build_packet, fingerprint
 from generate_briefs_batch import dek_is_complete, slugify
 from import_briefs_supabase import validate_manifest
@@ -170,7 +171,8 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             'characters, 3-5 standalone points <=900 characters each, optional short context, 1-3 topics. '
             'Every nonempty field needs supporting exact quotes and passage IDs from the extracted evidence. '
             'Context may be empty (text="", evidence=[]). Do not speculate about why it matters. '
-            'Describe the actual change and affected parties where supported. Address repair feedback.',
+            'Describe the actual change and affected parties where supported. Address repair feedback. '
+            + PLAIN_ENGLISH_STYLE,
             {'metadata':job['source_metadata'],'evidence':extracted,'feedback':feedback},DRAFT)
         feedback = validate_draft(draft,packet)
         if feedback:

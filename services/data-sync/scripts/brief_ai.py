@@ -7,7 +7,7 @@ import requests
 from generate_briefs_batch import response_text
 import json
 
-PROMPT_VERSION = 'continuous-v1'
+PROMPT_VERSION = 'continuous-v2-plain-english'
 
 
 def obj(**properties: Any) -> dict:

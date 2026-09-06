@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List
 import requests
 from dotenv import load_dotenv
 
+from brief_style import PLAIN_ENGLISH_STYLE
 from import_briefs_supabase import validate_manifest
 from sync_common import create_supabase_client
 
@@ -376,7 +377,8 @@ def generate_batch(
         "author only when the source states it; distinguish majority opinions, dissents, "
         "concurrences, and procedural orders. Context should be one short paragraph and "
         "may be empty when the record supplies no additional context. Return each input "
-        "record_key exactly once. Do not add citations or URLs to the prose."
+        "record_key exactly once. Do not add citations or URLs to the prose. "
+        + PLAIN_ENGLISH_STYLE
     )
     request_payload = {
         "model": model,
@@ -456,7 +458,7 @@ def assemble_brief(source: Dict[str, Any], draft: Dict[str, Any], model: str) ->
         "editor_notes": None,
         "generation_metadata": {
             "model": model,
-            "prompt_version": "balanced-journalistic-v2",
+            "prompt_version": "balanced-journalistic-v3-plain-english",
             "generated_on": date.today().isoformat(),
             "record_key": source["record_key"],
         },
