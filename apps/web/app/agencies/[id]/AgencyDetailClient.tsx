@@ -18,7 +18,7 @@ export default function AgencyDetailClient({ agencyId, agency, childAgencies, do
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Breadcrumbs steps={[{ label: 'Home', href: '/' }, { label: 'Federal agencies', href: '/agencies' }, { label: agency.name }]} />
+      <Breadcrumbs collection={'agencies'} currentLabel={agency.short_name || agency.name} />
 
       <header className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
         <div className="h-1.5 bg-primary" />

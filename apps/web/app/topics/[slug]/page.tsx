@@ -1,7 +1,6 @@
+import { ParentNavigationLink } from '@/components/Breadcrumbs';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 
 import AgencyRuleCard from '@/components/AgencyRuleCard';
 import BillCard from '@/components/BillCard';
@@ -67,7 +66,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-foreground pb-3">
             <h1 className="font-serif text-3xl font-semibold tracking-tight">{data.topic.name}</h1>
-            <Link href="/topics" className="inline-flex min-h-8 items-center gap-1.5 text-xs font-semibold text-primary hover:underline"><ArrowLeft aria-hidden="true" className="h-3 w-3" /> All topics</Link>
+            <ParentNavigationLink href="/topics">All topics</ParentNavigationLink>
           </div>
           <p className="sr-only">{data.topic.description}</p>
         </div>

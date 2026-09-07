@@ -14,7 +14,7 @@ export default function JudgeDetailClient({ judge, opinions }: { judge: Judge; o
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Breadcrumbs steps={[{ label: 'Home', href: '/' }, { label: 'Supreme Court justices', href: '/judges' }, { label: fullName }]} />
+      <Breadcrumbs collection={'justices'} currentLabel={fullName} />
 
       <header className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
         <div className="h-1.5 bg-primary" />

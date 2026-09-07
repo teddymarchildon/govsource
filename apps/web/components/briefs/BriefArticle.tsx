@@ -1,7 +1,8 @@
+import { ParentNavigationLink } from '@/components/Breadcrumbs';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
-import { ArrowLeft, ArrowUpRight, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import type { Brief } from '@/types/brief';
 import { getContentHref, getContentTypeLabel } from '@/utils/contentReferences';
 import { getBriefReadingMinutes } from '@/utils/briefReading';
@@ -20,7 +21,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
   return (
     <article className="mx-auto max-w-5xl py-5 md:py-6">
       <BriefReadingAnalytics briefId={brief.id} />
-      <Link href="/briefs" className="inline-flex min-h-7 items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary"><ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" /> All Briefs</Link>
+      <ParentNavigationLink href="/briefs">All Briefs</ParentNavigationLink>
 
       <header className="mt-3 max-w-[760px]">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">

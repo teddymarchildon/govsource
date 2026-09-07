@@ -170,7 +170,7 @@ export default function AgencyRuleDetail({ rule }: AgencyRuleDetailProps) {
   return (
     <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:h-[calc(100dvh-9rem)] md:min-h-[560px]">
       <div className="flex-shrink-0">
-        <Breadcrumbs steps={[{ label: 'Home', href: '/' }, { label: 'Agency documents', href: '/agency-rules' }, { label: rule.title }]} />
+        <Breadcrumbs collection={'agencyDocuments'} currentLabel={rule.remote_document_number ? `Document ${rule.remote_document_number}` : rule.title} />
       </div>
 
       <header className="flex flex-shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">

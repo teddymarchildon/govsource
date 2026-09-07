@@ -63,7 +63,7 @@ export default function CongressMemberDetailClient({ member, sponsoredBills, cos
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Breadcrumbs steps={[{ label: 'Home', href: '/' }, { label: 'Congress members', href: '/congress-members' }, { label: member.full_name }]} />
+      <Breadcrumbs collection={'congressMembers'} currentLabel={member.full_name} />
 
       <header className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
         <div className="h-1.5 bg-primary" />

@@ -245,13 +245,7 @@ export default function SupremeCourtCaseClient({ cluster }: { cluster: Cluster }
   return (
     <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:h-[calc(100dvh-9rem)] md:min-h-[560px]">
       <div className="flex-shrink-0">
-        <Breadcrumbs
-          steps={[
-            { label: 'Home', href: '/' },
-            { label: 'Supreme Court Cases', href: '/supreme-court-cases' },
-            { label: cluster.case_name },
-          ]}
-        />
+        <Breadcrumbs collection={'courtCases'} currentLabel={cluster.case_name_short || cluster.case_name} />
       </div>
 
       <header className="flex flex-shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">
