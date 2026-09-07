@@ -201,7 +201,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
 
   return (
     <>
-      <nav className="fixed left-0 right-0 top-12 z-[9] hidden h-12 border-b border-border/70 bg-card/95 backdrop-blur md:block" aria-label="Primary navigation">
+      <nav className="fixed left-0 right-0 top-12 z-[9] hidden h-12 border-b border-border bg-background md:block" aria-label="Primary navigation">
         <div ref={desktopMenusRef} className="relative container mx-auto grid h-full grid-cols-[1fr_auto] items-center px-4 lg:grid-cols-[1fr_auto_1fr]">
 
           <div className="flex items-center justify-center gap-4 lg:col-start-2 lg:gap-7">

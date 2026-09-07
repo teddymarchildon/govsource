@@ -1,27 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserPreferences, updateUserPreferences } from '../services/api';
 import { US_STATES } from '../constants/states';
 import { POLICY_AREAS } from '../constants/policyAreas';
 import { UserPreferences } from '../types/types';
 import type { PolicyArea } from '../types/types';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { XIcon } from 'lucide-react';
 import LoadingIndicator from './ui/LoadingIndicator';
-import { getPolicyAreaColors } from '../utils/policyColors';
 
 const UserPreferencesSection = () => {
   const { user } = useAuth();
-  const [_preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [selectedPolicyAreas, setSelectedPolicyAreas] = useState<PolicyArea[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const savingRef = useRef(false);
   const [stateSearchTerm, setStateSearchTerm] = useState('');
   const [policyAreaSearchTerm, setPolicyAreaSearchTerm] = useState('');
   const [isStatePopoverOpen, setIsStatePopoverOpen] = useState(false);
@@ -33,7 +35,8 @@ const UserPreferencesSection = () => {
 
       try {
         setIsLoading(true);
-        const prefs = await getUserPreferences(user.id);
+        setLoadError(false);
+        const prefs = await getUserPreferences(user.id, true);
         setPreferences(prefs);
 
         if (prefs) {
@@ -42,30 +45,37 @@ const UserPreferencesSection = () => {
         }
       } catch (error) {
         console.error('Error fetching preferences:', error);
+        setLoadError(true);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPreferences();
-  }, [user]);
+  }, [user, retry]);
   
   const updatePreferences = async (prefs: Partial<UserPreferences>) => {
-    if (!user) return;
+    if (!user || savingRef.current) return;
+    savingRef.current = true;
+    setSaveStatus('saving');
+    const next = { states: selectedStates, policy_areas: selectedPolicyAreas, ...prefs };
     try {
-      await updateUserPreferences(user.id, {
-        states: selectedStates,
-        policy_areas: selectedPolicyAreas,
-        ...prefs,
-      });
+      await updateUserPreferences(user.id, next);
+      setPreferences(previous => ({ ...previous, ...next }) as UserPreferences);
+      setSaveStatus('saved');
     } catch (error) {
       console.error('Error updating preferences:', error);
-      // Optionally, revert state or show error message
+      setSelectedStates(preferences?.states || []);
+      setSelectedPolicyAreas((preferences?.policy_areas || []).filter((area): area is PolicyArea => POLICY_AREAS.includes(area as PolicyArea)));
+      setSaveStatus('error');
+    } finally {
+      savingRef.current = false;
     }
   };
 
 
   const addState = (state: string) => {
+    if (savingRef.current) return;
     if (!selectedStates.includes(state)) {
       const newSelectedStates = [...selectedStates, state];
       setSelectedStates(newSelectedStates);
@@ -76,12 +86,14 @@ const UserPreferencesSection = () => {
   };
 
   const removeState = (state: string) => {
+    if (savingRef.current) return;
     const newSelectedStates = selectedStates.filter(s => s !== state);
     setSelectedStates(newSelectedStates);
     updatePreferences({ states: newSelectedStates });
   };
 
   const addPolicyArea = (area: PolicyArea) => {
+    if (savingRef.current) return;
     if (!selectedPolicyAreas.includes(area)) {
       const newSelectedPolicyAreas = [...selectedPolicyAreas, area];
       setSelectedPolicyAreas(newSelectedPolicyAreas);
@@ -92,6 +104,7 @@ const UserPreferencesSection = () => {
   };
 
   const removePolicyArea = (area: PolicyArea) => {
+    if (savingRef.current) return;
     const newSelectedPolicyAreas = selectedPolicyAreas.filter(a => a !== area);
     setSelectedPolicyAreas(newSelectedPolicyAreas);
     updatePreferences({ policy_areas: newSelectedPolicyAreas });
@@ -107,36 +120,29 @@ const UserPreferencesSection = () => {
     !selectedPolicyAreas.includes(area)
   );
 
-  if (isLoading) {
-    return (
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Your Preferences</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center items-center h-32">
-            <LoadingIndicator size="large" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (isLoading) return <div className="flex justify-center py-16"><LoadingIndicator size="large" /></div>;
+  if (loadError) return <div role="alert" className="border-y border-border py-8"><p className="text-sm text-muted-foreground">We couldn’t load your preferences. Please try again.</p><Button variant="outline" className="mt-4" onClick={() => setRetry(value => value + 1)}>Try again</Button></div>;
 
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle>Your Preferences</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <section className="max-w-3xl" aria-labelledby="preferences-heading">
+      <div className="border-b border-border pb-5">
+        <h2 id="preferences-heading" className="font-serif text-2xl">Preferences</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Choose states and policy areas to personalize your GovSource feed.</p>
+      </div>
+      <p role="status" aria-live="polite" className={`min-h-12 py-3 text-xs ${saveStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>
+        {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'We couldn’t save that change. Your previous preferences were restored. Please try again.' : 'Changes save automatically.'}
+      </p>
+      <fieldset disabled={saveStatus === 'saving'} className="min-w-0 disabled:opacity-60">
+        <legend className="sr-only">Personalize your feed</legend>
         <div className="space-y-6">
-          {/* States to watch */}
+          {/* States */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              States to watch
-            </label>
+            <h3 className="block text-sm font-semibold text-foreground mb-3">
+              States
+            </h3>
             <div className="flex flex-wrap gap-2 mb-2">
               {selectedStates.map(state => (
-                <Badge key={state} variant="secondary" className="pl-3 pr-1 py-1 text-sm">
+                <Badge key={state} variant="secondary" className="rounded-md pl-3 pr-1 py-1 text-sm font-normal">
                   {state}
                   <Button
                     variant="ghost"
@@ -150,18 +156,19 @@ const UserPreferencesSection = () => {
                 </Badge>
               ))}
               {selectedStates.length === 0 && (
-                <div className="text-sm text-gray-500 italic">No states selected</div>
+                <div className="text-sm text-muted-foreground">No states selected</div>
               )}
             </div>
             <Popover open={isStatePopoverOpen} onOpenChange={setIsStatePopoverOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-gray-500">
+                <Button variant="outline" className="w-full justify-start text-muted-foreground">
                   Search and select states...
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
                 <div className="p-2">
                     <Input
+                    aria-label="Search states"
                     placeholder="Search states..."
                     value={stateSearchTerm}
                     onChange={(e) => setStateSearchTerm(e.target.value)}
@@ -175,13 +182,14 @@ const UserPreferencesSection = () => {
                             key={state}
                             variant="ghost"
                             className="w-full justify-start"
+                            disabled={saveStatus === 'saving'}
                             onClick={() => addState(state)}
                             >
                             {state}
                             </Button>
                         ))
                     ) : (
-                        <div className="p-4 text-sm text-center text-gray-500">
+                        <div className="p-4 text-sm text-center text-muted-foreground">
                         No states found.
                         </div>
                     )}
@@ -190,14 +198,14 @@ const UserPreferencesSection = () => {
             </Popover>
           </div>
 
-          {/* Policy areas to watch */}
+          {/* Policy areas */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Policy areas to watch
-            </label>
+            <h3 className="block text-sm font-semibold text-foreground mb-3">
+              Policy areas
+            </h3>
             <div className="flex flex-wrap gap-2 mb-2">
               {selectedPolicyAreas.map(area => (
-                 <Badge key={area} variant="outline" className={`pl-3 pr-1 py-1 text-sm ${getPolicyAreaColors(area)}`}>
+                 <Badge key={area} variant="outline" className="rounded-md border-border bg-secondary pl-3 pr-1 py-1 text-sm font-normal">
                   {area}
                   <Button
                     variant="ghost"
@@ -211,18 +219,19 @@ const UserPreferencesSection = () => {
                 </Badge>
               ))}
               {selectedPolicyAreas.length === 0 && (
-                <div className="text-sm text-gray-500 italic">No policy areas selected</div>
+                <div className="text-sm text-muted-foreground">No policy areas selected</div>
               )}
             </div>
             <Popover open={isPolicyPopoverOpen} onOpenChange={setIsPolicyPopoverOpen}>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-gray-500">
+                    <Button variant="outline" className="w-full justify-start text-muted-foreground">
                         Search and select policy areas...
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
                 <div className="p-2">
                     <Input
+                        aria-label="Search policy areas"
                         placeholder="Search policy areas..."
                         value={policyAreaSearchTerm}
                         onChange={(e) => setPolicyAreaSearchTerm(e.target.value)}
@@ -236,13 +245,14 @@ const UserPreferencesSection = () => {
                             key={area}
                             variant="ghost"
                             className="w-full justify-start"
+                            disabled={saveStatus === 'saving'}
                             onClick={() => addPolicyArea(area as PolicyArea)}
                             >
                             {area}
                             </Button>
                         ))
                     ) : (
-                        <div className="p-4 text-sm text-center text-gray-500">
+                        <div className="p-4 text-sm text-center text-muted-foreground">
                             No policy areas found.
                         </div>
                     )}
@@ -251,8 +261,8 @@ const UserPreferencesSection = () => {
             </Popover>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </fieldset>
+    </section>
   );
 };
 

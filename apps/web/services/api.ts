@@ -884,7 +884,7 @@ export const getClusters = async (params: string | { court_id?: number; search?:
 };
 
 // User Preferences API
-export const getUserPreferences = async (userId: string) => {
+export const getUserPreferences = async (userId: string, throwOnError = false) => {
   try {
     
     const { data, error } = await supabase
@@ -898,7 +898,8 @@ export const getUserPreferences = async (userId: string) => {
 
     // Return the first preference found, or null if none exist
     return data && data.length > 0 ? data[0] : null;
-  } catch (_error) {
+  } catch (error) {
+    if (throwOnError) throw error;
     return null;
   }
 };
@@ -928,7 +929,7 @@ export const createUserPreferences = async (userId: string, preferences: { state
 export const updateUserPreferences = async (userId: string, preferences: { states?: string[], policy_areas?: string[] }) => {
   try {
     // First check if preferences exist
-    const existing = await getUserPreferences(userId);
+    const existing = await getUserPreferences(userId, true);
 
     if (existing) {
       // If preferences exist, update them
