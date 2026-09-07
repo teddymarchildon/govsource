@@ -158,3 +158,14 @@ def test_multi_candidate_links_retained_for_explicit_ambiguity_handling():
     row = copy.deepcopy(ROWS[0])
     row['committee']['candidate_ids'] = ['H2KS04099', 'H8IN07184']
     assert sum(r['kind'] == 'link' for r in normalize_receipt(row, 2026, '11B')) == 2
+
+
+def test_fec_candidate_list_can_contain_the_receiving_committee_itself():
+    # Live nationwide record 4060820261520438377 has this upstream anomaly.
+    row = copy.deepcopy(ROWS[0])
+    row['committee']['candidate_ids'].insert(0, row['committee_id'])
+    result = normalize_receipt(row, 2026, '11B')
+    assert [r['data']['candidate_id'] for r in result if r['kind'] == 'link'] == ROWS[0]['committee']['candidate_ids']
+    row['committee']['candidate_ids'] = [row['committee_id']]
+    with pytest.raises(FECError, match='no candidate mapping'):
+        normalize_receipt(row, 2026, '11B')

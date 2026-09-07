@@ -190,6 +190,11 @@ def normalize_receipt(row, cycle, line, scope='all'):
     ids = nested.get('candidate_ids')
     if not isinstance(ids, list) or not ids:
         raise FECError('Receiving committee has no candidate mapping')
+    # Some FEC committee histories include the committee's own C-ID in this
+    # candidate list. It is not a candidate; keep the actual H/S associations.
+    ids = [cid for cid in ids if cid != recipient]
+    if not ids:
+        raise FECError('Receiving committee has no candidate mapping')
     records = [committee_record(nested, recipient, row.get('committee_name'))]
     for cid in sorted(set(ids)):
         candidate_id(cid)
