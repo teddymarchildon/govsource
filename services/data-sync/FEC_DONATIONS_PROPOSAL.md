@@ -55,7 +55,36 @@ Candidate identities come from `/v1/candidates/?candidate_id=...` in batches.
 Only candidates associated with imported direct contributions are loaded,
 including challengers and former candidates. This is not a catalog of candidates
 with zero contributions. Names are not automatically matched to existing
-Congress members. Verified member links can be added later and survive refreshes.
+Congress members during ingestion. The backfill below adds verified ID links,
+which survive subsequent donation refreshes.
+
+### Backfill Congress member links
+
+Run `map_fec_candidates.py` once after donation imports, then rerun when new
+candidates are published. It joins exact FEC IDs to Bioguide IDs from both the
+current and historical files in the community-maintained
+[congress-legislators crosswalk](https://github.com/unitedstates/congress-legislators),
+then matches `congressman.bioguide_id`. This crosswalk is not an official FEC
+identity service. Every run records a fixed source revision and file hashes.
+
+```bash
+python scripts/map_fec_candidates.py --report /tmp/fec-member-preview.json
+# Use the revision from the preview to reproduce that source when writing.
+python scripts/map_fec_candidates.py --source-ref <40-character-commit-sha> --write --report /tmp/fec-member-results.json
+```
+
+The default is read-only. `--write` fills only still-null `congressman_id`
+values and verifies each change. Existing links are retained; conflicting
+source mappings and ambiguous database matches require review (exit code 2).
+Unmatched candidates remain unlinked, including challengers absent from the
+crosswalk. A name match alone never creates a link. Exit code 1 means a run
+failed; successful earlier writes can be safely revisited by rerunning.
+
+The script pages through both database tables and supports several FEC IDs for
+one member. It maps currently published `fec_candidate` rows, not private import
+staging, so rerun after the nationwide import completes. It does not change the
+weekly schedule or modify donation data. `--report` saves the plan before writes
+and updates it with the verified results and provenance afterward.
 
 Multi-candidate committee links are retained as evidence but excluded from the
 candidate totals view to avoid multiplying money. Inspect those mappings before

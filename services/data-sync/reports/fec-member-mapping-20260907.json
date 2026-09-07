@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-09-07T00:38:21.973859+00:00",
+  "write": true,
+  "matches": [
+    {
+      "candidate_id": "H8IN07184",
+      "candidate_name": "CARSON, ANDRE",
+      "existing_congressman_id": null,
+      "bioguide_id": "C001072",
+      "congressman_id": 197,
+      "member_name": "Andr\u00e9 Carson",
+      "status": "linked"
+    }
+  ],
+  "source": {
+    "repository": "https://github.com/unitedstates/congress-legislators",
+    "revision": "73e2fcd181e1c48d1b0580d417e8d0314b22f7c9",
+    "files": [
+      {
+        "url": "https://raw.githubusercontent.com/unitedstates/congress-legislators/73e2fcd181e1c48d1b0580d417e8d0314b22f7c9/legislators-current.json",
+        "sha256": "19b49014bfbfb0defd3bc7b6ba8e279a63931427af9464b0f014a9bfb541ec5d",
+        "records": 539
+      },
+      {
+        "url": "https://raw.githubusercontent.com/unitedstates/congress-legislators/73e2fcd181e1c48d1b0580d417e8d0314b22f7c9/legislators-historical.json",
+        "sha256": "25187633f3215a096fe9d14d8a40db1fb0841ab1d24c6da52da3a80c93698cbc",
+        "records": 12231
+      }
+    ]
+  },
+  "counts": {
+    "linked": 1
+  },
+  "status": "completed"
+}

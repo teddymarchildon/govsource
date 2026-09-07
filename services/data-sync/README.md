@@ -161,6 +161,21 @@ and agency reference rows exist, then manually run **Daily data sync**. Review
 the first few run durations and upstream request volumes before increasing the
 bounded page and record limits in the workflow files.
 
+## FEC candidate-to-member mapping
+
+After importing donations, run the reusable mapping backfill. It defaults to
+a dry run and uses exact FEC/Bioguide crosswalk IDs, never name-only matching:
+
+```bash
+python scripts/map_fec_candidates.py --report /tmp/fec-member-preview.json
+python scripts/map_fec_candidates.py --write --report /tmp/fec-member-results.json
+```
+
+For a reproducible source, pass the preview's revision with `--source-ref`.
+Existing links are preserved, conflicts are reported, and unmatched candidates
+stay unlinked. No FEC API key or schema change is needed. See
+[the mapping details](FEC_DONATIONS_PROPOSAL.md#backfill-congress-member-links).
+
 ## Continuous brief generation
 
 See [BRIEF_PIPELINE.md](BRIEF_PIPELINE.md) for the new models, split ingestion workflows, evidence verification, admin controls, activation steps and recovery procedures. The legacy daily workflow remains available until `BRIEF_PIPELINE_ENABLED=true`; automatic publication starts paused independently.
