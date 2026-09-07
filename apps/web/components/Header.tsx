@@ -111,7 +111,7 @@ export default function Header() {
               <Input
                 type="text"
                 placeholder="Search public records..."
-                className="w-72 lg:w-96 rounded-md border-border bg-card py-2 pl-9 pr-10 text-sm shadow-none"
+                className="w-72 lg:w-96 rounded-md border-border bg-card py-2 pl-9 pr-10 text-sm shadow-none transition-colors focus-visible:border-muted-foreground focus-visible:ring-1 focus-visible:ring-muted-foreground/30 focus-visible:ring-offset-0"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 aria-label="Search"
@@ -167,7 +167,7 @@ export default function Header() {
               ref={mobileSearchInputRef}
               type="text"
               placeholder="Search public records..."
-              className="w-full rounded-md border-border bg-card py-2 pl-9 pr-10 text-sm shadow-none"
+              className="w-full rounded-md border-border bg-card py-2 pl-9 pr-10 text-sm shadow-none transition-colors focus-visible:border-muted-foreground focus-visible:ring-1 focus-visible:ring-muted-foreground/30 focus-visible:ring-offset-0"
               value={searchQuery}
               onChange={handleSearchChange}
               aria-label="Search"
