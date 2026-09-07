@@ -1,7 +1,7 @@
 # GovSource data synchronization
 
-These jobs pull public records from Congress.gov, the Federal Register, and
-CourtListener into the hosted Supabase database and Storage. They do not run or
+These jobs pull public records from Congress.gov, the Federal Register,
+CourtListener, and OpenFEC into the hosted Supabase database and Storage. They do not run or
 require a project-local PostgreSQL server.
 
 ## Setup
@@ -18,6 +18,7 @@ Required environment variables:
 - `SUPABASE_SERVICE_ROLE_KEY` (server-side ETL only; legacy `SUPABASE_KEY` is
   accepted temporarily with a warning)
 - `CONGRESS_API_KEY` for Congress jobs
+- `FEC_API_KEY` for committee-contribution imports
 - `COURT_LISTENER_API_KEY` for CourtListener jobs
 - `OPENAI_API_KEY` for AI topic classification
 
@@ -102,7 +103,10 @@ Three scheduled workflows under `.github/workflows` run bounded synchronization 
   It skips records with all advertised formats stored, continues past existing
   records, and retries gaps and missing formats within that window.
 - `data-sync-weekly.yml` refreshes courts, Congress members, Federal Register
-  agencies, and agency relationships at 06:43 UTC each Sunday.
+  agencies, and agency relationships at 06:43 UTC each Sunday. An independent
+  FEC job refreshes direct party/PAC contributions to House and Senate campaigns
+  for the current reporting period. See [FEC donations](FEC_DONATIONS_PROPOSAL.md)
+  for the schema, local setup, pilot commands, coverage, and recovery.
 - `topic-classification.yml` classifies up to 100 of the most recently updated
   unclassified agency documents and court clusters from the prior 90 days at
   05:47 UTC each day. Its manual trigger exposes the batch size, lookback, and
@@ -145,6 +149,7 @@ Configure these repository Actions secrets before the first run:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `CONGRESS_API_KEY`
+- `FEC_API_KEY`
 - `COURT_LISTENER_API_KEY`
 - `OPENAI_API_KEY`
 

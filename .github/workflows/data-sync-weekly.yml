@@ -9,13 +9,12 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: govsource-courtlistener
-  cancel-in-progress: false
-
 jobs:
   sync-reference-data:
     name: Sync reference data
+    concurrency:
+      group: govsource-courtlistener
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
@@ -71,3 +70,43 @@ jobs:
 
       - name: Reconcile agency relationships
         run: python scripts/update_agency_relationships.py
+
+  sync-fec-donations:
+    name: Sync direct committee contributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    concurrency:
+      group: govsource-fec
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: services/data-sync
+    env:
+      PYTHONUNBUFFERED: '1'
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      FEC_API_KEY: ${{ secrets.FEC_API_KEY }}
+      FEC_MAX_API_REQUESTS: '2200'
+      FEC_MINIMUM_REQUEST_INTERVAL: '4'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/data-sync/requirements.runtime.txt
+      - run: pip install -r requirements.runtime.txt
+      - name: Verify FEC secrets
+        shell: bash
+        run: |
+          missing=0
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY FEC_API_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Actions secret: ${name}"
+              missing=1
+            fi
+          done
+          exit "$missing"
+      # FEC candidate IDs include challengers; no dependency on member ingestion.
+      - name: Import current reporting period
+        run: python scripts/sync_fec_donations.py --write

@@ -1,0 +1,1460 @@
+{
+  "source_url": "https://api.open.fec.gov/swagger/",
+  "retrieved_on": "2026-09-06",
+  "source_sha256": "23520efbceeb38ed383f38ed63e49bbee1bd804d6af30b3da8ecc07b0379e5e0",
+  "paths": {
+    "/v1/schedules/schedule_a/": {
+      "get": {
+        "description": "\nThis description is for both \u200b`/schedules\u200b/schedule_a\u200b/` and \u200b `/schedules\u200b/schedule_a\u200b/{sub_id}\u200b/`.\n\nThis endpoint provides itemized receipts. Schedule A records describe itemized receipts, including contributions from individuals. If you are interested in contributions from an individual, use the `/schedules/schedule_a/` endpoint. For a more complete description of all Schedule A records visit [About receipts data](https://www.fec.gov/campaign-finance-data/about-campaign-finance-data/about-receipts-data/). If you are interested in our \"is_individual\" methodology visit our [methodology page](https://www.fec.gov/campaign-finance-data/about-campaign-finance-data/methodology/). \n\u200bThe `/schedules\u200b/schedule_a\u200b/` endpoint is not paginated by page number. This endpoint uses keyset pagination to improve query performance and these indices are required to properly page through this large dataset. To request the next page, you should append the values found in the `last_indexes` object from pagination to the URL of your last request as additional parameters. \nFor example, when sorting by `contribution_receipt_date`, you might receive a page of results with the two scenarios of following pagination information:\n\ncase #1:\n```\npagination: {\n    pages: 2152643,\n    per_page: 20,\n    is_count_exact: False,\n    count: 43052850,\n    last_indexes: {\n        last_index: \"230880619\",\n        last_contribution_receipt_date: \"2014-01-01\"\n    }\n}\n```\n<br/>\ncase #2 (results which include contribution_receipt_date = NULL):\n\n```\npagination: {\n    pages: 2152644,\n    per_page: 20,\n    count: 43052850,\n    is_count_exact: False,\n    last_indexes: {\n        last_index: \"230880639\",\n        sort_null_only: True\n    }\n}\n```\nTo fetch the next page of sorted results, append `last_index=230880619` and `last_contribution_receipt_date=2014-01-01` to the URL and when reaching `contribution_receipt_date=NULL`, append `last_index=230880639` and `sort_null_only=True`. We strongly advise paging through these results using sort indices. The default sort is acending by `contribution_receipt_date` (`deprecated`, will be descending). If you do not page using sort indices, some transactions may be unintentionally filtered out.\n\nCalls to \u200b`/schedules\u200b/schedule_a\u200b/` may return many records. For large result sets, the record counts found in the pagination object are approximate; you will need to page through the records until no records are returned.\n\nTo avoid throwing the \"out of range\" exception on the last page, one recommandation is to use total count and `per_page` to control the traverse loop of results.\n\n\u200bThe `/schedules\u200b/schedule_a\u200b/{sub_id}\u200b/` endpoint returns a single transaction, but it does include a pagination object class. Please ignore the information in that object class.\n\n",
+        "parameters": [
+          {
+            "collectionFormat": "multi",
+            "description": "\nAn unique identifier for each page where the electronic or paper filing is reported.\n",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "image_number",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "description": "Minium image number of the page where the schedule item is reported",
+            "in": "query",
+            "name": "min_image_number",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Maxium image number of the page where the schedule item is reported",
+            "in": "query",
+            "name": "max_image_number",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Filter for all amounts greater than a value.",
+            "in": "query",
+            "name": "min_amount",
+            "required": false,
+            "type": "number"
+          },
+          {
+            "description": "Filter for all amounts less than a value.",
+            "in": "query",
+            "name": "max_amount",
+            "required": false,
+            "type": "number"
+          },
+          {
+            "description": "\nThe earliest date used to filter reported activity. Only records with an applicable\nreporting date after this date are returned.\n",
+            "in": "query",
+            "name": "min_date",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "\nThe latest date used to filter reported activity. Only records with an applicable reporting date\nbefore this date are returned.\n",
+            "in": "query",
+            "name": "max_date",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "\nA unique identifier assigned to each committee or filer registered with the FEC. In general a committee id begins with the letter C which is followed by eight digits.\n",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "committee_id",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "The FEC identifier should be represented here if the contributor is registered with the FEC.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "contributor_id",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Name of contributor",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "contributor_name",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "City of contributor",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "contributor_city",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "State of contributor. \nA valid two-letter U.S. state or territory code. Use `ZZ` for foreign countries, or `other` for\nforeign countries and any invalid or missing values.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "contributor_state",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Zip code of contributor",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "contributor_zip",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Employer of contributor, filers need to make an effort to gather this information",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "contributor_employer",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Occupation of contributor, filers need to make an effort to gather this information",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "contributor_occupation",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "default": null,
+            "description": "When sorting by `contribution_receipt_date`, this is populated with the contribution_receipt_date` of the last result. However, you will need to pass the index of that last result to `last_index` to get the next page.",
+            "in": "query",
+            "name": "last_contribution_receipt_date",
+            "required": false,
+            "type": "string",
+            "x-nullable": true
+          },
+          {
+            "default": null,
+            "description": "When sorting by `contribution_receipt_amount`, this is populated with the contribution_receipt_amount` of the last result. However, you will need to pass the index of that last result to `last_index` to get the next page.",
+            "in": "query",
+            "name": "last_contribution_receipt_amount",
+            "required": false,
+            "type": "number",
+            "x-nullable": true
+          },
+          {
+            "description": "\nFilter for form and line number using the following format:\n`FORM-LINENUMBER`.  For example an argument such as `F3X-16` would filter\ndown to all entries from form `F3X` line number `16`.\n",
+            "in": "query",
+            "name": "line_number",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "Restrict to non-earmarked individual contributions where memo code is true. Filtering individuals is useful to make sure contributions are not double reported and in creating breakdowns of the amount of money coming from individuals.",
+            "in": "query",
+            "name": "is_individual",
+            "required": false,
+            "type": "boolean",
+            "x-nullable": true
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Filters individual or committee contributions based on line number",
+            "in": "query",
+            "items": {
+              "enum": [
+                "individual",
+                "committee"
+              ],
+              "type": "string"
+            },
+            "name": "contributor_type",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "\nThis is a two-year period that is derived from the year a transaction took place in the\nItemized Schedule A and Schedule B tables. In cases where we have the date of the transaction\n(contribution_receipt_date in schedules/schedule_a, disbursement_date in schedules/schedule_b)\nthe two_year_transaction_period is named after the ending, even-numbered year. If we do not\nhave the date  of the transaction, we fall back to using the report year (report_year in both\ntables) instead,  making the same cycle adjustment as necessary. If no transaction year is\nspecified, the results default to the most current cycle.\n",
+            "in": "query",
+            "items": {
+              "type": "integer"
+            },
+            "name": "two_year_transaction_period",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "The one-letter type code of the organization:\n        - C communication cost\n        - D delegate\n        - E electioneering communication\n        - H house\n        - I independent expenditure filer (not a committee)\n        - N PAC - nonqualified\n        - O independent expenditure-only (super PACs)\n        - P presidential\n        - Q PAC - qualified\n        - S senate\n        - U single candidate independent expenditure\n        - V PAC with non-contribution account, nonqualified\n        - W PAC with non-contribution account, qualified\n        - X party, nonqualified\n        - Y party, qualified\n        - Z national party non-federal account\n",
+            "in": "query",
+            "items": {
+              "enum": [
+                "",
+                "C",
+                "D",
+                "E",
+                "H",
+                "I",
+                "N",
+                "O",
+                "P",
+                "Q",
+                "S",
+                "U",
+                "V",
+                "W",
+                "X",
+                "Y",
+                "Z"
+              ],
+              "type": "string"
+            },
+            "name": "recipient_committee_type",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "The one-letter code for the kind for organization:\n        - C corporation\n        - L labor organization\n        - M membership organization\n        - T trade association\n        - V cooperative\n        - W corporation without capital stock\n        - H host committee\n        - I inaugural committee\n",
+            "in": "query",
+            "items": {
+              "enum": [
+                "",
+                "C",
+                "L",
+                "M",
+                "T",
+                "V",
+                "W",
+                "H",
+                "I"
+              ],
+              "type": "string"
+            },
+            "name": "recipient_committee_org_type",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "The one-letter designation code of the organization:\n         - A authorized by a candidate\n         - J joint fundraising committee\n         - P principal campaign committee of a candidate\n         - U unauthorized\n         - B lobbyist/registrant PAC\n         - D leadership PAC\n",
+            "in": "query",
+            "items": {
+              "enum": [
+                "",
+                "A",
+                "J",
+                "P",
+                "U",
+                "B",
+                "D"
+              ],
+              "type": "string"
+            },
+            "name": "recipient_committee_designation",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "description": "Minimum load date",
+            "in": "query",
+            "name": "min_load_date",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Maximum load date",
+            "in": "query",
+            "name": "max_load_date",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 20,
+            "description": "The number of results returned per page. Defaults to 20.",
+            "in": "query",
+            "name": "per_page",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": null,
+            "description": "Index of last result from previous page",
+            "in": "query",
+            "name": "last_index",
+            "required": false,
+            "type": "integer",
+            "x-nullable": true
+          },
+          {
+            "default": "-contribution_receipt_date",
+            "description": "Provide a field to sort by. Use `-` for descending order.\n",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": false,
+            "description": "Hide null values on sorted column(s).",
+            "in": "query",
+            "name": "sort_hide_null",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "description": "Toggle that filters out all rows having sort column that is non-null",
+            "in": "query",
+            "name": "sort_null_only",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "description": "Toggle that sorts null values last",
+            "in": "query",
+            "name": "sort_nulls_last",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": "DEMO_KEY",
+            "description": "\nAPI key for https://api.data.gov. Get one at https://api.data.gov/signup.\n",
+            "in": "query",
+            "name": "api_key",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/ScheduleAPage"
+            }
+          }
+        },
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/v1/candidates/": {
+      "get": {
+        "description": "\nFetch basic information about candidates, and use parameters to filter results to the\ncandidates you're looking for.\n\nEach result reflects a unique FEC candidate ID. That ID is particular to the candidate for a\nparticular office sought. If a candidate runs for the same office multiple times, the ID\nstays the same. If the same person runs for another office \u2014 for example, a House\ncandidate runs for a Senate office \u2014 that candidate will get a unique ID for each office.\n",
+        "parameters": [
+          {
+            "default": 1,
+            "description": "For paginating through results, starting at page 1",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "The number of results returned per page. Defaults to 20.",
+            "in": "query",
+            "name": "per_page",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Name of candidate running for office",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "q",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "\nA unique identifier assigned to each candidate registered with the FEC.\nIf a person runs for several offices, that person will have separate candidate IDs for each office.\nFirst character indicates office - [P]residential, [H]ouse, [S]enate].\nSecond character is the last digit of the two-year period the ID was created.\nThird and fourth is the candidate state. Presidential IDs don't have state.\nFifth and sixth is the district when the candidate first ran. This does not change if the\ncandidate/member's district changes during re-districting. Presidential IDs don't have districts.\nThe rest is sequence.\n",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "candidate_id",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "description": "Selects all candidates whose first filing was received by the FEC after this date.",
+            "in": "query",
+            "name": "min_first_file_date",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Selects all candidates whose first filing was received by the FEC before this date.",
+            "in": "query",
+            "name": "max_first_file_date",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": " Candidates who are actively seeking office. If no value is specified, all candidates\nare returned. When True is specified, only active candidates are returned. When False is\nspecified, only inactive candidates are returned.\n",
+            "in": "query",
+            "name": "is_active_candidate",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "\nTwo-year election cycle in which a candidate runs for office.\nCalculated from Form 2. The cycle begins with\nan odd year and is named for its ending, even year. This cycle follows\nthe traditional house election cycle and subdivides the presidential\nand Senate elections into comparable two-year blocks. To retrieve data for\nthe entire four years of a presidential term or six years of a senatorial term,\nyou will need the `election_full` flag.\n",
+            "in": "query",
+            "items": {
+              "type": "integer"
+            },
+            "name": "cycle",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Year of election",
+            "in": "query",
+            "items": {
+              "type": "integer"
+            },
+            "name": "election_year",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Federal office candidate runs for: H, S or P",
+            "in": "query",
+            "items": {
+              "enum": [
+                "",
+                "H",
+                "S",
+                "P"
+              ],
+              "type": "string"
+            },
+            "name": "office",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "US state or territory where a candidate runs for office",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "state",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Three-letter code for the party affiliated with a candidate or committee. For example, DEM for Democratic Party and REP for Republican Party.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "party",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "description": "Retrieve records pertaining to a particular election year. The list of election years is based on a candidate filing a statement of candidacy (F2) for that year.",
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Two-digit US House distirict of the office the candidate is running for. Presidential, Senate and House at-large candidates will have District 00.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "district",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "One-letter code explaining if the candidate is:\n        - C present candidate\n        - F future candidate\n        - N not yet a candidate\n        - P prior candidate\n",
+            "in": "query",
+            "items": {
+              "enum": [
+                "",
+                "C",
+                "F",
+                "N",
+                "P"
+              ],
+              "type": "string"
+            },
+            "name": "candidate_status",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "One-letter code ('I', 'C', 'O') explaining if the candidate is an incumbent, a challenger, or if the seat is open.",
+            "in": "query",
+            "items": {
+              "enum": [
+                "",
+                "I",
+                "C",
+                "O"
+              ],
+              "type": "string"
+            },
+            "name": "incumbent_challenge",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "description": "A boolean the describes if a presidential candidate has accepted federal funds. The flag will be false for House and Senate candidates.",
+            "in": "query",
+            "name": "federal_funds_flag",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "description": "A boolean that describes if a candidate's committee has ever received any receipts for their campaign for this particular office. (Candidates have separate candidate IDs for each office.)",
+            "in": "query",
+            "name": "has_raised_funds",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "Name (candidate or committee) to search for. Alias for 'q'.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "name",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "default": "name",
+            "description": "Provide a field to sort by. Use `-` for descending order.\n",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": false,
+            "description": "Hide null values on sorted column(s).",
+            "in": "query",
+            "name": "sort_hide_null",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "description": "Toggle that filters out all rows having sort column that is non-null",
+            "in": "query",
+            "name": "sort_null_only",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "description": "Toggle that sorts null values last",
+            "in": "query",
+            "name": "sort_nulls_last",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": "DEMO_KEY",
+            "description": "\nAPI key for https://api.data.gov. Get one at https://api.data.gov/signup.\n",
+            "in": "query",
+            "name": "api_key",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CandidatePage"
+            }
+          }
+        },
+        "tags": [
+          "candidate"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ScheduleA": {
+      "properties": {
+        "amendment_indicator": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "amendment_indicator_desc": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "back_reference_schedule_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "back_reference_transaction_id": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_first_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_id": {
+          "description": "\nA unique identifier assigned to each candidate registered with the FEC.\nIf a person runs for several offices, that person will have separate candidate IDs for each office.\nFirst character indicates office - [P]residential, [H]ouse, [S]enate].\nSecond character is the last digit of the two-year period the ID was created.\nThird and fourth is the candidate state. Presidential IDs don't have state.\nFifth and sixth is the district when the candidate first ran. This does not change if the\ncandidate/member's district changes during re-districting. Presidential IDs don't have districts.\nThe rest is sequence.\n",
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_last_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_middle_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_name": {
+          "description": "Name of candidate running for office",
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_office": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_office_district": {
+          "description": "Two-digit US House distirict of the office the candidate is running for. Presidential, Senate and House at-large candidates will have District 00.",
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_office_full": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_office_state": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_office_state_full": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_prefix": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_suffix": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "committee": {
+          "$ref": "#/definitions/CommitteeHistory"
+        },
+        "committee_id": {
+          "description": "\nA unique identifier assigned to each committee or filer registered with the FEC. In general a committee id begins with the letter C which is followed by eight digits.\n",
+          "type": "string",
+          "x-nullable": true
+        },
+        "committee_name": {
+          "description": "The name of the committee. If a committee changes its name,     the most recent name will be shown. Committee names are not unique. Use committee_id     for looking up records.",
+          "type": "string",
+          "x-nullable": true
+        },
+        "conduit_committee_city": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "conduit_committee_id": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "conduit_committee_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "conduit_committee_state": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "conduit_committee_street1": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "conduit_committee_street2": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "conduit_committee_zip": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contribution_receipt_amount": {
+          "type": "number"
+        },
+        "contribution_receipt_date": {
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor": {
+          "$ref": "#/definitions/CommitteeHistory"
+        },
+        "contributor_aggregate_ytd": {
+          "description": "Total amount received from this source for the year to date. Starting 2000, it is aggregated on an election-cycle basis in F3 and F3P, and calendar year in F3X.",
+          "type": "number"
+        },
+        "contributor_city": {
+          "description": "City of contributor",
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_employer": {
+          "description": "Employer of contributor, filers need to make an effort to gather this information",
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_first_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_id": {
+          "description": "The FEC identifier should be represented here if the contributor is registered with the FEC.",
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_last_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_middle_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_name": {
+          "description": "Name of contributor",
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_occupation": {
+          "description": "Occupation of contributor, filers need to make an effort to gather this information",
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_prefix": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_state": {
+          "description": "State of contributor",
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_street_1": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_street_2": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_suffix": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "contributor_zip": {
+          "description": "Zip code of contributor",
+          "type": "string",
+          "x-nullable": true
+        },
+        "donor_committee_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "election_type": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "election_type_full": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "entity_type": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "entity_type_desc": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "fec_election_type_desc": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "fec_election_year": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "file_number": {
+          "type": "integer",
+          "x-nullable": true
+        },
+        "filing_form": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "image_number": {
+          "type": "string"
+        },
+        "increased_limit": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "is_individual": {
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "line_number": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "line_number_label": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "link_id": {
+          "type": "integer",
+          "x-nullable": true
+        },
+        "load_date": {
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "memo_code": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "memo_code_full": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "memo_text": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "memoed_subtotal": {
+          "type": "boolean"
+        },
+        "national_committee_nonfederal_account": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "original_sub_id": {
+          "type": "string"
+        },
+        "pdf_url": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "receipt_type": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "receipt_type_desc": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "receipt_type_full": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "recipient_committee_designation": {
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "recipient_committee_org_type": {
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "recipient_committee_type": {
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "report_type": {
+          "description": "Name of report where the underlying data comes from:\n    - 10D Pre-Election\n    - 10G Pre-General\n    - 10P Pre-Primary\n    - 10R Pre-Run-Off\n    - 10S Pre-Special\n    - 12C Pre-Convention\n    - 12G Pre-General\n    - 12P Pre-Primary\n    - 12R Pre-Run-Off\n    - 12S Pre-Special\n    - 30D Post-Election\n    - 30G Post-General\n    - 30P Post-Primary\n    - 30R Post-Run-Off\n    - 30S Post-Special\n    - 60D Post-Convention\n    - M1  January Monthly\n    - M10 October Monthly\n    - M11 November Monthly\n    - M12 December Monthly\n    - M2  February Monthly\n    - M3  March Monthly\n    - M4  April Monthly\n    - M5  May Monthly\n    - M6  June Monthly\n    - M7  July Monthly\n    - M8  August Monthly\n    - M9  September Monthly\n    - MY  Mid-Year Report\n    - Q1  April Quarterly\n    - Q2  July Quarterly\n    - Q3  October Quarterly\n    - TER Termination Report\n    - YE  Year-End\n    - ADJ COMP ADJUST AMEND\n    - CA  COMPREHENSIVE AMEND\n    - 90S Post Inaugural Supplement\n    - 90D Post Inaugural\n    - 24  24 Hour Notification (F6, F9)\n    - 24  24 Hour Report of Independent Expenditures (F5, F24/F3X)\n    - 48  48 Hour Report of Independent Expenditures (F5, F24/F3X)\n    - M7S July Monthly/Semi-Annual\n    - MSA Monthly Semi-Annual (MY)\n    - MYS Monthly Year End/Semi-Annual\n    - Q2S July Quarterly/Semi-Annual\n    - QSA Quarterly Semi-Annual (MY)\n    - QYS Quarterly Year End/Semi-Annual\n    - QYE Quarterly Semi-Annual (YE)\n    - QMS Quarterly Mid-Year/ Semi-Annual\n    - MSY Monthly Semi-Annual (YE)\n",
+          "type": "string",
+          "x-nullable": true
+        },
+        "report_year": {
+          "type": "integer"
+        },
+        "schedule_type": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "schedule_type_full": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "sub_id": {
+          "type": "string"
+        },
+        "transaction_id": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "two_year_transaction_period": {
+          "description": "\nThis is a two-year period that is derived from the year a transaction took place in the\nItemized Schedule A and Schedule B tables. In cases where we have the date of the transaction\n(contribution_receipt_date in schedules/schedule_a, disbursement_date in schedules/schedule_b)\nthe two_year_transaction_period is named after the ending, even-numbered year. If we do not\nhave the date  of the transaction, we fall back to using the report year (report_year in both\ntables) instead,  making the same cycle adjustment as necessary. If no transaction year is\nspecified, the results default to the most current cycle.\n",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "unused_contbr_id": {
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "type": "object"
+    },
+    "ScheduleAPage": {
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/SeekInfo"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/definitions/ScheduleA"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "CommitteeHistory": {
+      "properties": {
+        "affiliated_committee_name": {
+          "description": "\nAffiliated committee or connected organization\n",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_ids": {
+          "description": "\nA unique identifier assigned to each candidate registered with the FEC.\nIf a person runs for several offices, that person will have separate candidate IDs for each office.\nFirst character indicates office - [P]residential, [H]ouse, [S]enate].\nSecond character is the last digit of the two-year period the ID was created.\nThird and fourth is the candidate state. Presidential IDs don't have state.\nFifth and sixth is the district when the candidate first ran. This does not change if the\ncandidate/member's district changes during re-districting. Presidential IDs don't have districts.\nThe rest is sequence.\n",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "city": {
+          "description": "\nCity of committee as reported on the Form 1\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "committee_id": {
+          "description": "\nA unique identifier assigned to each committee or filer registered with the FEC. In general a committee id begins with the letter C which is followed by eight digits.\n",
+          "type": "string"
+        },
+        "committee_type": {
+          "description": "The one-letter type code of the organization:\n        - C communication cost\n        - D delegate\n        - E electioneering communication\n        - H house\n        - I independent expenditure filer (not a committee)\n        - N PAC - nonqualified\n        - O independent expenditure-only (super PACs)\n        - P presidential\n        - Q PAC - qualified\n        - S senate\n        - U single candidate independent expenditure\n        - V PAC with non-contribution account, nonqualified\n        - W PAC with non-contribution account, qualified\n        - X party, nonqualified\n        - Y party, qualified\n        - Z national party non-federal account\n",
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "committee_type_full": {
+          "description": "The one-letter type code of the organization:\n        - C communication cost\n        - D delegate\n        - E electioneering communication\n        - H house\n        - I independent expenditure filer (not a committee)\n        - N PAC - nonqualified\n        - O independent expenditure-only (super PACs)\n        - P presidential\n        - Q PAC - qualified\n        - S senate\n        - U single candidate independent expenditure\n        - V PAC with non-contribution account, nonqualified\n        - W PAC with non-contribution account, qualified\n        - X party, nonqualified\n        - Y party, qualified\n        - Z national party non-federal account\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "cycle": {
+          "description": "\nA two year election cycle that the committee was active- (after original registration\ndate but before expiration date in Form 1s) The cycle begins with\nan odd year and is named for its ending, even year.\n",
+          "type": "integer"
+        },
+        "cycles": {
+          "description": "\nA two year election cycle that the committee was active- (after original registration\ndate but before expiration date in Form 1s) The cycle begins with\nan odd year and is named for its ending, even year.\n",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "cycles_has_activity": {
+          "description": "\nA two year election cycle that the committee was active- (after original registration\ndate but before expiration date in Form 1), and the committee has filling activity during the cycle\n",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "cycles_has_financial": {
+          "description": "\nA two year election cycle that the committee was active- (after original registration\ndate but before expiration date in Form 1s), and the committee files the financial reports\n('F3', 'F3X', 'F3P', 'F3L', 'F4', 'F5', 'F7', 'F13') during this cycle.\n",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "designated_agent_city": {
+          "description": "\nDesignated agent city\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_first_name": {
+          "description": "\nDesignated agent first name\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_last_name": {
+          "description": "\nDesignated agent last name\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_middle_name": {
+          "description": "\nDesignated agent middle name\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_name": {
+          "description": "\nDesignated agent name\n",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_phone_number": {
+          "description": "\nDesignated agent phone number\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_prefix": {
+          "description": "\nDesignated agent prefix\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_state": {
+          "description": "\nDesignated agent state\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_street1": {
+          "description": "\nDesignated agent street1\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_street2": {
+          "description": "\nDesignated agent street2\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_suffix": {
+          "description": "\nDesignated agent suffix\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_title": {
+          "description": "\nDesignated agent title\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designated_agent_zip": {
+          "description": "\nDesignated agent zip\n",
+          "maxLength": 9,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designation": {
+          "description": "The one-letter designation code of the organization:\n         - A authorized by a candidate\n         - J joint fundraising committee\n         - P principal campaign committee of a candidate\n         - U unauthorized\n         - B lobbyist/registrant PAC\n         - D leadership PAC\n",
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "designation_full": {
+          "description": "The one-letter designation code of the organization:\n         - A authorized by a candidate\n         - J joint fundraising committee\n         - P principal campaign committee of a candidate\n         - U unauthorized\n         - B lobbyist/registrant PAC\n         - D leadership PAC\n",
+          "maxLength": 25,
+          "type": "string",
+          "x-nullable": true
+        },
+        "filing_frequency": {
+          "description": "The one-letter \n    code of the filing frequency:\n         - A Administratively terminated\n         - D Debt\n         - M Monthly filer\n         - Q Quarterly filer\n         - T Terminated\n         - W Waived\n",
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "first_f1_date": {
+          "description": "The day the FEC received the committee's first Form 1",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "first_file_date": {
+          "description": "The day the FEC received the committee's first filing. This is usually a Form 1 committee registration.",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "is_active": {
+          "description": "\nTrue indicates that a committee is active.\n",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "jfc_committee": {
+          "items": {
+            "$ref": "#/definitions/JFCCommittee"
+          },
+          "type": "array"
+        },
+        "last_cycle_has_activity": {
+          "description": "\nThe latest two year election cycle that the committee has filings\n",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "last_cycle_has_financial": {
+          "description": "\nThe latest two year election cycle that the committee files the financial reports\n('F3', 'F3X', 'F3P', 'F3L', 'F4', 'F5', 'F7', 'F13').\n",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "last_f1_date": {
+          "description": "The day the FEC received the committee's most recent Form 1",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "last_file_date": {
+          "description": "The day the FEC received the committee's most recent filing",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "name": {
+          "description": "The name of the committee. If a committee changes its name,     the most recent name will be shown. Committee names are not unique. Use committee_id     for looking up records.",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "organization_type": {
+          "description": "The one-letter code for the kind for organization:\n        - C corporation\n        - L labor organization\n        - M membership organization\n        - T trade association\n        - V cooperative\n        - W corporation without capital stock\n        - H host committee\n        - I inaugural committee\n",
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "organization_type_full": {
+          "description": "The one-letter code for the kind for organization:\n        - C corporation\n        - L labor organization\n        - M membership organization\n        - T trade association\n        - V cooperative\n        - W corporation without capital stock\n        - H host committee\n        - I inaugural committee\n",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "party": {
+          "description": "Three-letter code for the party affiliated with a candidate or committee. For example, DEM for Democratic Party and REP for Republican Party.",
+          "maxLength": 3,
+          "type": "string",
+          "x-nullable": true
+        },
+        "party_full": {
+          "description": "Three-letter code for the party affiliated with a candidate or committee. For example, DEM for Democratic Party and REP for Republican Party.",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "state": {
+          "description": "\nState of the committee's address as filed on the Form 1\n",
+          "maxLength": 2,
+          "type": "string",
+          "x-nullable": true
+        },
+        "state_full": {
+          "description": "\nState of committee as reported on the Form 1\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "street_1": {
+          "description": "\nStreet address of committee as reported on the Form 1\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "street_2": {
+          "description": "\nSecond line of street address of committee as reported on the Form 1\n",
+          "maxLength": 50,
+          "type": "string",
+          "x-nullable": true
+        },
+        "treasurer_name": {
+          "description": "Name of the Committee's treasurer. If multiple treasurers for the committee, the most recent treasurer will be shown.",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "zip": {
+          "description": "\nZip code of committee as reported on the Form 1\n",
+          "maxLength": 9,
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "committee_id",
+        "cycle"
+      ],
+      "type": "object"
+    },
+    "Candidate": {
+      "properties": {
+        "active_through": {
+          "description": "Last year a candidate was active. This field is specific to the candidate_id so if the same person runs for another office, there may be a different record for them.",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "candidate_id": {
+          "description": "\nA unique identifier assigned to each candidate registered with the FEC.\nIf a person runs for several offices, that person will have separate candidate IDs for each office.\nFirst character indicates office - [P]residential, [H]ouse, [S]enate].\nSecond character is the last digit of the two-year period the ID was created.\nThird and fourth is the candidate state. Presidential IDs don't have state.\nFifth and sixth is the district when the candidate first ran. This does not change if the\ncandidate/member's district changes during re-districting. Presidential IDs don't have districts.\nThe rest is sequence.\n",
+          "type": "string",
+          "x-nullable": true
+        },
+        "candidate_inactive": {
+          "description": " Candidates who are actively seeking office. If no value is specified, all candidates\nare returned. When True is specified, only active candidates are returned. When False is\nspecified, only inactive candidates are returned.\n",
+          "type": "boolean",
+          "x-nullable": true
+        },
+        "candidate_status": {
+          "description": "One-letter code explaining if the candidate is:\n        - C present candidate\n        - F future candidate\n        - N not yet a candidate\n        - P prior candidate\n",
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "cycles": {
+          "description": "\nTwo-year election cycle in which a candidate runs for office.\nCalculated from Form 2. The cycle begins with\nan odd year and is named for its ending, even year. This cycle follows\nthe traditional house election cycle and subdivides the presidential\nand Senate elections into comparable two-year blocks. To retrieve data for\nthe entire four years of a presidential term or six years of a senatorial term,\nyou will need the `election_full` flag.\n",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "district": {
+          "description": "Two-digit US House distirict of the office the candidate is running for. Presidential, Senate and House at-large candidates will have District 00.",
+          "maxLength": 2,
+          "type": "string",
+          "x-nullable": true
+        },
+        "district_number": {
+          "description": "Two-digit US House distirict of the office the candidate is running for. Presidential, Senate and House at-large candidates will have District 00.",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "election_districts": {
+          "description": "Two-digit US House distirict of the office the candidate is running for. Presidential, Senate and House at-large candidates will have District 00.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "election_years": {
+          "description": "Years in which a candidate ran for office.",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "federal_funds_flag": {
+          "type": "boolean"
+        },
+        "first_file_date": {
+          "description": "The day the FEC received the candidate's first filing. This is a F2 candidate registration.",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "has_raised_funds": {
+          "type": "boolean"
+        },
+        "inactive_election_years": {
+          "description": "inactive years",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "x-nullable": true
+        },
+        "incumbent_challenge": {
+          "description": "One-letter code ('I', 'C', 'O') explaining if the candidate is an incumbent, a challenger, or if the seat is open.",
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "incumbent_challenge_full": {
+          "description": "Explains if the candidate is an incumbent, a challenger, or if the seat is open.",
+          "maxLength": 10,
+          "type": "string",
+          "x-nullable": true
+        },
+        "last_f2_date": {
+          "description": "The day the FEC received the candidate's most recent Form 2",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "last_file_date": {
+          "description": "The day the FEC received the candidate's most recent filing",
+          "format": "date",
+          "type": "string",
+          "x-nullable": true
+        },
+        "load_date": {
+          "description": "Date the information was loaded into the FEC systems. This can be affected by reseting systems and other factors, refer to receipt_date for the day that the FEC received the paper or electronic document. Keep in mind that paper filings take more time to process and there can be a lag between load_date and receipt_date. This field can be helpful to identify paper records that have been processed recently.",
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "name": {
+          "description": "Name of candidate running for office",
+          "maxLength": 100,
+          "type": "string",
+          "x-nullable": true
+        },
+        "office": {
+          "description": "Federal office candidate runs for: H, S or P",
+          "maxLength": 1,
+          "type": "string",
+          "x-nullable": true
+        },
+        "office_full": {
+          "description": "Federal office candidate runs for: House, Senate or presidential",
+          "maxLength": 9,
+          "type": "string",
+          "x-nullable": true
+        },
+        "party": {
+          "description": "Three-letter code for the party affiliated with a candidate or committee. For example, DEM for Democratic Party and REP for Republican Party.",
+          "maxLength": 3,
+          "type": "string",
+          "x-nullable": true
+        },
+        "party_full": {
+          "description": "Party affiliated with a candidate or committee",
+          "maxLength": 255,
+          "type": "string",
+          "x-nullable": true
+        },
+        "state": {
+          "description": "US state or territory where a candidate runs for office",
+          "maxLength": 2,
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "type": "object"
+    },
+    "CandidatePage": {
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/OffsetInfo"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/definitions/Candidate"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "SeekInfo": {
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "is_count_exact": {
+          "type": "boolean"
+        },
+        "last_indexes": {},
+        "pages": {
+          "type": "integer"
+        },
+        "per_page": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "OffsetInfo": {
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "is_count_exact": {
+          "type": "boolean"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "pages": {
+          "type": "integer"
+        },
+        "per_page": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  }
+}
