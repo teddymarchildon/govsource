@@ -203,6 +203,11 @@ def normalize_receipt(row, cycle, line, scope='all'):
             'designation': row['recipient_committee_designation'],
         }))
     giver = row.get('contributor_id') or None
+    # OpenFEC preserves malformed filer-supplied donor IDs (for example
+    # C0035675 on receipt 4042920251187912755). Keep the named contribution
+    # as unresolved; never pad the ID or guess a different committee.
+    if isinstance(giver, str) and not re.fullmatch(r'C[0-9]{8}', giver):
+        giver = None
     name = required_text(row.get('contributor_name') or row.get('donor_committee_name'))
     if giver:
         committee_id(giver)

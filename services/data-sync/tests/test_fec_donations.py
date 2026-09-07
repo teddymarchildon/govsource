@@ -53,6 +53,19 @@ def test_signed_money_null_dates_and_unresolved_group_ids_are_preserved():
     assert result['receipt_date'] is None and result['giving_committee_id'] is None
 
 
+def test_malformed_filer_donor_id_preserves_receipt_without_guessing_identity():
+    row = {**ROWS[0], 'contributor_id': 'C0035675', 'sub_id': '4042920251187912755'}
+    result = normalize_receipt(row, 2026, '11B')
+    receipt = result[-1]['data']
+    assert receipt['giving_committee_id'] is None
+    assert receipt['contributor_name'] == row['contributor_name']
+    assert receipt['sub_id'] == row['sub_id']
+    assert not any(r['kind'] == 'committee' and r['key'] != row['committee_id'] for r in result)
+    # Required recipient IDs remain strict, since they determine attribution.
+    with pytest.raises(FECError):
+        normalize_receipt({**row, 'committee_id': 'C0035675'}, 2026, '11B')
+
+
 @pytest.mark.parametrize('change', [
     {'contribution_receipt_amount': None}, {'contribution_receipt_amount': 'NaN'},
     {'contribution_receipt_amount': '1.234'}, {'sub_id': None},
