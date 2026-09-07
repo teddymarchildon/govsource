@@ -119,6 +119,67 @@ def test_resume_reuses_completed_extractions():
     assert 'selection' not in ai.stages and 'extract' not in ai.stages
 
 
+def test_bad_extraction_gets_source_and_feedback_then_verifies():
+    class RepairAI(FakeAI):
+        def call(self,stage,instructions,payload,*a,**kw):
+            result=super().call(stage,instructions,payload,*a,**kw)
+            if stage=='extract':
+                if self.stages.count('extract')==1:
+                    result['facts'][0]['evidence'][0]['quote']='Invented quotation.'
+                else:
+                    assert payload['passage']==PASSAGE
+                    assert 'does not match' in payload['feedback'][0]
+                    assert payload['previous_extraction']['facts'][0]['evidence'][0]['quote']=='Invented quotation.'
+            return result
+    ai=RepairAI(None,None);db=DB()
+    assert process(db,job(),'lease',ai_factory=lambda *a:ai)=='verified'
+    assert ai.stages.count('extract')==2
+    saved=[args['p_work'] for name,args in db.calls if name=='save_brief_work']
+    assert 'extraction_repair' not in saved[-1]
+
+
+def test_persistently_invalid_extraction_is_withheld_without_writing():
+    class RejectAI(FakeAI):
+        def call(self,stage,*a,**kw):
+            result=super().call(stage,*a,**kw)
+            if stage=='extract': result['facts'][0]['text']='It costs 999 dollars.'
+            return result
+    ai=RejectAI(None,None);db=DB()
+    assert process(db,job(),'lease',ai_factory=lambda *a:ai)=='withheld'
+    assert ai.stages.count('extract')==3
+    assert 'write' not in ai.stages and 'verify' not in ai.stages
+    finish=[args for name,args in db.calls if name=='finish_brief_job'][0]
+    assert finish['p_status']=='withheld'
+    assert not finish['p_verification']['deterministic_passed']
+
+
+def test_extraction_repair_budget_survives_interruption():
+    class InterruptedAI(FakeAI):
+        def call(self,stage,*a,**kw):
+            result=super().call(stage,*a,**kw)
+            if stage=='extract':
+                if self.stages.count('extract')==2: raise TimeoutError('interrupted')
+                result['facts'][0]['evidence'][0]['quote']='Invented quotation.'
+            return result
+    db=DB();j=job()
+    with pytest.raises(TimeoutError):
+        process(db,j,'lease',ai_factory=InterruptedAI)
+    j['work']=[args['p_work'] for name,args in db.calls if name=='save_brief_work'][-1]
+    assert j['work']['extraction_repair']['attempts']==1
+    ai=FakeAI(None,None)
+    assert process(DB(),j,'new-lease',ai_factory=lambda *a:ai)=='verified'
+    assert ai.stages.count('extract')==1
+
+
+def test_extraction_transport_errors_still_fail_the_worker():
+    class BrokenAI(FakeAI):
+        def call(self,stage,*a,**kw):
+            if stage=='extract': raise ConnectionError('upstream unavailable')
+            return super().call(stage,*a,**kw)
+    with pytest.raises(ConnectionError):
+        process(DB(),job(),'lease',ai_factory=BrokenAI)
+
+
 def test_health_alerts_when_sources_never_ran():
     overview={'sources':[{'source':'congress','last_success_at':None,'status':'idle'}],'source_errors':[],'oldest_waiting':None}
     assert 'congress' in problems(overview)[0]

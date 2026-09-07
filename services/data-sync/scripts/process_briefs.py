@@ -148,16 +148,33 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
         return 'skipped'
     extracted = work.get('extracted',[])
     for passage in packet['passages'][len(extracted):]:
-        if deadline and time.monotonic()>deadline:
-            raise TimeoutError('Run time budget reached')
-        facts = ai.call('extract',
-            'Extract factual claims and all material qualifications from this passage. Each fact needs a verbatim supporting '
-            'quote (at least 12 characters) and this passage_id. Preserve dates, scope, exceptions and opinion type. '
-            'Do not require facts where the passage contains none.',passage,EXTRACTION)
-        for fact in facts['facts']:
-            errors = citation_errors(fact,[passage])
-            if errors:
-                raise ValueError('; '.join(errors))
+        repair = work.get('extraction_repair') or {}
+        if repair.get('passage_id') != passage['id']:
+            repair = {'passage_id':passage['id'],'attempts':0,'feedback':[]}
+        while repair['attempts'] < 3:
+            if deadline and time.monotonic()>deadline:
+                raise TimeoutError('Run time budget reached')
+            facts = ai.call('extract',
+                'Extract factual claims and all material qualifications from this passage. Each fact needs a verbatim supporting '
+                'quote (at least 12 characters) and this passage_id. Copy quotes exactly, including whitespace and punctuation; '
+                'do not paraphrase quotes or insert ellipses. Every number in a claim must occur in this passage. '
+                'Preserve dates, scope, exceptions and opinion type. Address validation feedback using the original passage. '
+                'Do not require facts where the passage contains none.',
+                {'passage':passage,'previous_extraction':repair.get('previous'),'feedback':repair['feedback']},EXTRACTION)
+            errors = [f'fact_{i}: {error}' for i,fact in enumerate(facts['facts'],1)
+                      for error in citation_errors(fact,[passage])]
+            if not errors:
+                break
+            repair.update(attempts=repair['attempts']+1,feedback=errors,previous=facts)
+            work['extraction_repair']=repair
+            checkpoint()
+        else:
+            # Invalid model content is a withheld editorial result, just like a
+            # rejected draft. Transport/database errors still fail the worker.
+            complete(db,job,token,'withheld','Extraction failed after two repairs',
+                     report={'passed':False,'deterministic_passed':False,'issues':repair['feedback']},ai=ai)
+            return 'withheld'
+        work.pop('extraction_repair',None)
         extracted.append({'passage_id':passage['id'],**facts})
         work['extracted']=extracted
         checkpoint()
