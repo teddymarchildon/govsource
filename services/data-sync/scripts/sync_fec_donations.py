@@ -188,13 +188,13 @@ def normalize_receipt(row, cycle, line, scope='all'):
     if not isinstance(nested, dict) or nested.get('cycle') != cycle:
         raise FECError('Missing cycle-specific receiving committee metadata')
     ids = nested.get('candidate_ids')
-    if not isinstance(ids, list) or not ids:
-        raise FECError('Receiving committee has no candidate mapping')
-    # Some FEC committee histories include the committee's own C-ID in this
-    # candidate list. It is not a candidate; keep the actual H/S associations.
-    ids = [cid for cid in ids if cid != recipient]
-    if not ids:
-        raise FECError('Receiving committee has no candidate mapping')
+    if ids is not None and not isinstance(ids, list):
+        raise FECError('Invalid candidate mapping list')
+    # This nullable upstream list can include self-referencing committee IDs or
+    # presidential IDs. Only H/S IDs can identify our congressional recipients.
+    # Keep receipts with no usable link; the totals view excludes unattributed
+    # receipts rather than assigning their money to a guessed candidate.
+    ids = [cid for cid in (ids or []) if isinstance(cid, str) and re.fullmatch(r'[HS][0-9A-Z]{8}', cid)]
     records = [committee_record(nested, recipient, row.get('committee_name'))]
     for cid in sorted(set(ids)):
         candidate_id(cid)

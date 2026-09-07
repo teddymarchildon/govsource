@@ -60,6 +60,9 @@ Congress members. Verified member links can be added later and survive refreshes
 Multi-candidate committee links are retained as evidence but excluded from the
 candidate totals view to avoid multiplying money. Inspect those mappings before
 adding attribution rules. Missing coverage must not be interpreted as zero.
+The nullable source candidate list can contain committee IDs or presidential
+IDs. Only House/Senate candidate IDs become links; receipts without a usable
+link are retained in the contribution table and omitted from candidate totals.
 
 FEC IDs and pagination indices retain their exact representation, including
 large `sub_id` values. Money uses `numeric(18,2)`, sent as decimal strings.

@@ -167,5 +167,16 @@ def test_fec_candidate_list_can_contain_the_receiving_committee_itself():
     result = normalize_receipt(row, 2026, '11B')
     assert [r['data']['candidate_id'] for r in result if r['kind'] == 'link'] == ROWS[0]['committee']['candidate_ids']
     row['committee']['candidate_ids'] = [row['committee_id']]
-    with pytest.raises(FECError, match='no candidate mapping'):
-        normalize_receipt(row, 2026, '11B')
+    result = normalize_receipt(row, 2026, '11B')
+    assert not any(r['kind'] == 'link' for r in result)
+    assert any(r['kind'] == 'contribution' for r in result)
+
+
+@pytest.mark.parametrize('ids', [None, [], ['P40019937'], ['H4NH02399', 'P40019937']])
+def test_nullable_and_out_of_scope_candidate_links_do_not_drop_receipts(ids):
+    row = copy.deepcopy(ROWS[0])
+    row['committee']['candidate_ids'] = ids
+    result = normalize_receipt(row, 2026, '11B')
+    assert any(r['kind'] == 'contribution' for r in result)
+    assert [r['data']['candidate_id'] for r in result if r['kind'] == 'link'] == (
+        ['H4NH02399'] if ids and 'H4NH02399' in ids else [])
