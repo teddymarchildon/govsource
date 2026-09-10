@@ -35,3 +35,5 @@ jobs:
       - run: pip install -r requirements.runtime.txt
       - name: Sync opinions within the shared daily allowance
         run: python scripts/run_pipeline_source.py courtlistener
+      - name: Recover stale court references within the same lock and allowance
+        run: python scripts/run_pipeline_source.py courtlistener --reference --if-needed

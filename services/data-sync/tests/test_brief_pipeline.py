@@ -2,7 +2,7 @@ from copy import deepcopy
 from types import SimpleNamespace
 import pytest
 from brief_evidence import chunks, build_packet, EvidenceUnavailable, fingerprint
-from process_briefs import citation_errors, validate_draft, verification_passes, draft_claims, process
+from process_briefs import citation_errors, validate_draft, verification_passes, draft_claims, process, publish_ready
 from check_brief_pipeline import problems
 
 TEXT='The proposed rule would require annual reporting for large operators. Comments close on October 1, 2026. Small operators are exempt.'
@@ -34,6 +34,17 @@ def test_exact_quotes_and_numbers_are_checked():
     assert any('Unsupported number' in e for e in citation_errors(bad,[PASSAGE]))
     bad=claim();bad['evidence'][0]['quote']='Invented quotation.'
     assert citation_errors(bad,[PASSAGE])
+
+
+def test_wrapped_quote_is_restored_to_literal_source_without_changing_words():
+    text='The agency requires\n    annual reporting for large operators.'
+    c=claim();c['evidence'][0]['quote']='The agency requires annual reporting for large operators.'
+    assert citation_errors(c,[{**PASSAGE,'text':text}])==[]
+    assert c['evidence'][0]['quote']==text
+    c['evidence'][0]['quote']='The agency requires annual reporting for small operators.'
+    assert citation_errors(c,[{**PASSAGE,'text':text}])
+    c['evidence'][0]={'passage_id':'wrong','quote':text}
+    assert citation_errors(c,[{**PASSAGE,'text':text}])
 
 
 def test_all_prose_including_headline_needs_evidence():
@@ -183,3 +194,49 @@ def test_extraction_transport_errors_still_fail_the_worker():
 def test_health_alerts_when_sources_never_ran():
     overview={'sources':[{'source':'congress','last_success_at':None,'status':'idle'}],'source_errors':[],'oldest_waiting':None}
     assert 'congress' in problems(overview)[0]
+
+
+def test_verification_interruption_resumes_exact_draft():
+    class InterruptedAI(FakeAI):
+        def call(self,stage,*a,**kw):
+            if stage=='verify': raise ConnectionError('provider unavailable')
+            return super().call(stage,*a,**kw)
+    db=DB();j=job()
+    with pytest.raises(ConnectionError): process(db,j,'lease',ai_factory=InterruptedAI)
+    j['work']=[args['p_work'] for name,args in db.calls if name=='save_brief_work'][-1]
+    assert j['work']['draft']==draft()
+    ai=FakeAI(None,None)
+    assert process(DB(),j,'lease',ai_factory=lambda *a:ai)=='verified'
+    assert ai.stages==['verify']
+
+
+def test_paused_publication_is_visible_in_health():
+    overview={'sources':[],'settings':{'publication_enabled':False},'counts':{'verified':2}}
+    assert any('Publication is paused' in p for p in problems(overview))
+
+
+@pytest.mark.parametrize('enabled',[False,True])
+def test_publication_drain_honors_pause_and_database_gates(enabled):
+    calls=[]
+    class Publisher:
+        def rpc(self,name,args):
+            calls.append(name)
+            data={'brief_pipeline_overview':{'settings':{'publication_enabled':enabled,'daily_publication_limit':30},
+                'counts':{'verified':2},'spending':{}},'publishable_brief_jobs':[{'id':1},{'id':2}],
+                'publish_verified_brief':123 if args.get('p_job')==1 else None}[name]
+            return SimpleNamespace(execute=lambda:SimpleNamespace(data=data))
+    assert publish_ready(Publisher(),30)==(1 if enabled else 0)
+    assert calls.count('publish_verified_brief')==(2 if enabled else 0)
+
+
+def test_recovery_only_reuses_valid_next_passage_and_preserves_original():
+    from recover_brief_extractions import recovered_work
+    j=job()
+    j['work']={'selection':{'important':True},'extraction_repair':{'passage_id':'s1','previous':{'facts':[claim()],'qualifications':[]}}}
+    work=recovered_work(j)
+    assert work['extracted'][0]['passage_id']=='s1'
+    assert 'extraction_repair' not in work and 'extraction_repair' in j['work']
+    j['work']['extraction_repair']['previous']['facts'][0]['evidence'][0]['quote']='Invented quotation.'
+    assert recovered_work(j) is None
+    j['work']['extraction_repair'].update(passage_id='wrong',previous={'facts':[claim()]})
+    assert recovered_work(j) is None

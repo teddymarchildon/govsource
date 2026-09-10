@@ -35,6 +35,14 @@ def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
     errors = []
     for ref in refs:
         quote = ref.get('quote','')
+        source = by_id.get(ref.get('passage_id'), '')
+        if len(quote.strip()) >= 12 and quote not in source:
+            # Recover only whitespace changes introduced when copying wrapped
+            # government text. Store the literal original quote for the audit.
+            pattern = r'\s+'.join(re.escape(word) for word in quote.strip().split())
+            match = re.search(pattern,source)
+            if match:
+                quote = ref['quote'] = match.group(0)
         if len(quote.strip()) < 12 or quote not in by_id.get(ref.get('passage_id'), ''):
             errors.append('Evidence quotation is missing or does not match its source')
     # Every numeric literal must occur in one of the cited passages. Semantic verification
@@ -127,6 +135,7 @@ def complete(db: Any, job: dict, token: str, status: str, reason: str, *, draft=
 
 def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> str:
     ai = ai_factory(db,job['id'])
+    ai.deadline = deadline
     packet = job['evidence']
     previous = db.table('brief').select('title,dek,published_at,generation_metadata').eq('primary_item_id',job['item_id']).in_('primary_item_type',[job['item_type'],job['source_type']]).order('published_at',desc=True).limit(5).execute().data or []
     work = job.get('work') or {}
@@ -159,7 +168,8 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
                 'quote (at least 12 characters) and this passage_id. Copy quotes exactly, including whitespace and punctuation; '
                 'do not paraphrase quotes or insert ellipses. Every number in a claim must occur in this passage. '
                 'Preserve dates, scope, exceptions and opinion type. Address validation feedback using the original passage. '
-                'Do not require facts where the passage contains none.',
+                'Do not require facts where the passage contains none. '
+                f'Every evidence entry must use passage_id "{passage["id"]}" exactly.',
                 {'passage':passage,'previous_extraction':repair.get('previous'),'feedback':repair['feedback']},EXTRACTION)
             errors = [f'fact_{i}: {error}' for i,fact in enumerate(facts['facts'],1)
                       for error in citation_errors(fact,[passage])]
@@ -183,7 +193,7 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
     for repair in range(work.get('repair',0),3):
         if deadline and time.monotonic()>deadline:
             raise TimeoutError('Run time budget reached')
-        draft = ai.call('write',
+        draft = work.get('draft') or ai.call('write',
             'Write a neutral, plain-English news brief: specific headline <=180 characters, one complete dek sentence <=300 '
             'characters, 3-5 standalone points <=900 characters each, optional short context, 1-3 topics. '
             'Every nonempty field needs supporting exact quotes and passage IDs from the extracted evidence. '
@@ -193,10 +203,17 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             {'metadata':job['source_metadata'],'evidence':extracted,'feedback':feedback},DRAFT)
         feedback = validate_draft(draft,packet)
         if feedback:
+            work.pop('draft',None)
             work.update({'repair':repair+1,'feedback':feedback})
             checkpoint()
             last_draft,last_report = draft,{'passed':False,'deterministic_passed':False,'issues':feedback}
             continue
+        # Reuse this exact validated draft after a timeout/provider failure. A new
+        # draft would discard paid work and require a fresh verification anyway.
+        work['draft'] = draft
+        checkpoint()
+        if deadline and time.monotonic()>deadline:
+            raise TimeoutError('Run time budget reached before verification')
         # Each verifier sees original source text, independent of the extractor.
         # Full packet within the explicit cap avoids checking only writer-selected excerpts.
         report = ai.call('verify',
@@ -217,6 +234,7 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             complete(db,job,token,'verified',selection['reason'],draft=assembled,report=report,ai=ai)
             return 'verified'
         feedback = report.get('issues',[])+report.get('material_omissions',[])+[c['reason'] for c in report['claims'] if not c['supported']]
+        work.pop('draft',None)
         work.update({'repair':repair+1,'feedback':feedback})
         checkpoint()
     complete(db,job,token,'withheld','Verification failed after two repairs',draft=last_draft,report=last_report,ai=ai)
@@ -224,8 +242,24 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
 
 
 def publish_ready(db: Any, limit: int) -> int:
+    overview = db.rpc('brief_pipeline_overview',{}).execute().data
+    settings = overview['settings']
+    log.info('brief_publication_status %s',json.dumps({'enabled':settings['publication_enabled'],
+        'daily_limit':settings['daily_publication_limit'],'verified':overview['counts'].get('verified',0),
+        'spending':overview['spending']}))
+    if not settings['publication_enabled']:
+        log.warning('Publication is paused; verified briefs remain queued')
+        return 0
     jobs = db.rpc('publishable_brief_jobs',{'p_limit':limit}).execute().data or []
-    return sum(bool(db.rpc('publish_verified_brief',{'p_job':j['id']}).execute().data) for j in jobs)
+    published = 0
+    for job in jobs:
+        result = db.rpc('publish_verified_brief',{'p_job':job['id']}).execute().data
+        if result:
+            published += 1
+            log.info('Published verified job %s as brief %s',job['id'],result)
+        else:
+            log.warning('Publication held for job %s: database gate (pause, daily cap, source change, or edited coverage)',job['id'])
+    return published
 
 
 def main() -> int:
@@ -236,12 +270,16 @@ def main() -> int:
     parser.add_argument('--discover-only',action='store_true')
     parser.add_argument('--seed-days',type=int,help='Queue existing unbriefed records updated in the prior 1-90 days')
     parser.add_argument('--publish',action='store_true',help='Publish verified jobs only when DB publication switch is enabled')
+    parser.add_argument('--publish-only',action='store_true',help='Drain verified results without discovery or model calls')
     args = parser.parse_args()
     if not 1<=args.limit<=100 or not 1<=args.discovery_limit<=1000 or not 1<=args.max_minutes<=20:
         parser.error('Limits: jobs 1-100, discovery 1-1000, minutes 1-20')
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
     db = create_supabase_client()
+    if args.publish_only:
+        log.info('brief_pipeline_summary %s',json.dumps({'published':publish_ready(db,args.limit)}))
+        return 0
     if args.seed_days is not None:
         if not 1<=args.seed_days<=90:
             parser.error('--seed-days must be 1-90')
@@ -275,6 +313,7 @@ def main() -> int:
                 log.exception('Job %s failed',job['id'])
     if args.publish:
         summary['published']=publish_ready(db,args.limit)
+    summary['failed']=failures
     log.info('brief_pipeline_summary %s',json.dumps(summary))
     return 1 if failures else 0
 

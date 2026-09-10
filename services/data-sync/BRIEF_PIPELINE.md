@@ -29,6 +29,10 @@ The manual Federal Register recovery workflow uses the same source lock and wrap
 
 Configure GitHub failed-workflow notifications to receive health/failure alerts. Health checks fail on stale sources, expired workers, backlog older than 24 hours, and repeatedly unavailable evidence. Successful runs produce logs without messages to external channels.
 
+The processor workflow drains verified results before and after generation, including after individual generation failures. Each generation run handles up to 25 jobs within its existing 20-minute time budget. `python scripts/process_briefs.py --publish-only --limit 30` drains verified work without discovery or model calls; it still honors every database publication gate. Publication logs show the pause switch, verified count, daily cap, usage, and published IDs. A paused pipeline with verified work now raises a health alert.
+
+Daily CourtListener runs also retry failed/expired court-reference refreshes, or refresh references older than seven days, using the existing shared lock and daily request allowance. A live lease is never displaced.
+
 ## Models and cost controls
 
 Defaults retain `gpt-5-mini` for writing and use a separate, independent verification request. The verifier receives all original passages, not only the extracted facts. `OPENAI_BRIEF_MODEL` and `OPENAI_BRIEF_VERIFIER_MODEL` can be overridden as repository variables.
@@ -36,6 +40,8 @@ Defaults retain `gpt-5-mini` for writing and use a separate, independent verific
 `BRIEF_PRICING_MODELS` lists the models covered by the configured pricing ceilings. If either selected model is missing, the worker refuses to call the API. Set `BRIEF_INPUT_USD_PER_MILLION` and `BRIEF_OUTPUT_USD_PER_MILLION` to ceilings that cover **both** models, including reasoning output. Default workflow values are 0.25 and 2.00 for `gpt-5-mini`; recheck provider pricing before changing models. These are accounted estimates, not a provider invoice.
 
 Before each call, the database serializes a conservative reservation against the UTC daily budget. Completed calls record response ID, tokens, model and estimated cost. An uncertain request retains the entire reservation. No automatic HTTP retry can create an unreserved model request. Budget exhaustion defers work to the next UTC day without consuming a failure attempt. Daily publication limits also apply to automated corrections.
+
+Provider completion status, incomplete reason, error code, stage, response ID, output allowance, and token counts are recorded under `brief_api_call.usage.response_diagnostics`. The ledger's `completed` status means usage was accounted, not that generation succeeded. Only an explicit `max_output_tokens` response gets one immediate retry, increasing the allowance from 8,000 to 16,000 with a separate budget reservation and a deadline check. Unknown provider failures keep the normal bounded job retries. Prompt and response bodies are not logged.
 
 ## Data models
 
@@ -61,6 +67,10 @@ CourtListener retains its current modified-time checkpoints, daily schedule and 
 Generation waits for a successful source run; a failed/incomplete source is held until a successful recovery. Other sources can continue independently. Discovery compares source revision and metadata again after reading Storage. Publication rechecks source status, revision and metadata. All automated file transfers must run through the wrapper so the source is marked running before Storage is changed.
 
 Every nonempty headline, dek, point and context claim requires an exact supporting quotation. Numeric literals must occur in cited passages. A separate verifier checks entailment, legal status and omitted qualifications. A passing top-level score is insufficient: every field must be checked and supported. Two repair attempts are allowed; unresolved claims are withheld. Transient failures retry up to three worker attempts. Time-budget deferral saves extraction work without consuming failure attempts.
+
+Whitespace-only copying differences are resolved back to the literal source quotation before validation; words, punctuation, numbers and passage identity must still match. Validated drafts are checkpointed before verification, so a timeout or provider failure resumes the same draft without paying to rewrite it. Rejected drafts still use the existing bounded repair process.
+
+For existing extraction failures, run `python scripts/recover_brief_extractions.py` to preview jobs whose saved extraction now passes. Add `--apply` to requeue only those jobs, preserving the validated extraction and prior history. Source revision and metadata must still match, and a concurrent job update prevents recovery. This performs no model calls and publishes nothing; the jobs must complete normal draft and independent verification stages.
 
 Full text is never silently truncated. Packets above 300,000 characters, missing readable text, ambiguous bill versions, enacted bills without enrolled/law text, or court packets without a lead/combined opinion are deferred with a reason. PDF-only records currently wait for a stored readable format; OCR is not part of this release.
 

@@ -9,6 +9,8 @@ from sync_common import create_supabase_client
 def problems(overview, now=None):
     now=now or datetime.now(timezone.utc)
     alerts=[]
+    if overview.get('counts',{}).get('verified',0) and not overview.get('settings',{}).get('publication_enabled',True):
+        alerts.append('Publication is paused with verified briefs waiting')
     for source in overview['sources']:
         allowance={'congress':8,'federal_register':6,'courtlistener':36,'courtlistener_reference':192,'processor':3}[source['source']]
         stamp=source.get('last_success_at')
