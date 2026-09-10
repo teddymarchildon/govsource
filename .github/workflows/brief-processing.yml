@@ -38,5 +38,10 @@ jobs:
           cache: pip
           cache-dependency-path: services/data-sync/requirements.runtime.txt
       - run: pip install -r requirements.runtime.txt
+      - name: Publish already verified results
+        run: python scripts/process_briefs.py --publish-only --limit 30
       - name: Process durable jobs and publish only verified results
-        run: python scripts/run_pipeline_source.py processor -- --limit 10 --max-minutes 20 --publish
+        run: python scripts/run_pipeline_source.py processor -- --limit 25 --max-minutes 20
+      - name: Publish verified results even after an individual job fails
+        if: ${{ always() && !cancelled() }}
+        run: python scripts/process_briefs.py --publish-only --limit 30

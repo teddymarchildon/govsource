@@ -357,13 +357,20 @@ def main(argv=None):
         partial = isinstance(exc, RequestBudgetReached)
         # Unknown client/transport exceptions may contain credentials; log only the type.
         message = str(exc) if isinstance(exc, FECError) else f'{type(exc).__name__}: import failed; previous data preserved'
+        # SQLSTATE/PostgREST codes explain failures without logging payloads,
+        # request URLs, donor records, or credentials from arbitrary exceptions.
+        code = str(getattr(exc,'code',''))
+        if re.fullmatch(r'(?:[0-9A-Z]{5}|PGRST[0-9]{3})',code):
+            message += f' (database code {code})'
         if store:
             try:
                 store.finish('partial' if partial else 'failed', message)
             except Exception:
                 LOG.error('Unable to release FEC lease; it expires automatically')
         LOG.error('data_sync_summary=%s', json.dumps({'job': 'fec', 'status': 'partial' if partial else 'failed',
-            'requests': client.requests if client else 0, 'error': message}))
+            'requests': client.requests if client else 0, 'error': message,
+            'phase':getattr(store,'checkpoint',{}).get('phase'),
+            'fetched':getattr(store,'checkpoint',{}).get('fetched')}))
         return 2 if partial else 1
 
 

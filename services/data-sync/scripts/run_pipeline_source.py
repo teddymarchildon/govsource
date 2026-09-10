@@ -17,6 +17,14 @@ log = logging.getLogger(__name__)
 SCRIPTS = Path(__file__).resolve().parent
 
 
+def reference_due(row, now=None):
+    now = now or datetime.now(timezone.utc)
+    if row['status'] == 'running':
+        return bool(row.get('lease_until') and datetime.fromisoformat(row['lease_until'].replace('Z','+00:00')) < now)
+    stamp = row.get('last_success_at')
+    return row['status'] != 'success' or not stamp or now-datetime.fromisoformat(stamp.replace('Z','+00:00')) >= timedelta(days=7)
+
+
 def congress(db, checkpoint):
     from sync_bills_supabase import CongressClient, sync_bill, BASE_URL
     client = CongressClient(require_env('CONGRESS_API_KEY'))
@@ -99,8 +107,11 @@ def main():
     parser.add_argument('source',choices=['congress','federal_register','courtlistener','processor'])
     parser.add_argument('--recovery',action='store_true')
     parser.add_argument('--reference',action='store_true')
+    parser.add_argument('--if-needed',action='store_true',help='Refresh court references only if stale, failed, or expired')
     parser.add_argument('--document-number',action='append')
     args, command=parser.parse_known_args()
+    if args.if_needed and not (args.source=='courtlistener' and args.reference):
+        parser.error('--if-needed requires courtlistener --reference')
     if command and args.source!='processor':
         parser.error('Unexpected arguments: '+ ' '.join(command))
     load_dotenv()
@@ -109,6 +120,11 @@ def main():
     db=create_supabase_client()
     token=str(uuid4())
     run_source='courtlistener_reference' if args.source=='courtlistener' and args.reference else args.source
+    if args.if_needed:
+        state=db.table('brief_source_run').select('status,last_success_at,lease_until').eq('source',run_source).single().execute().data
+        if not reference_due(state):
+            log.info('Court references are fresh or have an active worker')
+            return 0
     if not db.rpc('begin_brief_source_run',{'p_source':run_source,'p_token':token}).execute().data:
         log.info('Source already has an active run; work remains queued')
         return 0

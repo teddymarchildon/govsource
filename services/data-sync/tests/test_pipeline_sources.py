@@ -3,6 +3,19 @@ import pytest
 import run_pipeline_source as runner
 import sync_bills_supabase
 import sync_federal_register_docs
+from datetime import datetime, timezone
+
+
+def test_reference_recovery_respects_live_lease_and_recovers_expired_worker():
+    now=datetime(2026,9,10,tzinfo=timezone.utc)
+    row={'status':'running','lease_until':'2026-09-11T00:00:00Z','last_success_at':None}
+    assert not runner.reference_due(row,now)
+    row['lease_until']='2026-09-09T00:00:00Z'
+    assert runner.reference_due(row,now)
+    row.update(status='success',last_success_at='2026-09-09T00:00:00Z')
+    assert not runner.reference_due(row,now)
+    row['last_success_at']='2026-09-01T00:00:00Z'
+    assert runner.reference_due(row,now)
 
 
 class DB:

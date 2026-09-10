@@ -6,6 +6,10 @@ from typing import Any
 import requests
 from generate_briefs_batch import response_text
 import json
+import logging
+import time
+
+log = logging.getLogger(__name__)
 
 PROMPT_VERSION = 'continuous-v2-plain-english'
 
@@ -35,6 +39,10 @@ class BudgetExhausted(RuntimeError):
     pass
 
 
+class IncompleteResponse(ValueError):
+    """Provider diagnostics without prompts, evidence, or credentials."""
+
+
 class AI:
     def __init__(self, db: Any, job_id: int):
         self.db, self.job_id = db, job_id
@@ -49,14 +57,28 @@ class AI:
         if not all(math.isfinite(x) and x > 0 for x in (self.input_rate,self.output_rate)):
             raise ValueError('Model price ceilings must be finite and positive')
         self.key = os.environ['OPENAI_API_KEY']
+        self.deadline = None
 
     def call(self, stage: str, instructions: str, payload: Any, schema: dict, *, verify=False) -> dict:
+        # A token-limit retry is a new, separately reserved request. Other failures
+        # retain the durable worker's bounded retries rather than retrying blindly.
+        for output_bound in (8000, 16000):
+            if self.deadline is not None and time.monotonic() > self.deadline:
+                raise TimeoutError('Run time budget reached before model call')
+            result, diagnostics = self._call(stage, instructions, payload, schema, verify, output_bound)
+            if result is not None:
+                return result
+            if diagnostics['reason'] != 'max_output_tokens' or output_bound == 16000:
+                raise IncompleteResponse('Model response incomplete: ' + json.dumps(diagnostics))
+            log.warning('Retrying token-limited response with a larger reserved allowance: %s', json.dumps(diagnostics))
+        raise AssertionError('Unreachable')
+
+    def _call(self, stage, instructions, payload, schema, verify, output_bound):
         model = self.verifier if verify else self.writer
         content = json.dumps(payload, ensure_ascii=False)
         instructions = BASE + instructions
         # UTF-8 bytes conservatively bound input tokens; include schema and protocol overhead.
         input_bound = len((content + instructions + json.dumps(schema)).encode()) + 4096
-        output_bound = 8000
         amount = math.ceil((input_bound*self.input_rate+output_bound*self.output_rate))/1_000_000
         try:
             reservation = self.db.rpc('reserve_brief_api_call', {'p_job':self.job_id,'p_model':model,'p_stage':stage,'p_amount':amount}).execute().data
@@ -70,10 +92,21 @@ class AI:
         response.raise_for_status()
         body = response.json()
         usage = body.get('usage') or {}
+        diagnostics = {'stage':stage, 'model':model, 'response_id':body.get('id'),
+            'status':body.get('status'), 'reason':(body.get('incomplete_details') or {}).get('reason'),
+            'error_code':(body.get('error') or {}).get('code'), 'max_output_tokens':output_bound,
+            'input_tokens':usage.get('input_tokens'), 'output_tokens':usage.get('output_tokens'),
+            'reasoning_tokens':(usage.get('output_tokens_details') or {}).get('reasoning_tokens')}
+        # Keep provider completion separate from accounting completion. Existing
+        # ledger status describes whether usage was settled, not editorial success.
+        update = {'response_id':body.get('id'), 'usage':{**usage, 'response_diagnostics':diagnostics}}
         # Missing usage remains fully reserved, including timeouts/refusals.
         if isinstance(usage.get('input_tokens'),int) and isinstance(usage.get('output_tokens'),int):
             cost = (usage['input_tokens']*self.input_rate+usage['output_tokens']*self.output_rate)/1_000_000
-            self.db.table('brief_api_call').update({'actual_usd':cost,'response_id':body.get('id'),'usage':usage,'status':'completed'}).eq('id',reservation).execute()
+            update.update(actual_usd=cost,status='completed')
+        self.db.table('brief_api_call').update(update).eq('id',reservation).execute()
         if body.get('status') != 'completed':
-            raise ValueError('Model did not complete its structured response')
-        return json.loads(response_text(body))
+            return None, diagnostics
+        if any(c.get('type') == 'refusal' for item in body.get('output',[]) for c in item.get('content',[])):
+            raise IncompleteResponse('Model refused structured response: ' + json.dumps(diagnostics))
+        return json.loads(response_text(body)), diagnostics
