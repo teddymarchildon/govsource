@@ -210,7 +210,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
                 key={item.href}
                 href={item.href}
                 aria-current={isSectionActive(item.paths) ? 'page' : undefined}
-                className={`relative inline-flex h-12 items-center whitespace-nowrap text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary after:transition-opacity ${isSectionActive(item.paths) ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
+                className={`relative inline-flex h-12 items-center whitespace-nowrap font-serif text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary after:transition-opacity ${isSectionActive(item.paths) ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
               >
                 {item.label}
               </Link>
@@ -220,7 +220,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               <button
                 type="button"
                 onClick={() => { setTopicsOpen((open) => !open); setSourcesOpen(false); setWatchingOpen(false); }}
-                className={`relative inline-flex h-12 items-center gap-1 whitespace-nowrap text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary ${topicsOpen || pathname.startsWith('/topics') ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
+                className={`relative inline-flex h-12 items-center gap-1 whitespace-nowrap font-serif text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary ${topicsOpen || pathname.startsWith('/topics') ? 'text-primary after:opacity-100' : 'text-muted-foreground after:opacity-0 hover:text-foreground'}`}
                 aria-expanded={topicsOpen}
                 aria-haspopup="menu"
               >
@@ -257,7 +257,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               <button
                 type="button"
                 onClick={() => { setSourcesOpen((open) => !open); setTopicsOpen(false); setWatchingOpen(false); }}
-                className={`inline-flex h-12 items-center gap-1 text-sm font-semibold transition-colors ${sourcesOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`inline-flex h-12 items-center gap-1 font-serif text-sm font-semibold transition-colors ${sourcesOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                 aria-expanded={sourcesOpen}
                 aria-haspopup="menu"
               >
@@ -296,7 +296,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
             <button
               type="button"
               onClick={() => { setWatchingOpen((open) => !open); setSourcesOpen(false); setTopicsOpen(false); }}
-              className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 font-serif text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-expanded={watchingOpen}
               aria-haspopup="menu"
             >
@@ -325,7 +325,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
                     <Link
                       href={item.href}
                       aria-current={isSectionActive(item.paths) ? 'page' : undefined}
-                      className={`flex rounded-md px-3 py-2 text-sm font-medium transition-colors ${isSectionActive(item.paths) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                      className={`flex rounded-md px-3 py-2 font-serif text-sm font-medium transition-colors ${isSectionActive(item.paths) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
                     >
                       {item.label}
                     </Link>
