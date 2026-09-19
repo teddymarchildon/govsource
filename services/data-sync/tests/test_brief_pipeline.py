@@ -289,3 +289,11 @@ def test_filtered_job_is_withheld_and_worker_continues(monkeypatch):
     result=process_briefs.process_queue(Queue(),3,float('inf'))
     assert result=={'failed':0,'processed':2,'claimed':2,'withheld':1,'verified':1}
     assert any(n=='finish_brief_job' and a['p_status']=='withheld' for n,a in calls)
+
+
+def test_storage_outage_is_not_classified_as_waiting_for_source():
+    import httpx
+    from brief_evidence import read_text
+    def download(path): raise httpx.ConnectError('offline')
+    db=SimpleNamespace(storage=SimpleNamespace(from_=lambda bucket:SimpleNamespace(download=download)))
+    with pytest.raises(httpx.ConnectError): read_text(db,[('bucket','file',False)])

@@ -9,6 +9,7 @@ from typing import Any
 import html2text
 
 from generate_briefs_batch import congress_url
+from sync_common import error_status
 
 MAX_DOCUMENT_CHARS = 300_000
 CHUNK_CHARS = 18_000
@@ -34,6 +35,7 @@ def clean_text(value: str, markup: bool = False) -> str:
 
 
 def read_text(db: Any, options: list[tuple[str, Any, bool]]) -> str:
+    read_error = None
     for bucket, path, markup in options:
         if not path:
             continue
@@ -46,8 +48,13 @@ def read_text(db: Any, options: list[tuple[str, Any, bool]]) -> str:
                 return text
         except EvidenceUnavailable:
             raise
-        except Exception:
+        except Exception as exc:
+            # A service outage is retryable, not a permanent absence of evidence.
+            if not isinstance(exc,UnicodeDecodeError) and error_status(exc) != 404:
+                read_error = exc
             continue
+    if read_error is not None:
+        raise read_error
     raise EvidenceUnavailable('Complete readable source text is not yet stored; retry after source recovery')
 
 
