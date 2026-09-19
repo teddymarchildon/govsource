@@ -23,6 +23,8 @@ from sync_common import (
     iter_paginated_items,
     require_env,
     upload_bytes,
+    upsert_preserving_missing,
+    error_status,
 )
 
 logging.basicConfig(
@@ -144,10 +146,12 @@ def parse_bill_data(payload: Dict[str, Any]) -> Dict[str, Any]:
             else None
         ),
         "law_title": bill.get("title") if law_type else None,
-        "sponsors": bill.get("sponsors") or [],
+        "sponsors": bill.get("sponsors"),
         "cosponsors_url": (bill.get("cosponsors") or {}).get("url"),
         "texts_url": (bill.get("textVersions") or {}).get("url"),
         "summaries_url": (bill.get("summaries") or {}).get("url"),
+        "empty_collections": [key for key in ('cosponsors','textVersions','summaries')
+                              if (bill.get(key) or {}).get('count') == 0],
     }
 
 
@@ -252,7 +256,14 @@ def upload_bill_texts(
             if not source_url:
                 text[path_key] = None
                 continue
-            content, content_type = client.download(source_url)
+            try:
+                content, content_type = client.download(source_url)
+            except UpstreamAPIError as exc:
+                if error_status(exc) in (401, 403):
+                    raise
+                logger.warning("Bill %s: %s unavailable; preserving any stored copy", bill['bill_unique_id'], source_key)
+                text[path_key] = None
+                continue
             text[path_key] = upload_bytes(
                 supabase,
                 bucket,
@@ -282,33 +293,42 @@ def sync_bill(supabase: Any, client: CongressClient, detail_url: str) -> Dict[st
             "law_title",
         )
     }
-    result = (
-        supabase.table("bill").upsert(db_row, on_conflict="bill_unique_id").execute()
-    )
+    # A record being refreshed cannot become source evidence midway through a sync.
+    db_row = {key:value for key,value in db_row.items() if value is not None and value != ''}
+    db_row['sync_pending'] = True
+    result = upsert_preserving_missing(supabase, "bill", db_row, "bill_unique_id")
     if not result.data:
         raise RuntimeError(f"Bill upsert returned no ID for {bill['bill_unique_id']}")
     bill_id = result.data[0]["id"]
 
-    sponsors = bill["sponsors"]
-    cosponsors = (
-        client.collection(bill["cosponsors_url"], "cosponsors")
-        if bill["cosponsors_url"]
-        else []
-    )
-    sponsor_ids = ensure_congressmen(supabase, sponsors)
-    cosponsor_ids = ensure_congressmen(supabase, cosponsors)
+    missing = []
+    def optional(name, fetch):
+        try:
+            value = fetch()
+            if value is None:
+                missing.append(name)
+            return value
+        except UpstreamAPIError as exc:
+            # Authentication errors are configuration failures, not missing data.
+            if error_status(exc) in (401, 403):
+                raise
+            missing.append(name)
+            logger.warning("Bill %s: %s unavailable (%s)", bill['bill_unique_id'], name, exc)
+            return None
 
-    texts = (
-        parse_text_versions(client.collection(bill["texts_url"], "textVersions"))
-        if bill["texts_url"]
-        else []
-    )
-    texts = upload_bill_texts(supabase, client, bill, texts)
-    actions = client.actions(bill["congress"], bill["type"], bill["number"])
-
-    summaries = []
-    if bill["summaries_url"]:
-        for item in client.collection(bill["summaries_url"], "summaries"):
+    sponsor_ids = optional('sponsors', lambda: ensure_congressmen(supabase, bill['sponsors']) if bill['sponsors'] is not None else None)
+    cosponsor_ids = optional('cosponsors', lambda: ensure_congressmen(supabase,
+        client.collection(bill['cosponsors_url'], 'cosponsors')) if bill['cosponsors_url'] else ([] if 'cosponsors' in bill['empty_collections'] else None))
+    texts = optional('texts', lambda: parse_text_versions(client.collection(bill['texts_url'], 'textVersions')) if bill['texts_url'] else ([] if 'textVersions' in bill['empty_collections'] else None))
+    if texts is not None:
+        texts = upload_bill_texts(supabase, client, bill, texts)
+        if any(t.get(fmt+'_url') and not t.get(fmt+'_file_path') for t in texts for fmt in ('pdf','html','xml')):
+            missing.append('text_files')
+    actions = optional('actions', lambda: client.actions(bill['congress'], bill['type'], bill['number']))
+    raw_summaries = optional('summaries', lambda: client.collection(bill['summaries_url'], 'summaries') if bill['summaries_url'] else ([] if 'summaries' in bill['empty_collections'] else None))
+    summaries = None if raw_summaries is None else []
+    if raw_summaries is not None:
+        for item in raw_summaries:
             if item.get("actionDate") and item.get("text"):
                 summaries.append(
                     {
@@ -318,7 +338,7 @@ def sync_bill(supabase: Any, client: CongressClient, detail_url: str) -> Dict[st
                 )
 
     supabase.rpc(
-        "replace_bill_children",
+        "complete_bill_sync",
         {
             "p_bill_id": bill_id,
             "p_sponsor_ids": sponsor_ids,
@@ -326,9 +346,11 @@ def sync_bill(supabase: Any, client: CongressClient, detail_url: str) -> Dict[st
             "p_texts": texts,
             "p_actions": actions,
             "p_summaries": summaries,
+            "p_missing_fields": missing,
         },
     ).execute()
     logger.info("Synchronized %s", bill["bill_unique_id"])
+    bill['_missing_fields'] = missing
     return bill
 
 

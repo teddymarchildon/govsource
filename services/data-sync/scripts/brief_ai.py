@@ -43,6 +43,10 @@ class IncompleteResponse(ValueError):
     """Provider diagnostics without prompts, evidence, or credentials."""
 
 
+class ResponseWithheld(IncompleteResponse):
+    """An explicit provider refusal/filter requires review, not another attempt."""
+
+
 class AI:
     def __init__(self, db: Any, job_id: int):
         self.db, self.job_id = db, job_id
@@ -65,9 +69,23 @@ class AI:
         for output_bound in (8000, 16000):
             if self.deadline is not None and time.monotonic() > self.deadline:
                 raise TimeoutError('Run time budget reached before model call')
-            result, diagnostics = self._call(stage, instructions, payload, schema, verify, output_bound)
+            for attempt in range(2):
+                remaining = self.deadline-time.monotonic() if self.deadline is not None else 180
+                if remaining < 20:
+                    raise TimeoutError('Insufficient run time remaining for model call')
+                self.request_timeout = min(180, remaining-15)
+                try:
+                    result, diagnostics = self._call(stage, instructions, payload, schema, verify, output_bound)
+                    break
+                except (requests.Timeout, requests.ConnectionError):
+                    if attempt:
+                        raise
+                    log.warning('Transient model request failure; retrying once within the time and spending budgets')
+                    time.sleep(2)
             if result is not None:
                 return result
+            if diagnostics['reason'] == 'content_filter':
+                raise ResponseWithheld('Provider content filter; review required: ' + json.dumps(diagnostics))
             if diagnostics['reason'] != 'max_output_tokens' or output_bound == 16000:
                 raise IncompleteResponse('Model response incomplete: ' + json.dumps(diagnostics))
             log.warning('Retrying token-limited response with a larger reserved allowance: %s', json.dumps(diagnostics))
@@ -88,7 +106,7 @@ class AI:
             raise
         response = requests.post('https://api.openai.com/v1/responses', headers={'Authorization':f'Bearer {self.key}'},
             json={'model':model,'store':False,'instructions':instructions,'input':content,'max_output_tokens':output_bound,
-                  'text':{'format':{'type':'json_schema','name':f'brief_{stage}','strict':True,'schema':schema}}},timeout=(15,180))
+                  'text':{'format':{'type':'json_schema','name':f'brief_{stage}','strict':True,'schema':schema}}},timeout=(15,self.request_timeout))
         response.raise_for_status()
         body = response.json()
         usage = body.get('usage') or {}
@@ -108,5 +126,5 @@ class AI:
         if body.get('status') != 'completed':
             return None, diagnostics
         if any(c.get('type') == 'refusal' for item in body.get('output',[]) for c in item.get('content',[])):
-            raise IncompleteResponse('Model refused structured response: ' + json.dumps(diagnostics))
+            raise ResponseWithheld('Model refused structured response; review required: ' + json.dumps(diagnostics))
         return json.loads(response_text(body)), diagnostics

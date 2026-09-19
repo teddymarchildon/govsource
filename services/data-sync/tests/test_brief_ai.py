@@ -88,3 +88,40 @@ def test_expired_deadline_prevents_call(setup,monkeypatch):
     ai.deadline=1
     with pytest.raises(TimeoutError): ai.call('extract','instructions',{}, {})
     assert not db.reservations
+
+
+@pytest.mark.parametrize('body',[
+    {'status':'incomplete','incomplete_details':{'reason':'content_filter'}},
+    {'status':'completed','output':[{'content':[{'type':'refusal'}]}]},
+])
+def test_provider_filter_and_refusal_are_not_retried(setup,monkeypatch,body):
+    db,ai=setup
+    calls=responses(monkeypatch,[body])
+    with pytest.raises(brief_ai.ResponseWithheld): ai.call('extract','instructions',{}, {})
+    assert len(calls)==1
+
+
+def test_transport_retry_reserves_again_and_keeps_unknown_usage(setup,monkeypatch):
+    db,ai=setup
+    calls=[]
+    monkeypatch.setattr(brief_ai.time,'sleep',lambda _:None)
+    def post(*a,**kw):
+        calls.append(kw)
+        if len(calls)==1: raise brief_ai.requests.ReadTimeout('timeout')
+        return SimpleNamespace(raise_for_status=lambda:None,json=success)
+    monkeypatch.setattr(brief_ai.requests,'post',post)
+    assert ai.call('extract','instructions',{}, {})=={'ok':True}
+    assert len(db.reservations)==2 and len(db.updates)==1
+
+
+def test_deadline_bounds_network_timeout(setup,monkeypatch):
+    db,ai=setup
+    monkeypatch.setattr(brief_ai.time,'monotonic',lambda:100)
+    ai.deadline=150
+    calls=[]
+    def post(*a,**kw):
+        calls.append(kw)
+        return SimpleNamespace(raise_for_status=lambda:None,json=success)
+    monkeypatch.setattr(brief_ai.requests,'post',post)
+    ai.call('extract','instructions',{}, {})
+    assert calls[0]['timeout']==(15,35)

@@ -18,6 +18,10 @@ class EvidenceUnavailable(ValueError):
     pass
 
 
+class EvidenceReviewRequired(EvidenceUnavailable):
+    """Retrying unchanged source material cannot resolve this condition."""
+
+
 def fingerprint(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
 
@@ -38,7 +42,7 @@ def read_text(db: Any, options: list[tuple[str, Any, bool]]) -> str:
             text = clean_text(raw.decode('utf-8', errors='strict'), markup)
             if len(text) >= 120:
                 if len(text) > MAX_DOCUMENT_CHARS:
-                    raise EvidenceUnavailable('Source exceeds processing limit; full text must not be truncated')
+                    raise EvidenceReviewRequired('Source exceeds processing limit; full text must not be truncated')
                 return text
         except EvidenceUnavailable:
             raise
@@ -64,13 +68,15 @@ def chunks(text: str) -> list[str]:
 def build_packet(db: Any, source_type: str, row: dict) -> dict:
     documents = []
     if source_type == 'bill':
+        if row.get('sync_pending') or set(row.get('sync_missing_fields') or []) & {'actions','texts'}:
+            raise EvidenceUnavailable('Bill source refresh is incomplete; await text and actions')
         versions = row.get('texts') or []
         if not versions:
             raise EvidenceUnavailable('Bill text has not arrived')
         latest_date = max(str(t.get('date') or '') for t in versions)
         latest = [t for t in versions if str(t.get('date') or '') == latest_date]
         if len(latest) != 1:
-            raise EvidenceUnavailable('Latest bill text version is ambiguous')
+            raise EvidenceReviewRequired('Latest bill text version is ambiguous')
         version = latest[0]
         if row.get('law_enacted_date') and not re.search(r'enrolled|public law|private law', str(version.get('type')), re.I):
             raise EvidenceUnavailable('Enacted bill is missing its enrolled or law text')
@@ -106,7 +112,7 @@ def build_packet(db: Any, source_type: str, row: dict) -> dict:
     else:
         raise EvidenceUnavailable('Unsupported source')
     if sum(len(d[2]) for d in documents) > MAX_DOCUMENT_CHARS:
-        raise EvidenceUnavailable('Combined source packet exceeds processing limit')
+        raise EvidenceReviewRequired('Combined source packet exceeds processing limit')
     sources, passages = [], []
     for i, (label, url, text) in enumerate(documents, 1):
         source_id = f'source_{i}'

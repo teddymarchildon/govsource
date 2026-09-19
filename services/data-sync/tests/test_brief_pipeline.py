@@ -240,3 +240,52 @@ def test_recovery_only_reuses_valid_next_passage_and_preserves_original():
     assert recovered_work(j) is None
     j['work']['extraction_repair'].update(passage_id='wrong',previous={'facts':[claim()]})
     assert recovered_work(j) is None
+
+
+def test_slug_truncation_never_creates_double_hyphen():
+    from process_briefs import assemble
+    from import_briefs_supabase import SLUG_PATTERN
+    d=draft();d['title']['text']='a'*139+' '+'b'*10
+    assert SLUG_PATTERN.fullmatch(assemble(job(),d)['slug'])
+    d['title']['text']='日本語'
+    assert SLUG_PATTERN.fullmatch(assemble(job(),d)['slug'])
+
+
+def test_bill_missing_optional_cosponsors_can_build_evidence(monkeypatch):
+    import brief_evidence
+    monkeypatch.setattr(brief_evidence,'read_text',lambda *a:TEXT)
+    row={'id':1,'congress':119,'type':'S','number':1,'title':'Example','sync_missing_fields':['cosponsors'],
+        'texts':[{'date':'2026-09-01','type':'Introduced','html_url':'https://congress.gov/example'}]}
+    assert build_packet(None,'bill',row)['passages']
+    row['sync_missing_fields']=['actions']
+    with pytest.raises(EvidenceUnavailable,match='incomplete'): build_packet(None,'bill',row)
+
+
+def test_health_keeps_review_visible_without_retry_failure():
+    overview={'sources':[],'source_errors':[{'attempts':14,'error_kind':'review'}],
+        'oldest_waiting':'2020-01-01T00:00:00Z','oldest_current_waiting':None,'backfill_waiting':50}
+    assert problems(overview)==[]
+    overview['source_errors'][0]['error_kind']='temporary'
+    assert problems(overview)
+
+
+def test_green_noop_does_not_hide_stalled_processing():
+    assert any('no processing progress' in p for p in problems({'sources':[],'current_waiting':4,'last_progress_at':None}))
+
+
+def test_filtered_job_is_withheld_and_worker_continues(monkeypatch):
+    import process_briefs
+    from brief_ai import ResponseWithheld
+    jobs=[job(),{**job(),'id':2}]
+    calls=[]
+    class Queue:
+        def rpc(self,name,args):
+            calls.append((name,args))
+            return SimpleNamespace(execute=lambda:SimpleNamespace(data=[jobs.pop(0)] if name=='claim_brief_job' and jobs else []))
+    def run(db,j,*a,**kw):
+        if j['id']==1: raise ResponseWithheld('filter')
+        return 'verified'
+    monkeypatch.setattr(process_briefs,'process',run)
+    result=process_briefs.process_queue(Queue(),3,float('inf'))
+    assert result=={'failed':0,'processed':2,'claimed':2,'withheld':1,'verified':1}
+    assert any(n=='finish_brief_job' and a['p_status']=='withheld' for n,a in calls)

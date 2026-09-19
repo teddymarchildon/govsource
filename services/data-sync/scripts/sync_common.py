@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterator, Mapping, Optional, Tuple
 from uuid import uuid4
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 import httpx
@@ -30,7 +31,7 @@ def error_status(exc: BaseException) -> Optional[int]:
         response = getattr(exc, "response", None)
         status = getattr(response, "status_code", None)
         status = (
-            status or getattr(exc, "status", None) or getattr(exc, "status_code", None)
+            status or getattr(exc, "status", None) or getattr(exc, "status_code", None) or getattr(exc, "code", None)
         )
         try:
             if status is not None:
@@ -169,6 +170,11 @@ def get_json(
     rate_limiter: Optional[RateLimiter] = None,
 ) -> Dict[str, Any]:
     """Fetch a JSON object or raise a failure distinguishable from an empty page."""
+    if params:
+        parts = urlsplit(url)
+        query = {**dict(parse_qsl(parts.query)), **params}
+        url = urlunsplit((parts.scheme,parts.netloc,parts.path,urlencode(query,doseq=True),parts.fragment))
+        params = None
     if rate_limiter:
         rate_limiter.wait()
     try:
@@ -202,7 +208,7 @@ def iter_paginated_items(
             params=next_params,
             rate_limiter=rate_limiter,
         )
-        items = payload.get(item_key, [])
+        items = payload.get(item_key)
         if not isinstance(items, list):
             raise UpstreamAPIError(
                 f"Expected '{item_key}' to be a list from {next_url}"
@@ -261,12 +267,15 @@ def require_env(name: str, *fallback_names: str) -> str:
     raise ConfigurationError(f"Missing required environment variable ({choices})")
 
 
-def create_supabase_client() -> Any:
+def create_supabase_client(*, postgrest_timeout=None) -> Any:
     """Create a server-only Supabase client without resolving config at import time."""
     from supabase import create_client
 
     url = require_env("SUPABASE_URL")
     key = require_env("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_KEY")
+    if postgrest_timeout is not None:
+        from supabase import ClientOptions
+        return create_client(url,key,options=ClientOptions(postgrest_client_timeout=postgrest_timeout))
     return create_client(url, key)
 
 

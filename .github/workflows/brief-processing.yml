@@ -3,7 +3,17 @@ name: Generate and verify briefs
 on:
   schedule:
     - cron: "7,37 * * * *"
+  workflow_run:
+    workflows: [Sync Federal Register records, Sync changed Congress records]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      queue:
+        description: Process current developments or historical backfill
+        type: choice
+        default: current
+        options: [current, backfill]
 
 permissions:
   contents: read
@@ -14,7 +24,7 @@ concurrency:
 
 jobs:
   run:
-    if: ${{ vars.BRIEF_PIPELINE_ENABLED == 'true' }}
+    if: ${{ vars.BRIEF_PIPELINE_ENABLED == 'true' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -30,6 +40,7 @@ jobs:
       BRIEF_PRICING_MODELS: ${{ vars.BRIEF_PRICING_MODELS || 'gpt-5-mini' }}
       BRIEF_INPUT_USD_PER_MILLION: ${{ vars.BRIEF_INPUT_USD_PER_MILLION || '0.25' }}
       BRIEF_OUTPUT_USD_PER_MILLION: ${{ vars.BRIEF_OUTPUT_USD_PER_MILLION || '2.00' }}
+      BRIEF_QUEUE: ${{ inputs.queue || 'current' }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -41,7 +52,7 @@ jobs:
       - name: Publish already verified results
         run: python scripts/process_briefs.py --publish-only --limit 30
       - name: Process durable jobs and publish only verified results
-        run: python scripts/run_pipeline_source.py processor -- --limit 25 --max-minutes 20
+        run: python scripts/run_pipeline_source.py processor -- --limit 25 --max-minutes 20 --workers 2 --queue "$BRIEF_QUEUE"
       - name: Publish verified results even after an individual job fails
         if: ${{ always() && !cancelled() }}
         run: python scripts/process_briefs.py --publish-only --limit 30

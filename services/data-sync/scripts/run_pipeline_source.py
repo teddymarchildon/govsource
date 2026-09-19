@@ -11,7 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 from dotenv import load_dotenv
 
-from sync_common import create_supabase_client, get_json, require_env, UpstreamAPIError
+from sync_common import create_supabase_client, get_json, require_env, UpstreamAPIError, error_status
 
 log = logging.getLogger(__name__)
 SCRIPTS = Path(__file__).resolve().parent
@@ -32,6 +32,30 @@ def congress(db, checkpoint):
     start = checkpoint.get('since') or (now-timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ')
     until = checkpoint.get('until') or now.strftime('%Y-%m-%dT%H:%M:%SZ')
     offset = int(checkpoint.get('offset',0))
+    retries = dict(checkpoint.get('retry_bills') or {})
+    def sync_one(url):
+        try:
+            bill = sync_bill(db,client,url)
+            missing = (bill or {}).get('_missing_fields', [])
+            if not missing:
+                retries.pop(url, None)
+                return
+            reason = 'Missing collections: ' + ', '.join(missing)
+        except UpstreamAPIError as exc:
+            if error_status(exc) in (401,403):
+                raise
+            reason = str(exc)[:1000]
+        attempts = retries.get(url,{}).get('attempts',0)+1
+        retries[url] = {'attempts':attempts,'error':reason,
+            'next_attempt_at':(now+timedelta(hours=min(24,2**min(attempts,5)))).isoformat()}
+        log.warning('Congress record queued for recovery: %s (%s)',url,reason)
+
+    # Bounded recovery cannot prevent the new update window from advancing.
+    due = sorted((url for url,r in retries.items()
+                  if datetime.fromisoformat(r['next_attempt_at'].replace('Z','+00:00'))<=now),
+                 key=lambda url: retries[url]['next_attempt_at'])[:20]
+    for url in due:
+        sync_one(url)
     # Freeze the update window across pages/runs. Advance only after each complete page.
     for _ in range(4):
         body = get_json(client.session,f'{BASE_URL}/bill/{os.getenv("CONGRESS_NUMBER","119")}',
@@ -40,15 +64,15 @@ def congress(db, checkpoint):
         if not isinstance(rows,list):
             raise UpstreamAPIError('Congress listing omitted bills')
         for row in rows:
-            sync_bill(db,client,row['url'])
+            sync_one(row['url'])
         offset += len(rows)
         if not body.get('pagination',{}).get('next'):
             since = (datetime.fromisoformat(until.replace('Z','+00:00'))-timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M:%SZ')
-            return {'since':since,'offset':0}
+            return {'since':since,'offset':0,**({'retry_bills':retries} if retries else {})}
         # Persist within a run so a later page failure cannot erase earlier progress.
-        checkpoint.update({'since':start,'until':until,'offset':offset})
+        checkpoint.update({'since':start,'until':until,'offset':offset,'retry_bills':dict(retries)})
         db.table('brief_source_run').update({'checkpoint':checkpoint}).eq('source','congress').execute()
-    return {'since':start,'until':until,'offset':offset}
+    return {'since':start,'until':until,'offset':offset,'retry_bills':retries}
 
 
 def federal_register(db, checkpoint, recovery=False, document_numbers=None):
