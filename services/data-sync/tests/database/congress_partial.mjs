@@ -12,7 +12,7 @@ create table bill_summary(bill bigint,date date,text text);
 `);
 const original=readFileSync(new URL('../../../../apps/web/supabase/migrations/20260819160724_improve_data_sync_integrity.sql',import.meta.url),'utf8');
 await db.exec(original.match(/create or replace function public.replace_bill_actions\([\s\S]*?\n\$\$;/)[0]);
-await db.exec(readFileSync(new URL('../../../../apps/web/supabase/migrations/20260919145603_tolerate_partial_congress_records.sql',import.meta.url),'utf8'));
+await db.exec(readFileSync(new URL('../../../../apps/web/supabase/migrations/20260919165423_tolerate_partial_congress_records.sql',import.meta.url),'utf8'));
 await db.exec(`insert into bill(id,sync_pending) values(1,true);
 insert into sponsored_bills values(1,7); insert into cosponsored_bills values(1,8);
 insert into bill_text(bill_id,date,type,html_url,html_file_path,pdf_url,pdf_file_path) values(1,'2026-09-01','Introduced','html','stored.html','pdf','stored.pdf');

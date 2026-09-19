@@ -20,7 +20,7 @@ create table public.court_opinion(id bigint primary key,cluster_id bigint,type t
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260820192741_replace_articles_with_briefs.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906223838_continuous_brief_pipeline.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906224831_brief_source_refresh_tracking.sql','utf8'));
-await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260919145606_resilient_brief_processing.sql','utf8'));
+await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260919165433_resilient_brief_processing.sql','utf8'));
 const scalar=async (sql,params=[])=>Object.values((await db.query(sql,params)).rows[0])[0];
 const token='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 await db.exec("insert into bill(id,title) values (1,'Example bill');");
