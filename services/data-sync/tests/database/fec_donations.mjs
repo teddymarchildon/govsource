@@ -7,6 +7,8 @@ create table public.congressman(id bigint unique, bioguide_id text unique, prima
 await db.exec(readFileSync(new URL('../../../../apps/web/supabase/migrations/20260906235854_fec_committee_contributions.sql', import.meta.url), 'utf8'));
 await db.exec(readFileSync(new URL('../../../../apps/web/supabase/migrations/20260919145609_fec_publication_timeout.sql', import.meta.url), 'utf8'));
 const scalar = async (sql, params=[]) => Object.values((await db.query(sql,params)).rows[0])[0];
+assert.ok((await scalar("select rolconfig from pg_roles where rolname='service_role'")).includes('statement_timeout=55s'));
+assert.equal(await scalar("select rolconfig from pg_roles where rolname='anon'"),null);
 const token='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 const rec=(kind,key,data)=>({kind,key,data});
 const candidate=rec('candidate','H8IN07184',{candidate_id:'H8IN07184',name:'Candidate',office:'H',state:'IN'});

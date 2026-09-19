@@ -1,4 +1,8 @@
--- Bulk publication gets its own bounded timeout; role-wide timeouts stay unchanged.
+-- PostgREST starts its timeout before entering the RPC, so a function-local
+-- setting cannot extend the inherited 8-second deadline. Raise only the trusted
+-- server role's limit; anon/authenticated limits remain unchanged.
+alter role service_role set statement_timeout='55s';
+notify pgrst, 'reload config';
 create or replace function public.publish_fec_sync(p_cycle integer,p_token uuid)
 returns bigint language plpgsql security invoker set search_path='' set statement_timeout='55s' as $$
 declare s public.fec_sync_state; n bigint;
