@@ -139,3 +139,37 @@ def test_targeted_bill_sync_builds_exact_detail_url(monkeypatch):
 
     assert result["bill_unique_id"] == "hr6644-119"
     assert captured["detail_url"].endswith("/bill/119/hr/6644")
+
+
+def test_partial_cosponsor_failure_preserves_collection_and_saves_others(monkeypatch):
+    from types import SimpleNamespace
+    calls=[]
+    monkeypatch.setattr(sync_bills_supabase,'upsert_preserving_missing',lambda *a:SimpleNamespace(data=[{'id':9}]))
+    monkeypatch.setattr(sync_bills_supabase,'ensure_congressmen',lambda db,people:[1] if people else [])
+    def collection(url,key):
+        if key=='cosponsors': raise UpstreamAPIError('500')
+        return []
+    client=SimpleNamespace(bill_detail=lambda u:{'bill':{'congress':119,'type':'S','number':537,'title':'Title',
+        'sponsors':[{'bioguideId':'X'}],'cosponsors':{'url':'cosponsors'},'textVersions':{'url':'texts'},'summaries':{'url':'summaries'}}},
+        collection=collection,actions=lambda *a:[{'date':'2026-09-01','text':'Introduced'}])
+    db=SimpleNamespace(rpc=lambda name,args:calls.append((name,args)) or SimpleNamespace(execute=lambda:None))
+    result=sync_bills_supabase.sync_bill(db,client,'detail')
+    name,params=calls[-1]
+    assert name=='complete_bill_sync'
+    assert params['p_cosponsor_ids'] is None
+    assert params['p_sponsor_ids']==[1] and params['p_actions']
+    assert params['p_texts']==[]  # a successful empty response, not a failed fetch
+    assert result['_missing_fields']==['cosponsors']
+
+
+def test_missing_pdf_does_not_prevent_html_upload(monkeypatch):
+    from types import SimpleNamespace
+    def download(url):
+        if url=='pdf': raise UpstreamAPIError('404')
+        return b'complete html','text/html'
+    monkeypatch.setattr(sync_bills_supabase,'upload_bytes',lambda db,bucket,path,*args:path)
+    texts=sync_bills_supabase.upload_bill_texts(None,SimpleNamespace(download=download),
+        {'congress':119,'type':'S','number':537,'bill_unique_id':'s537-119'},
+        [{'date':'2026-09-01','pdf_url':'pdf','html_url':'html'}])
+    assert texts[0]['pdf_file_path'] is None
+    assert texts[0]['html_file_path'].endswith('bill.html')

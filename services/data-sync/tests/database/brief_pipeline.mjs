@@ -20,6 +20,7 @@ create table public.court_opinion(id bigint primary key,cluster_id bigint,type t
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260820192741_replace_articles_with_briefs.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906223838_continuous_brief_pipeline.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906224831_brief_source_refresh_tracking.sql','utf8'));
+await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260919165433_resilient_brief_processing.sql','utf8'));
 const scalar=async (sql,params=[])=>Object.values((await db.query(sql,params)).rows[0])[0];
 const token='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 await db.exec("insert into bill(id,title) values (1,'Example bill');");
@@ -93,5 +94,29 @@ assert.equal(await scalar('select slug from brief where id=$1',[thirdBrief]),'th
 assert.equal(await scalar('select count(*) from brief_revision where brief_id=$1',[thirdBrief]),1);
 await db.query("select note_brief_source_refresh('bill',3)");
 assert.equal(await scalar("select revision from brief_source_change where item_type='bill' and item_id=3"),3);
+// A failed or active unrelated source run no longer prevents valid packets.
+await db.exec("update brief_source_run set status='failed' where source='congress'; insert into bill(id,title) values(4,'Independent bill')");
+const m5=await scalar("select brief_source_bundle('bill',4)");
+const independent=await scalar("select enqueue_brief_job('bill',4,1,'independent','independent','bill',$1,$2,100)",[m5,packet]);
+await db.exec("update brief_job set status='withheld' where id<>"+independent+" and status in ('pending','retry','processing')");
+assert.equal((await db.query('select * from claim_brief_job($1)',[token])).rows[0].id,independent);
+await db.query("select finish_brief_job($1,$2,'verified','Important',$3,$4)",[independent,token,{...draft,slug:'independent-brief'},{passed:true,deterministic_passed:true}]);
+assert.ok(await scalar('select publish_verified_brief($1)',[independent]));
+
+// Historical work is retained but cannot take current-news slots.
+await db.exec("insert into bill(id,title) values(5,'Historical bill'); update brief_source_run set status='running' where source='congress'");
+const m6=await scalar("select brief_source_bundle('bill',5)");
+const historical=await scalar("select enqueue_brief_job('bill',5,1,'old','old','bill',$1,$2,100)",[m6,packet]);
+await db.exec("update brief_job set development_date=current_date-365 where id="+historical);
+assert.equal((await db.query('select * from claim_brief_job($1)',[token])).rows.length,0);
+assert.equal((await db.query("select * from claim_brief_job($1,'backfill')",[token])).rows[0].id,historical);
+assert.equal(await scalar("select has_function_privilege('anon','public.claim_brief_job(uuid,text)','execute')"),false);
+
+// Waiting/review items wake up only when their source changes.
+await db.exec("insert into bill(id,title) values(6,'Oversized bill'); update brief_source_change set error_kind='review',error='oversized' where item_id=6 and item_type='bill'");
+assert.equal(await scalar("select count(*) from pending_brief_source_changes(100) where item_id=6"),0);
+await db.exec("update bill set title='Updated oversized bill' where id=6");
+assert.equal(await scalar("select count(*) from pending_brief_source_changes(100) where item_id=6"),1);
+assert.equal(await scalar("select brief_pipeline_overview()->>'backfill_waiting'"),'1');
 console.log('PASS: migration, change tracking, source locks, duplicate discovery, exclusive claims, verification gate, pause, atomic/idempotent publication, revisions, editor protection, stale evidence, budgets, and permissions');
 await db.close();

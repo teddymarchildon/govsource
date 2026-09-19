@@ -63,3 +63,29 @@ def test_federal_register_failure_does_not_skip_other_categories(monkeypatch):
     assert kinds==['PRESDOCU','RULE','PRORULE','NOTICE']
     pages=db.updates[-1]['checkpoint']['recovery_pages']
     assert pages['NOTICE']==3 and 'RULE' not in pages
+
+
+def test_congress_upstream_failure_is_saved_and_later_records_continue(monkeypatch):
+    from sync_common import UpstreamAPIError
+    calls=[]
+    monkeypatch.setattr(runner,'require_env',lambda name:'test')
+    monkeypatch.setattr(sync_bills_supabase,'CongressClient',lambda key:SimpleNamespace(session=None))
+    monkeypatch.setattr(runner,'get_json',lambda *a,**kw:{'bills':[{'url':'broken'},{'url':'good'}]})
+    def sync(*args):
+        calls.append(args[-1])
+        if args[-1]=='broken': raise UpstreamAPIError('500 upstream')
+        return {}
+    monkeypatch.setattr(sync_bills_supabase,'sync_bill',sync)
+    result=runner.congress(DB(),{})
+    assert calls==['broken','good']
+    assert result['offset']==0 and result['since']
+    assert result['retry_bills']['broken']['attempts']==1
+
+
+def test_congress_partial_record_is_retried_without_blocking_window(monkeypatch):
+    monkeypatch.setattr(runner,'require_env',lambda name:'test')
+    monkeypatch.setattr(sync_bills_supabase,'CongressClient',lambda key:SimpleNamespace(session=None))
+    monkeypatch.setattr(runner,'get_json',lambda *a,**kw:{'bills':[{'url':'partial'}]})
+    monkeypatch.setattr(sync_bills_supabase,'sync_bill',lambda *a:{'_missing_fields':['cosponsors']})
+    result=runner.congress(DB(),{})
+    assert 'cosponsors' in result['retry_bills']['partial']['error']

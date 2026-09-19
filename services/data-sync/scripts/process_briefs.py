@@ -10,11 +10,12 @@ import time
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
-from brief_ai import AI, BudgetExhausted, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_ai import AI, BudgetExhausted, ResponseWithheld, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
 from brief_style import PLAIN_ENGLISH_STYLE
-from brief_evidence import EvidenceUnavailable, build_packet, fingerprint
+from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint
 from generate_briefs_batch import dek_is_complete, slugify
 from import_briefs_supabase import validate_manifest
 from sync_common import create_supabase_client
@@ -93,25 +94,23 @@ def assemble(job: dict, draft: dict) -> dict:
     points = [{'id':f'point_{i}','text':c['text'].strip(),
                'source_refs':list(dict.fromkeys(passages[e['passage_id']]['source_id'] for e in c['evidence']))}
               for i,c in enumerate(draft['points'],1)]
-    return {'title':draft['title']['text'].strip(), 'slug':f"{slugify(draft['title']['text'])[:140]}-brief-{job['id']}",
+    slug_base = slugify(draft['title']['text'])[:140].rstrip('-') or 'brief'
+    return {'title':draft['title']['text'].strip(), 'slug':f"{slug_base}-brief-{job['id']}",
             'dek':draft['dek']['text'].strip(),'points':points,'context_markdown':draft['context']['text'].strip(),
             'policy_areas':draft['policy_areas'],'sources':packet['sources']}
 
 
 def discover(db: Any, limit: int) -> dict:
-    states = {s['source']:s for s in db.table('brief_source_run').select('source,status,last_success_at').execute().data}
     # Fetch only outstanding changes through a server-side filter; pagination never
     # repeatedly walks already processed rows.
     changes = db.rpc('pending_brief_source_changes',{'p_limit':limit}).execute().data or []
     counts = {'enqueued':0,'deferred':0}
     for change in changes:
         kind, item_id = change['item_type'],change['item_id']
-        if states[SOURCE_NAMES[kind]]['status']!='success':
-            continue
         try:
             row = db.rpc('brief_source_bundle',{'p_type':kind,'p_id':item_id}).execute().data
             if not row:
-                raise EvidenceUnavailable('Source record was removed')
+                raise EvidenceReviewRequired('Source record was removed')
             packet = build_packet(db,kind,row)
             db.rpc('enqueue_brief_job',{'p_type':kind,'p_id':item_id,'p_revision':change['revision'],
                 'p_fingerprint':fingerprint({'metadata':row,'packet':packet}),'p_development':packet['development_key'],
@@ -120,7 +119,10 @@ def discover(db: Any, limit: int) -> dict:
         except Exception as exc:
             # Compare revision so a new change cannot be delayed by an older failing read.
             delay = min(24,2**min(change['attempts'],5))
+            error_kind = ('review' if isinstance(exc,EvidenceReviewRequired) else
+                          'waiting' if isinstance(exc,EvidenceUnavailable) else 'temporary')
             db.table('brief_source_change').update({'attempts':change['attempts']+1,'error':str(exc)[:1000],
+                'error_kind':error_kind,
                 'next_attempt_at':(datetime.now(timezone.utc)+timedelta(hours=delay)).isoformat()}).eq('item_type',kind).eq('item_id',item_id).eq('revision',change['revision']).execute()
             counts['deferred']+=1
             log.warning('Source %s/%s deferred: %s',kind,item_id,exc)
@@ -262,11 +264,47 @@ def publish_ready(db: Any, limit: int) -> int:
     return published
 
 
+def process_queue(db, limit, deadline, queue='current'):
+    summary = {'failed':0, 'processed':0, 'claimed':0}
+    for _ in range(limit):
+        if time.monotonic()>deadline-180:
+            break
+        token = str(uuid4())
+        rows = db.rpc('claim_brief_job',{'p_token':token,'p_queue':queue}).execute().data or []
+        if not rows:
+            break
+        job = rows[0]
+        summary['claimed'] += 1
+        try:
+            status = process(db,job,token,deadline=deadline-180)
+            summary[status]=summary.get(status,0)+1
+            summary['processed'] += 1
+        except ResponseWithheld as exc:
+            complete(db,job,token,'withheld',str(exc)[:1000])
+            summary['withheld']=summary.get('withheld',0)+1
+            summary['processed'] += 1
+            log.warning('Job %s withheld for review: %s',job['id'],exc)
+        except TimeoutError:
+            db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token,'p_budget':False}).execute()
+            break
+        except BudgetExhausted as exc:
+            db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token}).execute()
+            log.info('%s',exc)
+            break
+        except Exception as exc:
+            summary['failed']+=1
+            complete(db,job,token,'retry',str(exc)[:1000])
+            log.exception('Job %s failed',job['id'])
+    return summary
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--limit',type=int,default=10)
     parser.add_argument('--discovery-limit',type=int,default=100)
     parser.add_argument('--max-minutes',type=int,default=20)
+    parser.add_argument('--workers',type=int,choices=(1,2),default=1)
+    parser.add_argument('--queue',choices=('current','backfill'),default='current')
     parser.add_argument('--discover-only',action='store_true')
     parser.add_argument('--seed-days',type=int,help='Queue existing unbriefed records updated in the prior 1-90 days')
     parser.add_argument('--publish',action='store_true',help='Publish verified jobs only when DB publication switch is enabled')
@@ -286,36 +324,22 @@ def main() -> int:
         log.info('Seeded %s source changes',db.rpc('seed_brief_source_changes',{'p_days':args.seed_days}).execute().data)
     summary = discover(db,args.discovery_limit)
     deadline = time.monotonic()+args.max_minutes*60
-    failures = 0
+    summary['failed'] = 0
     if not args.discover_only:
-        for _ in range(args.limit):
-            if time.monotonic()>deadline-180:
-                break
-            token = str(uuid4())
-            rows = db.rpc('claim_brief_job',{'p_token':token}).execute().data or []
-            if not rows:
-                break
-            job = rows[0]
-            try:
-                status = process(db,job,token,deadline=deadline-180)
-                summary[status]=summary.get(status,0)+1
-            except TimeoutError:
-                db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token,'p_budget':False}).execute()
-                break
-            except BudgetExhausted as exc:
-                # Budget deferral does not consume a failure attempt.
-                db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token}).execute()
-                log.info('%s',exc)
-                break
-            except Exception as exc:
-                failures+=1
-                complete(db,job,token,'retry',str(exc)[:1000])
-                log.exception('Job %s failed',job['id'])
+        # Each worker owns its HTTP client; database claims and budget reservations
+        # remain atomic across workers. The combined job limit is unchanged.
+        def worker(index):
+            limit = args.limit//args.workers + int(index < args.limit%args.workers)
+            return process_queue(create_supabase_client(),limit,deadline,args.queue)
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            for result in pool.map(worker,range(args.workers)):
+                for key,value in result.items():
+                    summary[key]=summary.get(key,0)+value
     if args.publish:
         summary['published']=publish_ready(db,args.limit)
-    summary['failed']=failures
+    summary['queue']=args.queue
     log.info('brief_pipeline_summary %s',json.dumps(summary))
-    return 1 if failures else 0
+    return 1 if summary['failed'] else 0
 
 
 if __name__=='__main__':

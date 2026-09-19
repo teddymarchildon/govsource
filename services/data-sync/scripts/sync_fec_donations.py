@@ -347,7 +347,9 @@ def main(argv=None):
         logging.getLogger(name).setLevel(logging.WARNING)
     try:
         client = FECClient(require_env('FEC_API_KEY'), args.max_requests, args.minimum_interval)
-        store = DatabaseStore(create_supabase_client(), args.cycle, scope, args.restart) if args.write else DryRunStore(scope)
+        # Allow the bounded 55-second publication transaction to finish before
+        # the HTTP client times out. This does not change the request budget.
+        store = DatabaseStore(create_supabase_client(postgrest_timeout=65), args.cycle, scope, args.restart) if args.write else DryRunStore(scope)
         count = sync(client, store, args.cycle)
         LOG.info('data_sync_summary=%s', json.dumps({'job': 'fec', 'status': 'success', 'write': args.write,
             'cycle': args.cycle, 'scope': scope, 'contributions': count, 'requests': client.requests,
