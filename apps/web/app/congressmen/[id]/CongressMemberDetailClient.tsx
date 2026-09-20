@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useTransition, type ReactNode } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowUpRight, CalendarDays, Globe, Landmark, MapPin, Phone } from 'lucide-react';
 
 import BillCard from '@/components/BillCard';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Bill, Congressman, CongressmanTerm } from '@/types/types';
 
-type Props = { member: Congressman; sponsoredBills: Bill[]; cosponsoredBills: Bill[]; terms: CongressmanTerm[] };
+type Props = { member: Congressman; sponsoredBills: Bill[]; cosponsoredBills: Bill[]; terms: CongressmanTerm[]; activeTab: string; contributions: ReactNode };
 type PolicyAreaStat = { total: number; becameLaw: number };
 type YearStat = { total: number; sponsored: number; cosponsored: number; becameLaw: number };
 
@@ -24,7 +25,15 @@ function EmptyState({ children }: { children: string }) {
   return <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">{children}</div>;
 }
 
-export default function CongressMemberDetailClient({ member, sponsoredBills, cosponsoredBills, terms }: Props) {
+export default function CongressMemberDetailClient({ member, sponsoredBills, cosponsoredBills, terms, activeTab, contributions }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [pending, startTransition] = useTransition();
+  const changeTab = (tab: string) => {
+    const query = new URLSearchParams(searchParams.toString());
+    query.set('tab', tab);
+    startTransition(() => router.replace(`?${query}`, { scroll: false }));
+  };
   const stats = useMemo(() => {
     const allBills = [...sponsoredBills, ...cosponsoredBills];
     const policyAreas = allBills.reduce<Record<string, PolicyAreaStat>>((areas, bill) => {
@@ -92,12 +101,15 @@ export default function CongressMemberDetailClient({ member, sponsoredBills, cos
         </div>
       </header>
 
-      <Tabs defaultValue="bills" className="mt-8">
+      <Tabs value={activeTab} onValueChange={changeTab} className="mt-8" aria-busy={pending}>
         <TabsList>
           <TabsTrigger value="bills">Bills <Badge variant="outline">{stats.total}</Badge></TabsTrigger>
           <TabsTrigger value="terms">Terms <Badge variant="outline">{terms.length}</Badge></TabsTrigger>
           <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          <TabsTrigger value="contributions">Campaign contributions</TabsTrigger>
         </TabsList>
+        {pending ? <p role="status" className="mt-3 text-xs text-muted-foreground">Loading…</p> : null}
+        <TabsContent value="contributions" className="mt-6">{contributions}</TabsContent>
 
         <TabsContent value="bills" className="mt-6 space-y-10">
           <BillSection title="Sponsored bills" description="Legislation introduced by this member." bills={sponsoredBills} empty="No sponsored bills are available." />
