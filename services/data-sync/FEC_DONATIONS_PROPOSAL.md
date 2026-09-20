@@ -60,8 +60,9 @@ which survive subsequent donation refreshes.
 
 ### Backfill Congress member links
 
-Run `map_fec_candidates.py` once after donation imports, then rerun when new
-candidates are published. It joins exact FEC IDs to Bioguide IDs from both the
+The weekly workflow runs `map_fec_candidates.py --write` after successful donation
+imports and saves the mapping report as an Actions artifact. It can also be run
+manually. It joins exact FEC IDs to Bioguide IDs from both the
 current and historical files in the community-maintained
 [congress-legislators crosswalk](https://github.com/unitedstates/congress-legislators),
 then matches `congressman.bioguide_id`. This crosswalk is not an official FEC
@@ -82,8 +83,8 @@ failed; successful earlier writes can be safely revisited by rerunning.
 
 The script pages through both database tables and supports several FEC IDs for
 one member. It maps currently published `fec_candidate` rows, not private import
-staging, so rerun after the nationwide import completes. It does not change the
-weekly schedule or modify donation data. `--report` saves the plan before writes
+staging. The weekly job maps only after publication succeeds; manual imports
+should be followed by this script. It does not modify donation data. `--report` saves the plan before writes
 and updates it with the verified results and provenance afterward.
 
 Multi-candidate committee links are retained as evidence but excluded from the
@@ -209,4 +210,18 @@ describe intended published-data read access; its
 [no-policy notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)
 for staging/state reflect intentional default-deny access.
 
-No page or navigation changes are included in this data-source implementation.
+## Member-page contributions
+
+Congress member pages now include a Campaign contributions tab. It shows top
+contributing committees, signed totals, and paginated transactions with FEC source
+links. The reporting-period selector lists published periods (currently 2026).
+Queries combine all verified candidate IDs for a member and exclude ambiguous
+campaign committees from both totals and transactions. Missing mappings, empty
+coverage, and query failures have distinct messages rather than implying zero
+fundraising. Only publication timestamps/coverage are read with the server-only
+admin client; contribution data uses the public RLS-protected client.
+
+The September 20 backfill linked 605 additional candidate records: 606 total
+candidate records now map to 561 distinct members. Another 904 candidates have no
+crosswalk match and remain unlinked. See `reports/fec-member-mapping-20260920.json`
+for the complete results and source provenance.

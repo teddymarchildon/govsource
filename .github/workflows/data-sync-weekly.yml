@@ -116,3 +116,12 @@ jobs:
       # FEC candidate IDs include challengers; no dependency on member ingestion.
       - name: Import current reporting period
         run: python scripts/sync_fec_donations.py --write
+      - name: Link published FEC candidates to Congress members
+        run: python scripts/map_fec_candidates.py --write --report reports/fec-member-mapping.json
+      - name: Save member mapping report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fec-member-mapping
+          path: services/data-sync/reports/fec-member-mapping.json
+          if-no-files-found: ignore

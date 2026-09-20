@@ -163,8 +163,9 @@ bounded page and record limits in the workflow files.
 
 ## FEC candidate-to-member mapping
 
-After importing donations, run the reusable mapping backfill. It defaults to
-a dry run and uses exact FEC/Bioguide crosswalk IDs, never name-only matching:
+The weekly FEC job runs the mapping backfill after a successful import and saves
+its report as an Actions artifact. After manual imports, run it explicitly. The
+script defaults to a dry run and uses exact FEC/Bioguide crosswalk IDs, never name-only matching:
 
 ```bash
 python scripts/map_fec_candidates.py --report /tmp/fec-member-preview.json
