@@ -1,0 +1,65 @@
+name: Sync FEC individual contributions
+
+on:
+  schedule:
+    - cron: '43 10 * * 0'
+  workflow_dispatch:
+    inputs:
+      cycle:
+        description: 'Even reporting year (blank uses the current period)'
+        type: string
+        default: ''
+      committee:
+        description: 'Optional receiving committee ID; blank processes eligible member campaigns'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  sync-individuals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    # Share the OpenFEC quota with the existing party/PAC job.
+    concurrency:
+      group: govsource-fec
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: services/data-sync
+    env:
+      PYTHONUNBUFFERED: '1'
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      FEC_API_KEY: ${{ secrets.FEC_API_KEY }}
+      FEC_MAX_API_REQUESTS: '2200'
+      FEC_MINIMUM_REQUEST_INTERVAL: '4'
+      INPUT_CYCLE: ${{ inputs.cycle }}
+      INPUT_COMMITTEE: ${{ inputs.committee }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/data-sync/requirements.runtime.txt
+      - run: pip install -r requirements.runtime.txt
+      - name: Verify required secrets
+        shell: bash
+        run: |
+          missing=0
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY FEC_API_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required Actions secret: ${name}"
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Import individual records and refresh employer and occupation summaries
+        shell: bash
+        run: |
+          args=(--write)
+          if [[ -n "$INPUT_CYCLE" ]]; then args+=(--cycle "$INPUT_CYCLE"); fi
+          if [[ -n "$INPUT_COMMITTEE" ]]; then args+=(--committee "$INPUT_COMMITTEE"); fi
+          python scripts/sync_fec_individuals.py "${args[@]}"

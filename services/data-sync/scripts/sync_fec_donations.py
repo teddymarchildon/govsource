@@ -168,7 +168,7 @@ def committee_record(row, cid, fallback_name=None):
     })
 
 
-def normalize_receipt(row, cycle, line, scope='all'):
+def normalize_receipt(row, cycle, line, scope='all', *, individual=False):
     if row.get('two_year_transaction_period') != cycle or row.get('filing_form') != 'F3' or row.get('line_number') != line:
         raise FECError('FEC returned a receipt outside the requested reporting scope')
     recipient = committee_id(row.get('committee_id'))
@@ -182,7 +182,10 @@ def normalize_receipt(row, cycle, line, scope='all'):
         raise FECError('Unrecognized FEC memo flag')
     # Some legacy rows have no entity_type. The report line determines category;
     # explicit individual rows do not belong in the groups-only dataset.
-    if row.get('entity_type') == 'IND' or row.get('is_individual') is True:
+    is_individual = row.get('entity_type') == 'IND' or row.get('is_individual') is True
+    if individual and (line != '11AI' or not is_individual):
+        raise FECError('Receipt is not an itemized individual contribution')
+    if not individual and is_individual:
         return []
     nested = row.get('committee')
     if not isinstance(nested, dict) or nested.get('cycle') != cycle:
@@ -202,7 +205,7 @@ def normalize_receipt(row, cycle, line, scope='all'):
             'candidate_id': cid, 'committee_id': recipient,
             'designation': row['recipient_committee_designation'],
         }))
-    giver = row.get('contributor_id') or None
+    giver = None if individual else row.get('contributor_id') or None
     # OpenFEC preserves malformed filer-supplied donor IDs (for example
     # C0035675 on receipt 4042920251187912755). Keep the named contribution
     # as unresolved; never pad the ID or guess a different committee.
@@ -227,12 +230,21 @@ def normalize_receipt(row, cycle, line, scope='all'):
     sub_id = identifier(str(row.get('sub_id') or ''), r'[0-9]+')
     source = row.get('pdf_url')
     if not isinstance(source, str) or not source.startswith('https://docquery.fec.gov/'):
-        source = f'https://www.fec.gov/data/receipts/?data_type=processed&committee_id={recipient}&two_year_transaction_period={cycle}'
+        receipt_path = 'receipts/individual-contributions' if individual else 'receipts'
+        source = f'https://www.fec.gov/data/{receipt_path}/?data_type=processed&committee_id={recipient}&two_year_transaction_period={cycle}'
     data = {
         'sub_id': sub_id, 'giving_committee_id': giver, 'contributor_name': name,
         'receiving_committee_id': recipient, 'amount': format(amount, '.2f'),
         'receipt_date': receipt_date or None, 'line_number': line, 'source_url': source,
     }
+    if individual:
+        # Allowlist public research fields. Never import street addresses or infer donor identities.
+        for field in ('employer', 'occupation', 'city', 'state'):
+            value = row.get('contributor_' + field)
+            if value is not None and not isinstance(value, str):
+                raise FECError('Invalid individual contributor field')
+            data[field] = value.strip() or None if value is not None else None
+        del data['giving_committee_id']
     for key in ('transaction_id', 'file_number', 'image_number', 'receipt_type', 'amendment_indicator', 'election_type', 'fec_election_year'):
         data[key] = str(row[key]) if row.get(key) is not None else None
     records.append(record('contribution', sub_id, data))

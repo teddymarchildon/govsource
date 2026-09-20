@@ -21,8 +21,9 @@ Use processed `/v1/schedules/schedule_a/` with these filters:
 Read the receiving campaign's records only. Exclude `memo_code=X`,
 `memoed_subtotal=true`, and explicit individual records from totals. Retain
 signed corrections. These are reported contributions, **not net of refunds**.
-Independent spending, joint fundraising transfers, loans, individual donors,
-employer groupings, and presidential campaigns are outside v1.
+Independent spending, joint fundraising transfers, loans and presidential
+campaigns remain outside this importer. Individual records and employer/occupation
+summaries use the [separate individual-contributions importer](FEC_INDIVIDUALS.md).
 
 Unknown contributor committee IDs remain null with their reported group name;
 they are not silently discarded or matched by name. The FEC reporting period

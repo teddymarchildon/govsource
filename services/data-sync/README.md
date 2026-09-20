@@ -163,6 +163,10 @@ bounded page and record limits in the workflow files.
 
 ## FEC candidate-to-member mapping
 
+Itemized individual records and employer/occupation summaries are maintained by
+the separate [individual-contributions importer](FEC_INDIVIDUALS.md), with its own
+weekly workflow and resumable per-campaign publication.
+
 The weekly FEC job runs the mapping backfill after a successful import and saves
 its report as an Actions artifact. After manual imports, run it explicitly. The
 script defaults to a dry run and uses exact FEC/Bioguide crosswalk IDs, never name-only matching:

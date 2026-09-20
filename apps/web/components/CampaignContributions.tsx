@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { CONTRIBUTION_PAGE_SIZE, getMemberContributions } from '@/lib/repositories/contributions';
+import ContributionKindLinks from '@/components/ContributionKindLinks';
 
 const money = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 const date = (value: string) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
@@ -25,12 +26,13 @@ export default async function CampaignContributions({ memberId, cycle, page }: {
     data = await getMemberContributions(memberId, cycle, page);
   } catch {
     console.error('Campaign contribution lookup failed', { memberId });
-    return <EmptyState>Campaign contributions are temporarily unavailable. <Link href={`?tab=contributions`} className="font-medium text-primary hover:underline">Try again</Link>.</EmptyState>;
+    return <div className="space-y-6"><ContributionKindLinks kind="committees" /><EmptyState>Campaign contributions are temporarily unavailable. <Link href={`?tab=contributions`} className="font-medium text-primary hover:underline">Try again</Link>.</EmptyState></div>;
   }
   const period = data.cycle;
   const href = (next: number) => `?tab=contributions&cycle=${period}&contributionPage=${next}`;
   const pageCount = Math.max(1, Math.ceil(data.count / CONTRIBUTION_PAGE_SIZE));
   return <div className="space-y-6">
+    <ContributionKindLinks kind="committees" cycle={period} />
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><h2 className="flex items-center gap-2 text-xl font-semibold"><HandCoins className="h-5 w-5 text-primary" />Campaign contributions</h2><p className="mt-1 text-sm text-muted-foreground">Direct contributions from political parties and PACs to this member’s campaigns.</p></div>
       {period ? <form className="flex shrink-0 items-end gap-2" action={`/congress-members/${memberId}`}>

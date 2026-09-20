@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "test:briefs": "node --test scripts/brief-selection.test.mjs scripts/brief-reading.test.mjs scripts/brief-pipeline-api.test.mjs",
     "test:sitemap": "node --test scripts/sitemap-records.test.js",
-    "test:contributions": "node --test scripts/contributions.test.mjs",
+    "test:contributions": "node --test scripts/contributions.test.mjs scripts/individual-contributions.test.mjs",
     "postbuild": "next-sitemap"
   },
   "dependencies": {
