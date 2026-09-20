@@ -6,6 +6,7 @@ from process_briefs import citation_errors, validate_draft, verification_passes,
 from check_brief_pipeline import problems
 
 TEXT='The proposed rule would require annual reporting for large operators. Comments close on October 1, 2026. Small operators are exempt.'
+BLOCKED='Request Access\nYour request has been flagged as potentially automated. Please complete the CAPTCHA. ' * 3
 PASSAGE={'id':'s1','source_id':'source_1','text':TEXT}
 
 
@@ -26,6 +27,44 @@ def test_chunks_preserve_entire_source_including_final_exception():
     text=('A long section.\n'*4000)+'FINAL EXCEPTION: small operators are exempt.'
     assert ''.join(chunks(text))==text
     assert 'FINAL EXCEPTION' in chunks(text)[-1]
+
+
+def stored_files(files):
+    return SimpleNamespace(storage=SimpleNamespace(from_=lambda bucket:
+        SimpleNamespace(download=lambda path: files[path].encode())))
+
+
+def test_stored_access_page_falls_back_to_document_text():
+    from brief_evidence import read_text
+    db=stored_files({'blocked':BLOCKED,'document':TEXT})
+    assert ' '.join(read_text(db,[('agency-docs','blocked',True),('agency-docs','document',True)]).split())==TEXT
+
+
+def test_all_stored_formats_blocked_requires_source_recovery():
+    from brief_evidence import read_text, EvidenceReviewRequired
+    with pytest.raises(EvidenceReviewRequired,match='access-blocking'):
+        read_text(stored_files({'blocked':BLOCKED}),[('agency-docs','blocked',True)])
+
+
+def test_agency_packet_prefers_stored_xml_body():
+    row={'id':1,'title':'Reporting','remote_document_number':'2026-12345',
+         'xml_file_path':'document','html_file_path':'blocked','type':'Rule'}
+    packet=build_packet(stored_files({'document':f'<P>{TEXT}</P>','blocked':BLOCKED}), 'agency_document',row)
+    assert ' '.join(packet['passages'][0]['text'].split())==TEXT
+
+
+def test_legitimate_document_can_discuss_captcha():
+    from brief_evidence import is_access_page
+    assert not is_access_page('The proposed accessibility rule discusses CAPTCHA and automated scraping requirements.')
+
+
+def test_cached_blocked_job_is_withheld_before_any_ai_call():
+    j=job();j['evidence']['passages']=[{**PASSAGE,'text':BLOCKED}]
+    def unexpected_ai(*args):
+        raise AssertionError('Blocked evidence must not reach AI')
+    db=DB()
+    assert process(db,j,'lease',ai_factory=unexpected_ai)=='withheld'
+    assert db.calls[0][1]['p_status']=='withheld'
 
 
 def test_exact_quotes_and_numbers_are_checked():

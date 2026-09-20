@@ -34,14 +34,37 @@ def clean_text(value: str, markup: bool = False) -> str:
     return re.sub(r'\n{3,}', '\n\n', value).strip()
 
 
+def is_access_page(text: str) -> bool:
+    """Recognize interstitials, without rejecting documents discussing CAPTCHA policy."""
+    normalized = re.sub(r'\s+', ' ', text).lower()
+    return any(marker in normalized for marker in (
+        'your request has been flagged as potentially automated',
+        'due to aggressive automated scraping of federalregister.gov',
+        'verify you are human',
+        'checking your browser before accessing',
+        'enable javascript and cookies to continue',
+    )) or bool(re.search(
+        r'(?im)^\s*(?:#{1,6}\s*)?(?:403 forbidden|access denied|'
+        r'just a moment|robot check)\s*[.!]?\s*$', text))
+
+
+def validate_packet(packet: dict) -> None:
+    if any(is_access_page(p['text']) for p in packet['passages']):
+        raise EvidenceReviewRequired('Stored source is an access-blocking page; recover document text')
+
+
 def read_text(db: Any, options: list[tuple[str, Any, bool]]) -> str:
     read_error = None
+    blocked = False
     for bucket, path, markup in options:
         if not path:
             continue
         try:
             raw = db.storage.from_(bucket).download(path)
             text = clean_text(raw.decode('utf-8', errors='strict'), markup)
+            if is_access_page(text):
+                blocked = True
+                continue  # Try another stored representation of the same document.
             if len(text) >= 120:
                 if len(text) > MAX_DOCUMENT_CHARS:
                     raise EvidenceReviewRequired('Source exceeds processing limit; full text must not be truncated')
@@ -55,6 +78,8 @@ def read_text(db: Any, options: list[tuple[str, Any, bool]]) -> str:
             continue
     if read_error is not None:
         raise read_error
+    if blocked:
+        raise EvidenceReviewRequired('Stored source is an access-blocking page; recover document text')
     raise EvidenceUnavailable('Complete readable source text is not yet stored; retry after source recovery')
 
 
@@ -100,7 +125,9 @@ def build_packet(db: Any, source_type: str, row: dict) -> dict:
         development = fingerprint({'action': latest_action, 'version': version.get('type'), 'date': version.get('date'), 'law': row.get('law_enacted_date')})
         priority = 95 if item_type == 'law' else 65 if re.search('passed|agreed to', str(latest_action.get('text')), re.I) else 35
     elif source_type == 'agency_document':
-        text = read_text(db, [('agency-docs', row.get('html_file_path'), True), ('agency-docs', row.get('xml_file_path'), True)])
+        # Use document bodies already saved in Storage, never a live landing page
+        # or the metadata abstract. Prefer XML; fall back to validated stored HTML.
+        text = read_text(db, [('agency-docs', row.get('xml_file_path'), True), ('agency-docs', row.get('html_file_path'), True)])
         number = row['remote_document_number']
         documents.append((row['title'], f'https://www.federalregister.gov/d/{number}', text))
         item_type = 'executive_order' if row.get('subtype') == 'Executive Order' else 'agency_document'

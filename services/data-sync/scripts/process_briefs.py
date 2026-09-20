@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 from brief_ai import AI, BudgetExhausted, ResponseWithheld, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
 from brief_style import PLAIN_ENGLISH_STYLE
-from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint
+from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint, validate_packet
 from generate_briefs_batch import dek_is_complete, slugify
 from import_briefs_supabase import validate_manifest
 from sync_common import create_supabase_client
@@ -136,6 +136,12 @@ def complete(db: Any, job: dict, token: str, status: str, reason: str, *, draft=
 
 
 def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> str:
+    # Queued jobs can predate source validation and contain cached bad evidence.
+    try:
+        validate_packet(job['evidence'])
+    except EvidenceReviewRequired as exc:
+        complete(db,job,token,'withheld',str(exc))
+        return 'withheld'
     ai = ai_factory(db,job['id'])
     ai.deadline = deadline
     packet = job['evidence']
@@ -222,7 +228,10 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             'Independently audit this brief against ALL original source passages, not the writer reasoning. '
             'Check EVERY factual claim including headline, dek, context, dates, amounts, affected entities, '
             'legal status, majority vs dissent, effective dates and unsupported stakes. Identify material omissions '
-            'or qualifications that change the meaning. Return exactly one claims entry for each nonempty field '
+            'or qualifications that change the meaning. '
+            'Reject access-blocking/error pages as evidence. Confirm the passages describe the document '
+            'identified by the metadata and reject a brief about an unrelated topic. '
+            'Return exactly one claims entry for each nonempty field '
             '(title, dek, point_1 ... point_N, context). Any unsupported claim or material omission fails publication. '
             'Do not accept a quote merely because it exists; verify that it entails the entire claim.',
             {'metadata':job['source_metadata'],'passages':packet['passages'],'claims':draft_claims(draft)},VERIFICATION,verify=True)
