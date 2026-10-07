@@ -13,7 +13,12 @@ type CongressMemberPageProps = { params: Promise<{ id: string }>; searchParams: 
 export async function generateMetadata({ params }: CongressMemberPageProps): Promise<Metadata> {
   const { id } = await params;
   const detail = await getCongressMemberDetail(id);
-  return detail ? { title: detail.member.full_name } : { title: 'Congress member not found' };
+  if (!detail) return { title: 'Congress member not found' };
+
+  return {
+    title: detail.member.full_name,
+    alternates: { canonical: `/congress-members/${detail.member.id}` },
+  };
 }
 
 export default async function CongressMemberDetailPage({ params, searchParams }: CongressMemberPageProps) {
