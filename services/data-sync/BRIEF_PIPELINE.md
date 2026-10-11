@@ -103,3 +103,25 @@ Apply the `tolerate_partial_congress_records`, `resilient_brief_processing`, and
 - Source failures have an `error_kind`: `temporary` retries with backoff; `waiting` wakes on source revision changes; `review` needs operator intervention or corrected source material. To requeue reviewed evidence after resolving its blocker, call `note_brief_source_refresh(type,id)`. Never truncate a document to bypass the evidence limit.
 - Health reports current and historical backlog separately and checks actual job progress, not only worker exits. Review-required source counts stay visible as warnings; temporary repeated failures and stalled current work remain errors.
 - FEC publication stays atomic and retry-safe for the same run token. The trusted `service_role` has a 55-second statement timeout (public-user roles are unchanged), and its worker uses a 65-second HTTP timeout. A function-local timeout alone cannot extend PostgREST’s inherited 8-second timer. A failed publication retains the durable staging area and prior public dataset; resume with the existing weekly workflow (`fec_only=true`), without `--restart`.
+
+## Actionable queue health (October 2026)
+
+Apply `20261011003652_actionable_brief_queue_health.sql` before deploying the
+updated health script. This migration adds a service-only eligibility helper
+shared by the worker and health overview. It preserves queued data and the
+existing total backlog fields used by the admin UI.
+
+The 24-hour backlog and six-hour progress checks now concern eligible current
+jobs. Source revisions, source readiness, retry timing, attempt limits, and
+worker leases determine eligibility. Backfill activity cannot mask stalled
+current processing. Blocked counts and the oldest blocked job IDs/reasons appear
+in health logs. Source changes and expected waiting remain visible as warnings;
+missing source tracking, exhausted retries, expired/missing leases, stale sources,
+and genuinely stalled eligible work remain failures. Older databases retain the
+previous conservative health behavior until the migration is applied.
+
+Model output is checked recursively for null characters before checkpoint or
+result writes. Affected jobs are withheld for review with a safe reason, without
+publishing or modifying source quotations. The paid call remains accounted for,
+and subsequent jobs continue. Database and transport failures still fail the
+worker; this does not use blanket workflow error suppression.

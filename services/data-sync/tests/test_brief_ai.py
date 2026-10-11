@@ -125,3 +125,24 @@ def test_deadline_bounds_network_timeout(setup,monkeypatch):
     monkeypatch.setattr(brief_ai.requests,'post',post)
     ai.call('extract','instructions',{}, {})
     assert calls[0]['timeout']==(15,35)
+
+
+@pytest.mark.parametrize('payload', [
+    {'nested': [{'text': 'unsafe\x00text'}]}, {'bad\x00key': True},
+])
+def test_null_output_is_accounted_then_withheld_without_retry(setup, monkeypatch, payload):
+    import json
+    db, ai = setup
+    body = success()
+    body['output'][0]['content'][0]['text'] = json.dumps(payload)
+    calls = responses(monkeypatch, [body])
+    with pytest.raises(brief_ai.ResponseWithheld, match='null character'):
+        ai.call('extract', 'instructions', {}, {})
+    assert len(calls) == len(db.updates) == 1
+    assert db.updates[0]['status'] == 'completed'
+
+
+def test_json_validation_preserves_literal_escape_and_unicode():
+    value = {'quote': r'An example of \u0000, with café and 日本語.'}
+    brief_ai.validate_json_text(value)
+    assert value['quote'] == r'An example of \u0000, with café and 日本語.'

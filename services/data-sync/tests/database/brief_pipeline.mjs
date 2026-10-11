@@ -21,6 +21,7 @@ await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260820192741_rep
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906223838_continuous_brief_pipeline.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906224831_brief_source_refresh_tracking.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260919165433_resilient_brief_processing.sql','utf8'));
+await db.exec(readFileSync(root+'apps/web/supabase/migrations/20261011003652_actionable_brief_queue_health.sql','utf8'));
 const scalar=async (sql,params=[])=>Object.values((await db.query(sql,params)).rows[0])[0];
 const token='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 await db.exec("insert into bill(id,title) values (1,'Example bill');");
@@ -119,4 +120,51 @@ await db.exec("update bill set title='Updated oversized bill' where id=6");
 assert.equal(await scalar("select count(*) from pending_brief_source_changes(100) where item_id=6"),1);
 assert.equal(await scalar("select brief_pipeline_overview()->>'backfill_waiting'"),'1');
 console.log('PASS: migration, change tracking, source locks, duplicate discovery, exclusive claims, verification gate, pause, atomic/idempotent publication, revisions, editor protection, stale evidence, budgets, and permissions');
+
+// Health and claiming agree, while total waiting counts remain available to the UI.
+await db.exec(`
+ update brief_job set status='withheld' where status in ('pending','retry','processing');
+ alter table bill add column sync_pending boolean default false;
+ insert into bill(id,title) values(100,'Queue health fixture');
+`);
+const healthMeta=await scalar("select brief_source_bundle('bill',100)");
+const healthId=await scalar("select enqueue_brief_job('bill',100,1,'health','health','bill',$1,$2,100)",[healthMeta,packet]);
+await db.query("update brief_job set created_at=now()-interval '2 days',development_date=current_date where id=$1",[healthId]);
+for (const [label, mutation, blocker, eligible] of [
+ ['ready', '', null, true],
+ ['changed source', "update brief_source_change set revision=2 where item_type='bill' and item_id=100", 'source_changed', false],
+ ['missing source', "delete from brief_source_change where item_type='bill' and item_id=100", 'missing_source', false],
+ ['source incomplete', "update bill set sync_pending=true where id=100; update brief_source_change set revision=1 where item_type='bill' and item_id=100", 'source_not_ready', false],
+ ['future retry', "update brief_job set status='retry',next_attempt_at=now()+interval '1 hour' where id="+healthId, 'retry_scheduled', false],
+ ['active final attempt', "update brief_job set status='processing',attempts=3,lease_until=now()+interval '5 minutes' where id="+healthId, 'active_worker', false],
+ ['expired lease', "update brief_job set status='processing',attempts=1,lease_until=now()-interval '1 minute' where id="+healthId, null, true],
+ ['exhausted retry', "update brief_job set status='retry',attempts=3 where id="+healthId, 'attempts_exhausted', false],
+ ['exhausted expired worker', "update brief_job set status='processing',attempts=3,lease_until=now()-interval '1 minute' where id="+healthId, 'attempts_exhausted', false],
+ ['missing lease', "update brief_job set status='processing',attempts=1,lease_until=null where id="+healthId, 'missing_lease', false],
+]) {
+ await db.exec('begin');
+ if (mutation) await db.exec(mutation);
+ const health=await scalar('select brief_pipeline_overview()');
+ assert.equal(health.current_waiting,1,label);
+ assert.equal(health.eligible_current_waiting,eligible ? 1 : 0,label);
+ assert.equal(health.oldest_eligible_current_job,eligible ? healthId : null,label);
+ assert.equal(health.oldest_eligible_current_waiting!==null,eligible,label);
+ if (blocker) {
+   assert.equal(health.blocked_current_counts[blocker],1,label);
+   assert.equal(health.blocked_current_jobs[0].id,healthId,label);
+   assert.equal(health.blocked_current_jobs[0].blocker,blocker,label);
+ }
+ if (label.includes('expired')) assert.equal(health.expired_current_leases,1,label);
+ const claimed=(await db.query("select * from claim_brief_job($1,'current')",[token])).rows;
+ assert.equal(claimed.length,eligible ? 1 : 0,label);
+ if (eligible) assert.equal(claimed[0].id,healthId,label);
+ await db.exec('rollback');
+}
+await db.query('update brief_job set development_date=current_date-365 where id=$1',[healthId]);
+assert.equal((await scalar('select brief_pipeline_overview()')).eligible_current_waiting,0,'backfill excluded');
+assert.equal((await db.query("select * from claim_brief_job($1,'backfill')",[token])).rows[0].id,healthId);
+assert.equal(await scalar("select has_function_privilege('anon','public.brief_job_blocker(public.brief_job,bigint,boolean)','execute')"),false);
+assert.equal(await scalar("select has_function_privilege('authenticated','public.brief_job_blocker(public.brief_job,bigint,boolean)','execute')"),false);
+assert.equal(await scalar("select has_function_privilege('service_role','public.brief_job_blocker(public.brief_job,bigint,boolean)','execute')"),true);
+console.log('PASS: queue health matches worker eligibility, blocked diagnostics, expired/exhausted workers, backfill, and permissions');
 await db.close();

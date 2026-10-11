@@ -69,6 +69,8 @@ class FECClient:
     def get(self, path, params):
         for attempt in range(4):
             if self.requests >= self.max_requests:
+                if attempt:
+                    raise FECError('FEC request failed; retry budget exhausted')
                 raise RequestBudgetReached('FEC request budget reached; import remains incomplete')
             self.limiter.wait()
             self.requests += 1
@@ -92,7 +94,9 @@ class FECClient:
                 delay = float(delay) if delay.isdigit() else 2 ** (attempt + 1)
                 # Long quota resets should yield the run, not hold a worker/lease.
                 if delay > 60:
-                    raise RequestBudgetReached('FEC quota cooldown; retry this import later')
+                    if status == 429:
+                        raise RequestBudgetReached('FEC quota cooldown; retry this import later')
+                    raise FECError(f'FEC service unavailable (HTTP {status}); retry later')
             except requests.RequestException:
                 delay = 2 ** (attempt + 1)
             finally:

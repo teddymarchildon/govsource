@@ -47,6 +47,20 @@ class ResponseWithheld(IncompleteResponse):
     """An explicit provider refusal/filter requires review, not another attempt."""
 
 
+def validate_json_text(value):
+    """Reject NULs before JSONB writes; never silently alter evidence or quotes."""
+    if isinstance(value, str):
+        if '\x00' in value:
+            raise ResponseWithheld('Output contains a null character; review required')
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            validate_json_text(key)
+            validate_json_text(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            validate_json_text(item)
+
+
 class AI:
     def __init__(self, db: Any, job_id: int):
         self.db, self.job_id = db, job_id
@@ -127,4 +141,6 @@ class AI:
             return None, diagnostics
         if any(c.get('type') == 'refusal' for item in body.get('output',[]) for c in item.get('content',[])):
             raise ResponseWithheld('Model refused structured response; review required: ' + json.dumps(diagnostics))
-        return json.loads(response_text(body)), diagnostics
+        result = json.loads(response_text(body))
+        validate_json_text(result)
+        return result, diagnostics

@@ -144,15 +144,21 @@ def main(argv=None):
         return 0
     except Exception as exc:
         partial = isinstance(exc, RequestBudgetReached)
+        checkpoint_ok = True
         message = str(exc) if isinstance(exc, FECError) else f'{type(exc).__name__}: individual import failed; previous data preserved'
         if store and args.write:
             try:
                 store.finish('partial' if partial else 'failed', message)
             except Exception:
+                checkpoint_ok = False
                 LOG.error('Unable to release individual import lease; it expires automatically')
-        LOG.error('data_sync_summary=%s', json.dumps({'job': 'fec_individuals', 'status': 'partial' if partial else 'failed',
+        paused = partial and checkpoint_ok
+        logger = LOG.warning if paused else LOG.error
+        logger('data_sync_summary=%s', json.dumps({'job': 'fec_individuals', 'status': 'partial' if paused else 'failed',
             'campaigns': completed, 'requests': client.requests if client else 0, 'error': message}))
-        return 2 if partial else 1
+        # Only the deliberate request cap/quota cooldown is a resumable pause.
+        # API, validation, persistence and lease failures remain failures.
+        return 0 if paused else 1
 
 
 if __name__ == '__main__':

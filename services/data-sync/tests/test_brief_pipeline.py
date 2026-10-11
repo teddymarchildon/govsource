@@ -336,3 +336,77 @@ def test_storage_outage_is_not_classified_as_waiting_for_source():
     def download(path): raise httpx.ConnectError('offline')
     db=SimpleNamespace(storage=SimpleNamespace(from_=lambda bucket:SimpleNamespace(download=download)))
     with pytest.raises(httpx.ConnectError): read_text(db,[('bucket','file',False)])
+
+
+@pytest.mark.parametrize('stage', ['selection', 'extract', 'write', 'verify'])
+def test_null_content_is_withheld_and_never_written(monkeypatch, stage):
+    import process_briefs
+    from brief_ai import validate_json_text
+    class NullAI(FakeAI):
+        def call(self, name, *args, **kwargs):
+            result = super().call(name, *args, **kwargs)
+            if name == stage:
+                result['untrusted_nested'] = [{'text': 'bad\x00text'}]
+            return result
+    class Queue(DB):
+        claimed = False
+        def rpc(self, name, args):
+            validate_json_text(args)  # Simulate JSONB's boundary.
+            super().rpc(name, args)
+            if name == 'claim_brief_job' and not self.claimed:
+                self.claimed = True
+                return SimpleNamespace(execute=lambda: SimpleNamespace(data=[job()]))
+            return self
+    monkeypatch.setattr(process_briefs, 'process', lambda db, j, token, **kw:
+                        process(db, j, token, ai_factory=NullAI, **kw))
+    db = Queue()
+    result = process_briefs.process_queue(db, 2, float('inf'))
+    assert result['withheld'] == 1 and result['failed'] == 0
+    finishes = [args for name, args in db.calls if name == 'finish_brief_job']
+    assert finishes[-1]['p_status'] == 'withheld'
+    assert finishes[-1]['p_draft'] is None
+    assert not any(name == 'publish_verified_brief' for name, _ in db.calls)
+
+
+def test_database_failure_still_fails_worker(monkeypatch):
+    import process_briefs
+    class Queue(DB):
+        claimed = False
+        def rpc(self, name, args):
+            if name == 'claim_brief_job' and not self.claimed:
+                self.claimed = True
+                return SimpleNamespace(execute=lambda: SimpleNamespace(data=[job()]))
+            return super().rpc(name, args)
+    def broken(*a, **kw):
+        raise ConnectionError('database unavailable')
+    monkeypatch.setattr(process_briefs, 'process', broken)
+    assert process_briefs.process_queue(Queue(), 2, float('inf'))['failed'] == 1
+
+
+def test_blocked_queue_does_not_impersonate_runnable_backlog():
+    overview = {'sources': [], 'oldest_current_waiting': '2020-01-01T00:00:00Z',
+                'current_waiting': 5, 'eligible_current_waiting': 0,
+                'oldest_eligible_current_waiting': None, 'last_progress_at': None,
+                'blocked_current_counts': {'source_changed': 2, 'source_not_ready': 1,
+                                           'active_worker': 1, 'retry_scheduled': 1}}
+    assert problems(overview) == []
+    overview.update(eligible_current_waiting=1, oldest_eligible_current_waiting='2020-01-01T00:00:00Z')
+    assert any('older than 24 hours' in p for p in problems(overview))
+    assert any('no processing progress' in p for p in problems(overview))
+
+
+@pytest.mark.parametrize('extra', [
+    {'blocked_current_counts': {'attempts_exhausted': 1}},
+    {'blocked_current_counts': {'missing_source': 1}},
+    {'blocked_current_counts': {'missing_lease': 1}}, {'expired_current_leases': 1},
+])
+def test_unclaimable_worker_faults_remain_health_failures(extra):
+    assert problems({'sources': [], 'eligible_current_waiting': 0, **extra})
+
+
+def test_backfill_progress_cannot_mask_stalled_current_queue():
+    from datetime import datetime, timezone
+    overview = {'sources': [], 'eligible_current_waiting': 1,
+                'last_current_progress_at': None,
+                'last_progress_at': datetime.now(timezone.utc).isoformat()}
+    assert any('no processing progress' in p for p in problems(overview))

@@ -13,7 +13,7 @@ from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
-from brief_ai import AI, BudgetExhausted, ResponseWithheld, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_ai import AI, BudgetExhausted, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
 from brief_style import PLAIN_ENGLISH_STYLE
 from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint, validate_packet
 from generate_briefs_batch import dek_is_complete, slugify
@@ -130,6 +130,7 @@ def discover(db: Any, limit: int) -> dict:
 
 
 def complete(db: Any, job: dict, token: str, status: str, reason: str, *, draft=None, report=None, ai=None):
+    validate_json_text([reason, draft, report])
     db.rpc('finish_brief_job',{'p_id':job['id'],'p_token':token,'p_status':status,'p_reason':reason,
         'p_draft':draft,'p_verification':report,'p_writer':ai.writer if ai else '',
         'p_verifier':ai.verifier if ai else '', 'p_prompt':PROMPT_VERSION}).execute()
@@ -151,6 +152,7 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
         work={}
     work['prompt_version']=PROMPT_VERSION
     def checkpoint():
+        validate_json_text(work)
         db.rpc('save_brief_work',{'p_id':job['id'],'p_token':token,'p_work':work}).execute()
     selection = work.get('selection') or ai.call('selection',
         'Assess newsworthiness of this development. Prioritize enactment, chamber passage, substantive executive orders, '

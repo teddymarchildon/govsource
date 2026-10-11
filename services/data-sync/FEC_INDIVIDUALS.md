@@ -85,8 +85,12 @@ concurrent quota use. It is activated when the workflow is pushed to the default
 branch and reuses the existing secrets. Manual dispatch supports a reporting
 period and optional receiving committee; it can resume a partial backfill.
 
-Exit 0 means the selected queue completed, 2 means a request/quota budget stopped
-the run with resumable progress, and 1 means a failure. Completed campaigns stay
+Exit 0 means the selected queue completed (`status: success`) or a request/quota
+budget paused the run with saved resumable progress (`status: partial`, logged as
+a warning). Exit 1 means a failure, including a failed checkpoint/lease update,
+an upstream outage, or exhausted retries for a failed request. Inspect coverage
+timestamps and partial summaries to track backfill completion; a green run alone
+does not mean the entire dataset has published. Completed campaigns stay
 published even when a later campaign pauses. An initial nationwide backfill may
 require multiple runs; the UI never claims complete coverage before publication.
 Only the current reporting period refreshes automatically; older periods require

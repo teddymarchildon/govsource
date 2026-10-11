@@ -120,8 +120,9 @@ class Session:
 def test_attempt_budget_includes_retries_and_never_leaks_key(monkeypatch):
     monkeypatch.setattr('sync_fec_donations.time.sleep', lambda _: None)
     client = FECClient('secret-key', 2, 0, Session([requests.ConnectionError('url?api_key=secret-key'), Response(status=503)]))
-    with pytest.raises(RequestBudgetReached) as error:
+    with pytest.raises(FECError, match='retry budget exhausted') as error:
         client.get('/candidates/', {})
+    assert not isinstance(error.value, RequestBudgetReached)
     assert client.requests == 2
     assert 'secret-key' not in str(error.value)
 
