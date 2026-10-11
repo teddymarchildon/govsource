@@ -1,8 +1,8 @@
 import 'server-only';
 import { applyContributionFilters, type ContributionFilters } from '@/lib/contributionFilters';
 
-import { createClient } from '@/utils/supabase/server';
-import { createAdminClient } from '@/utils/supabase/admin';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { CONTRIBUTION_PAGE_SIZE } from './contributions';
 
 export type IndividualReceipt = {
@@ -18,10 +18,11 @@ export type IndividualContributions = {
   filteredCount: number; committeeIds: string[]; employers: IndividualGroup[]; occupations: IndividualGroup[];
 };
 
-export async function getMemberIndividualContributions(memberId: string, requestedCycle?: string, requestedPage?: string, filters: ContributionFilters = {}): Promise<IndividualContributions> {
-  const db = await createClient();
+export async function getMemberIndividualContributions(memberId: string, requestedCycle?: string, requestedPage?: string, filters: ContributionFilters = {}, client?: SupabaseClient): Promise<IndividualContributions> {
+  const db = client ?? await (await import('@/utils/supabase/server')).createClient();
+  const admin = client ?? (await import('@/utils/supabase/admin')).createAdminClient();
   const [periods, candidates] = await Promise.all([
-    createAdminClient().from('fec_sync_state').select('cycle').not('last_success_at', 'is', null).order('cycle', { ascending: false }),
+    admin.from('fec_sync_state').select('cycle').not('last_success_at', 'is', null).order('cycle', { ascending: false }),
     db.from('fec_candidate').select('candidate_id').eq('congressman_id', memberId),
   ]);
   if (periods.error) throw periods.error;

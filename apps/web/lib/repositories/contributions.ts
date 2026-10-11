@@ -1,8 +1,8 @@
 import 'server-only';
 import { applyContributionFilters, type ContributionFilters } from '@/lib/contributionFilters';
 
-import { createClient } from '@/utils/supabase/server';
-import { createAdminClient } from '@/utils/supabase/admin';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 
 export const CONTRIBUTION_PAGE_SIZE = 25;
 
@@ -17,11 +17,12 @@ export type MemberContributions = {
   receipts: Contribution[]; count: number; page: number; filteredCount: number; committeeIds: string[];
 };
 
-export async function getMemberContributions(memberId: string, requestedCycle?: string, requestedPage?: string, filters: ContributionFilters = {}): Promise<MemberContributions> {
-  const db = await createClient();
+export async function getMemberContributions(memberId: string, requestedCycle?: string, requestedPage?: string, filters: ContributionFilters = {}, client?: SupabaseClient): Promise<MemberContributions> {
+  const db = client ?? await (await import('@/utils/supabase/server')).createClient();
+  const admin = client ?? (await import('@/utils/supabase/admin')).createAdminClient();
   // Only publication metadata is returned. Import errors, leases and checkpoints stay private.
   const [coverage, candidates] = await Promise.all([
-    createAdminClient().from('fec_sync_state')
+    admin.from('fec_sync_state')
       .select('cycle,last_success_at,last_full_success_at,published_scope')
       .not('last_success_at', 'is', null).order('cycle', { ascending: false }),
     db.from('fec_candidate').select('candidate_id').eq('congressman_id', memberId),

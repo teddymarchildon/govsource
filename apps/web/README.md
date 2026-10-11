@@ -68,7 +68,7 @@ match the same capitalization/spacing normalization as the summary groups.
 Apply `supabase/migrations/20261011005959_contribution_overviews.sql` before
 deploying this feature, followed by `supabase/migrations/20261011010041_contribution_views_read_only.sql`. It adds invoker-security reporting views, the
 `campaign_finance` Brief type, and a unique member/reporting-cycle constraint.
-It does not generate or publish any briefs, or change ingestion schedules.
+The migration does not generate or publish any briefs. Existing ingestion schedules are unchanged.
 
 In `/admin/briefs`, use **Draft a contribution overview**, select a member and
 cycle ending year, and review the result in the existing editor. Initial drafts
@@ -86,3 +86,31 @@ automatically. The existing editorial revision behavior remains unchanged.
 Run `npm run test:contributions`, `npm run test:briefs`, and `npx tsc --noEmit` in
 `apps/web`; run `npm run test:database` in `services/data-sync` for schema,
 reporting-view, uniqueness, and access checks.
+
+### Automated contribution draft pilot
+
+`Draft contribution brief pilot` runs after successful `Weekly reference data sync`
+or `Sync FEC individual contributions` workflows on main, and can be dispatched
+manually. It uses the existing Actions Supabase secrets and the same repository
+summaries and template as the admin UI; no model API key is needed.
+
+The pilot creates at most **five contribution briefs total per current cycle**,
+counting existing briefs in every status. It skips existing member/cycle briefs
+without editing them. A database uniqueness constraint handles duplicate races;
+Actions concurrency serializes pilot runs. Concurrent manual creation for other
+members can exceed the pilot target, but the automated job itself remains capped.
+
+Both the nationwide committee import and every eligible individual campaign for
+a selected member must have refreshed since Sunday 00:00 UTC. Insufficiently
+covered members are skipped in stable member-ID order. Consequently the first
+committee-triggered run may wait for the later individual import. The existing
+Sunday imports start at 06:43 UTC (committees) and 10:43 UTC (individuals); generation
+starts after successful completion, not at a fixed time. Failed imports do not
+trigger generation. Run summaries list draft IDs and skip counts.
+
+Drafts have `status=review`, no publication timestamp and no verified publication
+job. They remain outside the automatic publisher and require editorial review in
+`/admin/briefs`. Once the cap is reached, later imports do not create more drafts
+or refresh existing ones. Increase the explicit pilot cap in code only after review.
+Run locally with `npm run briefs:contributions` using server-side `SUPABASE_URL`
+and `SUPABASE_SERVICE_ROLE_KEY`; this command writes unpublished drafts.
