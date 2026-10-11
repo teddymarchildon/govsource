@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { safeAuthRedirect } from '@/utils/authRedirect';
 import { useAuth } from './AuthContext';
 import { supabase } from '../utils/supabase/client';
 import { UserPreferences } from '../types/types';
@@ -38,77 +39,55 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [userPreferences, setUserPreferences] = useState<OnboardingUserPreferences>(defaultUserPreferences);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const destination = safeAuthRedirect(searchParams.get('redirect'));
   const router = useRouter();
   const totalSteps = 2; // Total number of onboarding steps (states and policy areas)
 
-  // Check if user has already completed onboarding
   useEffect(() => {
+    let cancelled = false;
     const checkOnboardingStatus = async () => {
-      if (!user) {
+      if (!userId) {
+        setUserPreferences(defaultUserPreferences);
+        setLoadedUserId(null);
+        setCurrentStep(1);
         setIsLoading(false);
         return;
       }
-
+      setIsLoading(true);
+      setCurrentStep(1);
       try {
-        // First check user_usage table to see if user has seen onboarding
-        const { data: usageData, error: usageError } = await supabase
-          .from('user_usage')
-          .select('saw_onboarding_flow_at')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (usageError && usageError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-          console.error('Error fetching user usage:', usageError);
-        }
-
-        const completed = !!(usageData && usageData.saw_onboarding_flow_at);
-
-        if (completed) {
-          setUserPreferences(prev => ({
-            ...prev,
-            user_id: user.id,
-            onboarding_completed: true
-          }));
-          setIsLoading(false);
-          return;
-        }
-
-        // If user hasn't seen onboarding, check if they have preferences
-        const { data: prefsData, error: prefsError } = await supabase
-          .from('user_preferences')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (prefsError && prefsError.code !== 'PGRST116') {
-          console.error('Error fetching user preferences:', prefsError);
-        }
-
-        if (prefsData) {
-          setUserPreferences({
-            id: prefsData.id || '',
-            user_id: prefsData.user_id || user.id,
-            states: prefsData.states || [],
-            policy_areas: prefsData.policy_areas || [],
-            onboarding_completed: false
-          });
-        } else if (user) {
-          // If no preferences exist yet, set user_id
-          setUserPreferences(prev => ({
-            ...prev,
-            user_id: user.id
-          }));
-        }
+        const [usage, prefs] = await Promise.all([
+          supabase.from('user_usage').select('saw_onboarding_flow_at').eq('user_id', userId).maybeSingle(),
+          supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
+        ]);
+        if (usage.error) throw usage.error;
+        if (prefs.error) throw prefs.error;
+        if (cancelled) return;
+        setUserPreferences({
+          id: prefs.data?.id || '',
+          user_id: userId,
+          states: prefs.data?.states || [],
+          policy_areas: prefs.data?.policy_areas || [],
+          onboarding_completed: !!usage.data?.saw_onboarding_flow_at,
+        });
       } catch (error) {
-        console.error('Error in onboarding check:', error);
+        if (cancelled) return;
+        console.error('Error checking onboarding:', error);
+        setUserPreferences({ ...defaultUserPreferences, user_id: userId });
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setLoadedUserId(userId);
+          setIsLoading(false);
+        }
       }
     };
-
-    checkOnboardingStatus();
-  }, [user, router]);
+    void checkOnboardingStatus();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const goToNextStep = () => {
     if (currentStep < totalSteps) {
@@ -194,7 +173,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       // Update local state
       updatePreference('onboarding_completed', true);
 
-      router.push('/');
+      router.replace(destination);
     } catch (error) {
       throw error;
     } finally {
@@ -212,7 +191,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       updatePreference('onboarding_completed', true);
 
       // Navigate to dashboard
-      router.push('/');
+      router.replace(destination);
     } catch (error) {
       throw error;
     } finally {
@@ -225,7 +204,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       value={{
         currentStep,
         totalSteps,
-        isLoading,
+        isLoading: authLoading || isLoading || (!!userId && loadedUserId !== userId),
         userPreferences,
         goToNextStep,
         goToPreviousStep,

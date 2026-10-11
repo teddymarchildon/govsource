@@ -7,6 +7,7 @@ import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext'
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { safeAuthRedirect } from '@/utils/authRedirect';
 
 // Google SVG icon
 const GoogleIcon = () => (
@@ -35,7 +36,10 @@ function LoginPageInner() {
   const [showConfirmNotice, setShowConfirmNotice] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get('redirect') || '/';
+  const redirectPath = safeAuthRedirect(searchParams.get('redirect'));
+  const callbackError = searchParams.has('error')
+    ? 'We could not complete sign-in. The link may have expired or been opened in a different browser. Please try again in the browser where you requested it.'
+    : '';
   const { signInWithMagicLink, signInWithPassword, signUp, signInWithGoogle, user, loading: isAuthLoading } = useAuth();
   const { userPreferences, isLoading: isOnboardingLoading } = useOnboarding();
 
@@ -46,10 +50,10 @@ function LoginPageInner() {
       if (!userPreferences.onboarding_completed) {
         // Redirect to onboarding, preserving the original redirect path
         const onboardingUrl = `/onboarding${redirectPath !== '/' ? `?redirect=${encodeURIComponent(redirectPath)}` : ''}`;
-        router.push(onboardingUrl);
+        router.replace(onboardingUrl);
       } else {
         // Onboarding is complete, redirect to the originally intended path or homepage
-        router.push(redirectPath);
+        router.replace(redirectPath);
       }
     }
   }, [user, isAuthLoading, userPreferences.onboarding_completed, isOnboardingLoading, router, redirectPath]);
@@ -62,18 +66,14 @@ function LoginPageInner() {
     try {
       if (authMode === 'password') {
         if (isFirstTime) {
-          const redirectUrl = typeof window !== 'undefined'
-            ? window.location.origin + (redirectPath || '/')
-            : undefined;
+          const redirectUrl = redirectPath;
           await signUp(email, password, redirectUrl);
           setShowConfirmNotice(true);
         } else {
           await signInWithPassword(email, password);
         }
       } else {
-        const redirectUrl = typeof window !== 'undefined'
-          ? window.location.origin + (redirectPath || '/')
-          : undefined;
+        const redirectUrl = redirectPath;
         await signInWithMagicLink(email, redirectUrl);
         setShowConfirmNotice(true);
       }
@@ -91,9 +91,7 @@ function LoginPageInner() {
     setError('');
     setIsLoading(true);
     try {
-      const redirectUrl = typeof window !== 'undefined'
-        ? window.location.origin + (redirectPath || '/')
-        : undefined;
+      const redirectUrl = redirectPath;
       await signInWithGoogle(redirectUrl);
       // The user will be redirected by Supabase, so no further action needed here
     } catch (err: any) {
@@ -103,9 +101,8 @@ function LoginPageInner() {
     }
   };
 
-  if (user && user.email_confirmed_at) {
-    // Optionally, render nothing or a loading spinner while redirecting
-    return null;
+  if (isAuthLoading || user) {
+    return <div role="status" className="flex justify-center items-center h-64"><LoadingIndicator size="large" /><span className="sr-only">Completing sign-in…</span></div>;
   }
 
   return (
@@ -125,15 +122,16 @@ function LoginPageInner() {
             <p className="text-sm text-gray-600">Enter your email to access your account</p>
           </div>
 
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
+          {(error || callbackError) && (
+            <div role="alert" className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error || callbackError}
             </div>
           )}
 
           {showConfirmNotice && (
-            <div className="bg-secondary border border-primary/20 text-secondary-foreground px-4 py-3 rounded mb-4">
-              Check your email for a link to sign in. Click the link to continue back to GovSource.
+            <div role="status" className="bg-secondary border border-primary/20 text-secondary-foreground px-4 py-3 rounded mb-4">
+              Check your email for a link to sign in. Open it in this browser to continue back to GovSource.
+              <Button type="button" variant="outline" className="mt-3 w-full" onClick={() => setShowConfirmNotice(false)}>Try again or use another email</Button>
             </div>
           )}
 
@@ -143,7 +141,8 @@ function LoginPageInner() {
               <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
                 <button
                   type="button"
-                  onClick={() => setAuthMode('magic-link')}
+                  disabled={isLoading}
+                  onClick={() => { setAuthMode('magic-link'); setError(''); }}
                   className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                     authMode === 'magic-link'
                       ? 'bg-white text-gray-900 shadow-sm'
@@ -154,7 +153,8 @@ function LoginPageInner() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setAuthMode('password')}
+                  disabled={isLoading}
+                  onClick={() => { setAuthMode('password'); setError(''); }}
                   className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                     authMode === 'password'
                       ? 'bg-white text-gray-900 shadow-sm'
@@ -174,6 +174,7 @@ function LoginPageInner() {
                     <Input
                       type="email"
                       id="email"
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="block w-full"
@@ -192,6 +193,8 @@ function LoginPageInner() {
                       <Input
                         type="password"
                         id="password"
+                        autoComplete={isFirstTime ? 'new-password' : 'current-password'}
+                        minLength={isFirstTime ? 6 : undefined}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="block w-full"

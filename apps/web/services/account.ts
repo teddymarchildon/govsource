@@ -47,7 +47,7 @@ export async function createCheckoutSession() {
 export async function upsertUserUsage(userId: string) {
   const { data, error } = await supabase
     .from('user_usage')
-    .upsert({ user_id: userId }, { onConflict: 'user_id' });
+    .upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
 
   if (error) throw error;
   return data;

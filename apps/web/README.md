@@ -19,6 +19,31 @@ Create a `.env.local` file with the required variables for:
 - OpenAI (`OPENAI_API_KEY`)
 - Stripe (checkout + webhook secrets used by API routes)
 
+The shared navigation also requires `SUPABASE_SERVICE_ROLE_KEY` for server-side
+topic reads. Keep this server-only key out of all `NEXT_PUBLIC_` variables.
+
+## Authentication
+
+Email links, signup confirmations, and Google sign-in return to
+`/auth/callback?redirect=<local path>`. The callback exchanges the PKCE code for
+session cookies, then `/login` waits for the current user's onboarding status
+before navigating. Password sign-in uses the same onboarding decision. Completing
+or skipping onboarding preserves the original destination.
+
+Before deployment, verify Supabase Authentication → URL Configuration allows the
+callback URL on each supported origin, including its `redirect` query string
+(for example `https://www.govsrc.com/auth/callback**` and
+`http://localhost:3000/auth/callback**` for local development). Set the Site URL
+to the canonical production origin. Email templates should honor `RedirectTo`
+through Supabase's confirmation URL. Open email links in the browser where they
+were requested; PKCE depends on that browser's verifier cookie.
+
+Run `node --test scripts/auth-flow.test.mjs` for redirect, callback failure,
+session-race, and onboarding regression coverage. Release verification should
+also complete Google, password, and email-link sign-in with a test account,
+check a page reload retains the session, and verify sign-out. Automated callback
+tests use a mocked provider; they do not prove email delivery or provider settings.
+
 ## Main App Areas
 
 - `app/bills`, `app/laws`

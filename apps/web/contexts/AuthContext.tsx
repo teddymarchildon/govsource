@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '../utils/supabase/client';
-import { User as SupabaseUser } from '@supabase/supabase-js';
 import type { User as AppUser } from '../types/types';
-import { upsertSubscription, upsertUserUsage, getUserUsage } from '../services/api';
+import { upsertSubscription, upsertUserUsage, getUserUsage } from '../services/account';
+import { authCallbackUrl } from '@/utils/authRedirect';
 import { AI_FREE_USAGE_LIMIT } from '../constants/onboarding';
 
 type AuthContextType = {
@@ -31,79 +31,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [aiInteractions, setAiInteractions] = useState<number>(0);
   const [aiLimitReached, setAiLimitReached] = useState<boolean>(false);
 
-  // Check if the user is a paid subscriber
-  const handlePostLogin = async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from('subscription')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+  useEffect(() => {
+    let active = true;
+    let generation = 0;
+    let currentUserId: string | null = null;
 
-      setSubscription(data || null);
-      let isPaid = false;
-      if (data) {
-        const tier = data.tier;
-        isPaid = tier === 'paid';
-        setIsPaidSubscriber(isPaid);
-      } else {
-        await upsertSubscription();
-        setIsPaidSubscriber(false);
-      }
-      // Fetch aiInteractions from user_usage
-      const usage = await getUserUsage(userId);
-      const count = usage?.ai_interactions || 0;
-      setAiInteractions(count);
-      setAiLimitReached(!isPaid && count >= AI_FREE_USAGE_LIMIT);
-    } catch (_err) {
+    const resetAccount = () => {
       setIsPaidSubscriber(false);
       setSubscription(null);
       setAiInteractions(0);
       setAiLimitReached(false);
-    }
-  };
+    };
 
-  useEffect(() => {
-    // Set up auth state listener
+    const loadAccount = async (userId: string, version: number) => {
+      const isCurrent = () => active && version === generation;
+      try {
+        await upsertUserUsage(userId);
+        if (!isCurrent()) return;
+        const [{ data, error }, usage] = await Promise.all([
+          supabase.from('subscription').select('*').eq('user_id', userId).maybeSingle(),
+          getUserUsage(userId),
+        ]);
+        if (error) throw error;
+        if (!isCurrent()) return;
+        if (!data) await upsertSubscription();
+        if (!isCurrent()) return;
+        const paid = data?.tier === 'paid';
+        const count = usage?.ai_interactions || 0;
+        setSubscription(data || null);
+        setIsPaidSubscriber(paid);
+        setAiInteractions(count);
+        setAiLimitReached(!paid && count >= AI_FREE_USAGE_LIMIT);
+      } catch {
+        if (isCurrent()) resetAccount();
+      }
+    };
+
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setTimeout(async () => {
-          if (session?.user) {
-            const supaUser = session.user as SupabaseUser;
-            setUser({
-              id: supaUser.id,
-              email: supaUser.email ?? '',
-              email_confirmed_at: (supaUser as any).email_confirmed_at ?? null,
-              confirmed_at: (supaUser as any).confirmed_at ?? null,
-            });
-            if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && supaUser.id) {
-              try {
-                await upsertUserUsage(supaUser.id);
-              } catch (_err) {
-                console.error('Error upserting user_usage or subscription:', _err);
-              }
-              await handlePostLogin(supaUser.id);
-            }
-          } else {
-            setUser(null);
-            setIsPaidSubscriber(false);
-            setSubscription(null);
-          }
-          setLoading(false);
-        }, 0);
+      (_event, session) => {
+        if (!active) return;
+        const supaUser = session?.user;
+        const userId = supaUser?.id ?? null;
+        setUser(supaUser ? {
+          id: supaUser.id,
+          email: supaUser.email ?? '',
+          email_confirmed_at: supaUser.email_confirmed_at ?? null,
+          confirmed_at: supaUser.confirmed_at ?? null,
+        } : null);
+        // Account enrichment must not block sign-in or run inside the auth lock.
+        setLoading(false);
+        if (userId !== currentUserId) {
+          currentUserId = userId;
+          const version = ++generation;
+          resetAccount();
+          if (userId) setTimeout(() => {
+            if (active && version === generation) void loadAccount(userId, version);
+          }, 0);
+        }
       }
     );
 
     return () => {
-      authListener?.subscription.unsubscribe();
+      active = false;
+      generation++;
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
   const signInWithMagicLink = async (email: string, redirectUrl?: string) => {
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: email.trim(),
       options: {
-        emailRedirectTo: redirectUrl || (process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding')
+        emailRedirectTo: authCallbackUrl(window.location.origin, redirectUrl)
       }
     });
     if (error) throw error;
@@ -111,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithPassword = async (email: string, password: string, _redirectUrl?: string) => {
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
     if (error) throw error;
@@ -119,10 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, redirectUrl?: string) => {
     const { error } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
       options: {
-        emailRedirectTo: redirectUrl || (process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding')
+        emailRedirectTo: authCallbackUrl(window.location.origin, redirectUrl)
       }
     });
     if (error) throw error;
@@ -132,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl || (process.env.NEXT_PUBLIC_DOMAIN_BASE + '/onboarding')
+        redirectTo: authCallbackUrl(window.location.origin, redirectUrl)
       }
     });
     if (error) throw error;
@@ -140,11 +139,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signOut();
-    setLoading(false);
-    if (error) throw error;
-    setIsPaidSubscriber(false);
-    setSubscription(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setUser(null);
+      setIsPaidSubscriber(false);
+      setSubscription(null);
+      setAiInteractions(0);
+      setAiLimitReached(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
