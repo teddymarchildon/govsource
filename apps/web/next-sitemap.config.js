@@ -27,6 +27,7 @@ module.exports = {
       '/agencies',
       '/agency-rules',
       '/briefs',
+      '/campaign-finance',
       '/bills',
       '/congress-members',
       '/executive-orders',

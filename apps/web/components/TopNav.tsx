@@ -34,6 +34,7 @@ type TopicLink = Pick<Topic, 'id' | 'slug' | 'name'>;
 
 const sectionItems = [
   { href: '/', label: 'Today', paths: ['/', '/briefs'] },
+  { href: '/campaign-finance', label: 'Campaign Finance', paths: ['/campaign-finance'] },
   { href: '/congress', label: 'Congress', paths: ['/congress', '/bills', '/laws', '/congress-members'] },
   { href: '/white-house', label: 'White House', paths: ['/white-house', '/executive-orders'] },
   { href: '/agencies', label: 'Agencies', paths: ['/agencies', '/agency-rules'] },
@@ -204,7 +205,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
       <nav className="fixed left-0 right-0 top-12 z-[9] hidden h-12 border-b border-border bg-background md:block" aria-label="Primary navigation">
         <div ref={desktopMenusRef} className="relative container mx-auto grid h-full grid-cols-[1fr_auto] items-center px-4 lg:grid-cols-[1fr_auto_1fr]">
 
-          <div className="flex items-center justify-center gap-4 lg:col-start-2 lg:gap-7">
+          <div className="flex items-center justify-center gap-3 lg:col-start-2 lg:gap-5">
             {sectionItems.map((item) => (
               <Link
                 key={item.href}
