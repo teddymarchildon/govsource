@@ -6,6 +6,9 @@ import ts from 'typescript';
 const { outputText } = ts.transpileModule(readFileSync(new URL('../lib/repositories/individualContributions.ts', import.meta.url), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } });
 
+const filterExports = {};
+new Function('exports', ts.transpileModule(readFileSync(new URL('../lib/contributionFilters.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(filterExports);
+
 function repository(overrides = {}, failTable) {
   const tables = {
     fec_sync_state: [{ cycle: 2026, last_success_at: '2026-09-20' }],
@@ -28,16 +31,21 @@ function repository(overrides = {}, failTable) {
       receiving_committee_id: i === 26 ? 'C2' : 'C1', receipt_date: i === 26 ? null : '2026-06-01' })),
     ...overrides,
   };
+  tables.fec_individual_receipts_normalized = tables.fec_individual_contribution.map(row => ({ ...row, employer_normalized: row.employer?.trim().replace(/\s+/g, ' ').toUpperCase() ?? null, occupation_normalized: row.occupation?.trim().replace(/\s+/g, ' ').toUpperCase() ?? null }));
   const calls = [];
   const db = { from(table) {
-    let rows = [...tables[table]], range;
+    let rows = [...tables[table]], range, head = false;
     const order = [];
     return {
-      select() { return this; },
+      select(columns, options) { head = options?.head; return this; },
       eq(key, value) { rows = rows.filter(row => row[key] === value); return this; },
       in(key, values) { rows = rows.filter(row => values.includes(row[key])); return this; },
       not(key, op, value) { rows = rows.filter(row => row[key] !== value); return this; },
       order(key, options = {}) { order.push({ key, ...options }); return this; },
+      is(key, value) { rows = rows.filter(row => row[key] == value); return this; },
+      ilike(key, pattern) { const term = pattern.slice(1, -1).replace(/\\([%_\\])/g, '$1').toLowerCase(); rows = rows.filter(row => String(row[key] ?? '').toLowerCase().includes(term)); return this; },
+      gte(key, value) { rows = rows.filter(row => row[key] != null && (key === 'amount' ? Number(row[key]) >= Number(value) : row[key] >= value)); return this; },
+      lte(key, value) { rows = rows.filter(row => row[key] != null && (key === 'amount' ? Number(row[key]) <= Number(value) : row[key] <= value)); return this; },
       range(start, end) { range = [start, end]; calls.push({ table, range }); return this; },
       then(resolve, reject) {
         rows.sort((a, b) => {
@@ -49,13 +57,13 @@ function repository(overrides = {}, failTable) {
           }
           return 0;
         });
-        return Promise.resolve({ data: range ? rows.slice(range[0], range[1] + 1) : rows.slice(0, 1000),
+        return Promise.resolve({ count: rows.length, data: head ? null : range ? rows.slice(range[0], range[1] + 1) : rows.slice(0, 1000),
           error: table === failTable ? new Error('Query failed') : null }).then(resolve, reject);
       },
     };
   } };
   const exports = {};
-  new Function('require', 'exports', outputText)((name) => name === 'server-only' ? {} : name === './contributions'
+  new Function('require', 'exports', outputText)((name) => name === 'server-only' ? {} : name === '@/lib/contributionFilters' ? filterExports : name === './contributions'
     ? { CONTRIBUTION_PAGE_SIZE: 25 } : { createClient: async () => db, createAdminClient: () => db }, exports);
   return { get: exports.getMemberIndividualContributions, calls };
 }
@@ -106,4 +114,21 @@ test('loads all summary pages and keeps missing employment separate', async () =
 test('a query failure cannot be presented as zero individual fundraising', async () => {
   await assert.rejects(repository({}, 'fec_individual_coverage').get('1'), /Query failed/);
   await assert.rejects(repository({}, 'fec_individual_group_totals').get('1'), /Query failed/);
+});
+
+test('employer drill-down matches normalized grouping and retains full-period summaries', async () => {
+  const { get } = repository({ fec_individual_contribution: [
+    { cycle: 2026, sub_id: '1', receiving_committee_id: 'C1', employer: ' Example  Co ', amount: -5, receipt_date: '2026-06-01' },
+    { cycle: 2026, sub_id: '2', receiving_committee_id: 'C2', employer: 'Other Co', amount: 100, receipt_date: '2026-06-01' },
+    { cycle: 2026, sub_id: '3', receiving_committee_id: 'C3', employer: 'Example Co', amount: 100, receipt_date: '2026-06-01' },
+  ] });
+  const result = await get('1', '2026', '99', { employer: 'EXAMPLE CO', min: '-10', max: '0' });
+  assert.equal(result.filteredCount, 1);
+  assert.equal(result.receipts[0].sub_id, '1');
+  assert.equal(result.total, 100);
+  assert.equal(result.page, 1);
+  const empty = await get('1', '2026', '9', { employer: 'No match' });
+  assert.equal(empty.filteredCount, 0);
+  assert.deepEqual(empty.receipts, []);
+  assert.equal(empty.page, 1);
 });

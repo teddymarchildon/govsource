@@ -10,7 +10,7 @@ export const GOVERNMENT_SECTIONS = [
 export type GovernmentSection = (typeof GOVERNMENT_SECTIONS)[number];
 
 export const SECTION_CONTENT_TYPES: Record<GovernmentSection, readonly ContentType[]> = {
-  congress: ['bill', 'law'],
+  congress: ['bill', 'law', 'campaign_finance'],
   'white-house': ['executive_order'],
   agencies: ['agency_document'],
   courts: ['cluster'],

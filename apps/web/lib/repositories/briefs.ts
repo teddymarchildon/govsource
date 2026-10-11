@@ -59,8 +59,10 @@ function liveBriefWithRelationsQuery() {
     .lte('published_at', new Date().toISOString());
 }
 
-export const getPublishedBriefs = cache(async (limit = 24): Promise<Brief[]> => {
-  const { data, error } = await liveBriefWithRelationsQuery()
+export const getPublishedBriefs = cache(async (limit = 24, campaignFinance = false): Promise<Brief[]> => {
+  let query = liveBriefWithRelationsQuery();
+  if (campaignFinance) query = query.eq('primary_item_type', 'campaign_finance');
+  const { data, error } = await query
     .order('published_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit);
@@ -157,4 +159,12 @@ export const getHomepageBriefs = cache(async (): Promise<Brief[]> => {
     }
   }
   return [...briefs.values()];
+});
+
+export const getPublishedContributionBrief = cache(async (memberId: string, cycle: number): Promise<Brief | null> => {
+  const { data, error } = await liveBriefWithRelationsQuery()
+    .eq('primary_item_type', 'campaign_finance').eq('primary_item_id', memberId)
+    .eq('contribution_cycle', cycle).maybeSingle();
+  if (error) throw error;
+  return data ? normalizeBrief(data as BriefRow, data.related_items ?? []) : null;
 });

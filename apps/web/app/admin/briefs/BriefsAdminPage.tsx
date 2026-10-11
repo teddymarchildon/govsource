@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import CongressmanSearchSelect from '@/components/CongressmanSearchSelect';
 import { Input } from '@/components/ui/input';
 import type { BriefPoint, BriefSource, BriefStatus } from '@/types/brief';
 import type { ContentType } from '@/types/content';
@@ -19,6 +20,7 @@ type AdminBrief = {
   context_markdown: string | null;
   primary_item_type: ContentType;
   primary_item_id: number;
+  contribution_cycle?: number | null;
   policy_areas: string[];
   sources: BriefSource[];
   author_name: string | null;
@@ -39,6 +41,7 @@ type FormState = {
   context_markdown: string;
   primary_item_type: ContentType;
   primary_item_id: string;
+  contribution_cycle: string;
   policy_areas: string;
   source_urls: string;
   author_name: string;
@@ -58,6 +61,7 @@ const EMPTY_FORM: FormState = {
   context_markdown: '',
   primary_item_type: 'bill',
   primary_item_id: '',
+  contribution_cycle: '',
   policy_areas: '',
   source_urls: '',
   author_name: '',
@@ -82,6 +86,7 @@ const TYPE_LABELS: Record<ContentType, string> = {
   agency_document: 'Agency document',
   executive_order: 'Executive order',
   cluster: 'Supreme Court case',
+  campaign_finance: 'Campaign finance',
 };
 
 function toLocalDateTime(value: string | null) {
@@ -105,6 +110,7 @@ function buildForm(brief: AdminBrief): FormState {
     context_markdown: brief.context_markdown || '',
     primary_item_type: brief.primary_item_type,
     primary_item_id: String(brief.primary_item_id),
+    contribution_cycle: brief.contribution_cycle ? String(brief.contribution_cycle) : '',
     policy_areas: brief.policy_areas.join(', '),
     source_urls: brief.sources.map((source) => source.url).join('\n'),
     author_name: brief.author_name || '',
@@ -136,6 +142,9 @@ export default function BriefsAdminPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [contributionMember, setContributionMember] = useState<string>('');
+  const [contributionCycle, setContributionCycle] = useState(String(Math.ceil(new Date().getFullYear() / 2) * 2));
+  const [generating, setGenerating] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | BriefStatus>('all');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -210,6 +219,7 @@ export default function BriefsAdminPage({
       context_markdown: form.context_markdown || null,
       primary_item_type: form.primary_item_type,
       primary_item_id: primaryItemId,
+      contribution_cycle: form.primary_item_type === 'campaign_finance' ? Number(form.contribution_cycle) : null,
       policy_areas: form.policy_areas.split(',').map((area) => area.trim()).filter(Boolean),
       sources: urls.map((url, index) => selected?.sources.find((source) => source.url === url) || { id: `source_${crypto.randomUUID()}`, label: `Source ${index + 1}`, url }),
       author_name: form.author_name || null,
@@ -241,6 +251,26 @@ export default function BriefsAdminPage({
     }
   };
 
+  const generateContributionBrief = async () => {
+    setGenerating(true);
+    setMessage(null);
+    try {
+      const response = await fetch('/api/admin/contribution-briefs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: Number(contributionMember), cycle: Number(contributionCycle) }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Could not generate overview');
+      setSelected(payload.brief);
+      setForm(buildForm(payload.brief));
+      setEditing(true);
+      setMessage({ type: 'success', text: payload.existing ? 'Opened the existing overview for this member and period.' : 'Overview drafted from contribution summaries. Review it before publishing.' });
+      await loadBriefs();
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Could not generate overview' });
+    } finally { setGenerating(false); }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -251,6 +281,16 @@ export default function BriefsAdminPage({
         </div>
         <Button onClick={startNew}>New Brief</Button>
       </div>
+
+      <section aria-labelledby="contribution-generator" className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+        <h2 id="contribution-generator" className="text-lg font-semibold">Draft a contribution overview</h2>
+        <p className="mt-1 text-sm text-gray-600">Create an editable, source-linked brief from published contribution summaries. One overview per member and reporting period; existing briefs are opened without being replaced.</p>
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="min-w-0 flex-1"><p className="mb-1 text-sm font-medium">Congress member</p><CongressmanSearchSelect onSelect={member => setContributionMember(member ? String(member.id) : '')} selectedId={contributionMember} /></div>
+          <label className="text-sm font-medium">Cycle ending year<Input type="number" min="1980" max="2200" step="2" className="mt-1 w-32" value={contributionCycle} onChange={event => setContributionCycle(event.target.value)} /></label>
+          <Button disabled={!contributionMember || generating || saving} onClick={generateContributionBrief}>{generating ? 'Drafting…' : 'Draft overview'}</Button>
+        </div>
+      </section>
 
       {message ? (
         <div className={`mt-6 rounded-md border px-4 py-3 text-sm ${message.type === 'success' ? 'border-green-300 bg-green-50 text-green-800' : 'border-red-300 bg-red-50 text-red-800'}`}>
@@ -317,6 +357,7 @@ export default function BriefsAdminPage({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium">Primary source type<select className="mt-1 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm" value={form.primary_item_type} onChange={(event) => setField('primary_item_type', event.target.value as ContentType)}>{Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                {form.primary_item_type === 'campaign_finance' ? <label className="block text-sm font-medium">Cycle ending year<Input className="mt-1" type="number" min="1980" max="2200" step="2" value={form.contribution_cycle} onChange={event => setField('contribution_cycle', event.target.value)} /></label> : null}
                 <label className="block text-sm font-medium">Government record ID<Input className="mt-1" type="number" min="1" value={form.primary_item_id} onChange={(event) => setField('primary_item_id', event.target.value)} /></label>
               </div>
               <label className="block text-sm font-medium">Policy areas<Input className="mt-1" value={form.policy_areas} onChange={(event) => setField('policy_areas', event.target.value)} placeholder="Economics, Health, Defense" /></label>
@@ -332,7 +373,7 @@ export default function BriefsAdminPage({
               <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={form.is_featured} onChange={(event) => setField('is_featured', event.target.checked)} />Feature on homepage</label>
               {form.is_featured ? <label className="block text-sm font-medium">Featured until<Input className="mt-1" type="datetime-local" value={form.featured_until} onChange={(event) => setField('featured_until', event.target.value)} /></label> : null}
 
-              <div className="flex justify-end gap-3 border-t pt-5"><Button variant="outline" onClick={() => setEditing(false)}>Close</Button><Button onClick={saveBrief} disabled={saving}>{saving ? 'Saving…' : 'Save Brief'}</Button></div>
+              <div className="flex justify-end gap-3 border-t pt-5"><Button variant="outline" onClick={() => setEditing(false)}>Close</Button><Button onClick={saveBrief} disabled={saving || generating}>{saving ? 'Saving…' : 'Save Brief'}</Button></div>
             </div>
           </section>
         ) : null}

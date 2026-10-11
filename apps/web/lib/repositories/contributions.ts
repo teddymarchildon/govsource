@@ -1,4 +1,5 @@
 import 'server-only';
+import { applyContributionFilters, type ContributionFilters } from '@/lib/contributionFilters';
 
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
@@ -13,10 +14,10 @@ export type Contribution = {
 export type MemberContributions = {
   cycles: number[]; cycle: number | null; refreshedAt: string | null; nationwide: boolean;
   linked: boolean; excludedCommittees: number; groups: Group[]; total: number;
-  receipts: Contribution[]; count: number; page: number;
+  receipts: Contribution[]; count: number; page: number; filteredCount: number; committeeIds: string[];
 };
 
-export async function getMemberContributions(memberId: string, requestedCycle?: string, requestedPage?: string): Promise<MemberContributions> {
+export async function getMemberContributions(memberId: string, requestedCycle?: string, requestedPage?: string, filters: ContributionFilters = {}): Promise<MemberContributions> {
   const db = await createClient();
   // Only publication metadata is returned. Import errors, leases and checkpoints stay private.
   const [coverage, candidates] = await Promise.all([
@@ -33,7 +34,7 @@ export async function getMemberContributions(memberId: string, requestedCycle?: 
   const result: MemberContributions = {
     cycles, cycle, refreshedAt: publication?.last_success_at ?? null,
     nationwide: Boolean(publication?.last_full_success_at), linked: Boolean(candidates.data?.length),
-    excludedCommittees: 0, groups: [], total: 0, receipts: [], count: 0, page: 1,
+    excludedCommittees: 0, groups: [], total: 0, receipts: [], count: 0, page: 1, filteredCount: 0, committeeIds: [],
   };
   if (!cycle || !candidates.data?.length) return result;
   const ids = candidates.data.map(row => row.candidate_id);
@@ -47,6 +48,7 @@ export async function getMemberContributions(memberId: string, requestedCycle?: 
   for (const row of allLinks.data ?? []) linkCounts.set(row.committee_id, (linkCounts.get(row.committee_id) ?? 0) + 1);
   const attributed = committees.filter(id => linkCounts.get(id) === 1);
   result.excludedCommittees = committees.length - attributed.length;
+  result.committeeIds = attributed;
   if (!attributed.length) return result;
 
   // Page through every group, including members with multiple FEC IDs; never total a truncated top-N result.
@@ -75,12 +77,20 @@ export async function getMemberContributions(memberId: string, requestedCycle?: 
     .in('receiving_committee_id', attributed).eq('cycle', cycle);
   if (count.error) throw count.error;
   result.count = count.count ?? 0;
+  const filteredQuery = db.from('fec_committee_contribution').select('sub_id', { count: 'exact', head: true })
+    .in('receiving_committee_id', attributed).eq('cycle', cycle);
+  applyContributionFilters(filteredQuery, filters);
+  const filtered = Object.keys(filters).length ? await filteredQuery : count;
+  if (filtered.error) throw filtered.error;
+  result.filteredCount = filtered.count ?? 0;
   const pageNumber = requestedPage && /^\d{1,8}$/.test(requestedPage) ? Number(requestedPage) : 1;
-  result.page = Math.max(1, Math.min(pageNumber, Math.max(1, Math.ceil(result.count / CONTRIBUTION_PAGE_SIZE))));
+  result.page = Math.max(1, Math.min(pageNumber, Math.max(1, Math.ceil(result.filteredCount / CONTRIBUTION_PAGE_SIZE))));
   const offset = (result.page - 1) * CONTRIBUTION_PAGE_SIZE;
-  const receipts = await db.from('fec_committee_contribution')
+  const receiptQuery = db.from('fec_committee_contribution')
     .select('sub_id,contributor_name,giving_committee_id,receiving_committee_id,amount,receipt_date,source_url')
-    .in('receiving_committee_id', attributed).eq('cycle', cycle)
+    .in('receiving_committee_id', attributed).eq('cycle', cycle);
+  applyContributionFilters(receiptQuery, filters);
+  const receipts = await receiptQuery
     .order('receipt_date', { ascending: false, nullsFirst: false }).order('sub_id', { ascending: false })
     .range(offset, offset + CONTRIBUTION_PAGE_SIZE - 1);
   if (receipts.error) throw receipts.error;

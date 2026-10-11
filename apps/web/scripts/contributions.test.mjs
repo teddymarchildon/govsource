@@ -6,6 +6,9 @@ import ts from 'typescript';
 const source = readFileSync(new URL('../lib/repositories/contributions.ts', import.meta.url), 'utf8');
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } });
 
+const filterExports = {};
+new Function('exports', ts.transpileModule(readFileSync(new URL('../lib/contributionFilters.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(filterExports);
+
 function repository(overrides = {}, failTable) {
   const tables = {
     fec_sync_state: [{ cycle: 2026, last_success_at: '2026-09-20', last_full_success_at: '2026-09-20' }, { cycle: 2024, last_success_at: '2025-01-01' }],
@@ -36,6 +39,10 @@ function repository(overrides = {}, failTable) {
       in(column, values) { rows = rows.filter(row => values.includes(row[column])); return this; },
       not(column, op, value) { rows = rows.filter(row => row[column] !== value); return this; },
       order(column, options = {}) { sorts.push({ column, ...options }); return this; },
+      is(key, value) { rows = rows.filter(row => row[key] == value); return this; },
+      ilike(key, pattern) { const term = pattern.slice(1, -1).replace(/\\([%_\\])/g, '$1').toLowerCase(); rows = rows.filter(row => String(row[key] ?? '').toLowerCase().includes(term)); return this; },
+      gte(key, value) { rows = rows.filter(row => row[key] != null && (key === 'amount' ? Number(row[key]) >= Number(value) : row[key] >= value)); return this; },
+      lte(key, value) { rows = rows.filter(row => row[key] != null && (key === 'amount' ? Number(row[key]) <= Number(value) : row[key] <= value)); return this; },
       range(from, to) { range = [from, to]; calls.push({ table, range }); return this; },
       then(resolve, reject) {
         rows.sort((a, b) => {
@@ -56,7 +63,7 @@ function repository(overrides = {}, failTable) {
     return query;
   } };
   const exports = {};
-  new Function('require', 'exports', outputText)((name) => name === 'server-only' ? {} : { createClient: async () => db, createAdminClient: () => db }, exports);
+  new Function('require', 'exports', outputText)((name) => name === 'server-only' ? {} : name === '@/lib/contributionFilters' ? filterExports : { createClient: async () => db, createAdminClient: () => db }, exports);
   return { get: exports.getMemberContributions, calls };
 }
 
@@ -113,4 +120,18 @@ test('database errors do not silently become zero contributions; private sync fi
   await get('197');
   const columns = calls.find(call => call.table === 'fec_sync_state').columns;
   assert.ok(!/\*|error|checkpoint|token|lease/.test(columns));
+});
+
+test('filtered receipts and count agree while summary totals retain their full-period scope', async () => {
+  const { get } = repository({ fec_committee_contribution: [
+    { sub_id: '1', receiving_committee_id: 'C1', giving_committee_id: 'C00000001', contributor_name: 'Example PAC', cycle: 2026, receipt_date: '2026-06-01', amount: 100 },
+    { sub_id: '2', receiving_committee_id: 'C1', giving_committee_id: 'C00000001', contributor_name: 'Example PAC', cycle: 2026, receipt_date: '2026-05-01', amount: 20 },
+    { sub_id: '3', receiving_committee_id: 'C3', giving_committee_id: 'C00000001', contributor_name: 'Example PAC', cycle: 2026, receipt_date: '2026-06-01', amount: 100 },
+  ] });
+  const result = await get('197', '2026', '999', { committee: 'C00000001', contributor: 'example', from: '2026-06-01', min: '50' });
+  assert.equal(result.filteredCount, 1);
+  assert.equal(result.receipts[0].sub_id, '1');
+  assert.equal(result.count, 2);
+  assert.equal(result.total, 100);
+  assert.equal(result.page, 1);
 });

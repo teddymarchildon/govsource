@@ -1,4 +1,5 @@
 import 'server-only';
+import { applyContributionFilters, type ContributionFilters } from '@/lib/contributionFilters';
 
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
@@ -14,10 +15,10 @@ export type IndividualContributions = {
   cycle: number | null; cycles: number[]; linked: boolean; excludedCommittees: number;
   coveredCommittees: number; eligibleCommittees: number; refreshedAt: string | null;
   total: number; count: number; page: number; receipts: IndividualReceipt[];
-  employers: IndividualGroup[]; occupations: IndividualGroup[];
+  filteredCount: number; committeeIds: string[]; employers: IndividualGroup[]; occupations: IndividualGroup[];
 };
 
-export async function getMemberIndividualContributions(memberId: string, requestedCycle?: string, requestedPage?: string): Promise<IndividualContributions> {
+export async function getMemberIndividualContributions(memberId: string, requestedCycle?: string, requestedPage?: string, filters: ContributionFilters = {}): Promise<IndividualContributions> {
   const db = await createClient();
   const [periods, candidates] = await Promise.all([
     createAdminClient().from('fec_sync_state').select('cycle').not('last_success_at', 'is', null).order('cycle', { ascending: false }),
@@ -28,7 +29,7 @@ export async function getMemberIndividualContributions(memberId: string, request
   const cycles = (periods.data ?? []).map(row => Number(row.cycle));
   const cycle = cycles.includes(Number(requestedCycle)) ? Number(requestedCycle) : cycles[0] ?? null;
   const result: IndividualContributions = { cycle, cycles, linked: Boolean(candidates.data?.length), excludedCommittees: 0,
-    coveredCommittees: 0, eligibleCommittees: 0, refreshedAt: null, total: 0, count: 0, page: 1, receipts: [], employers: [], occupations: [] };
+    coveredCommittees: 0, eligibleCommittees: 0, refreshedAt: null, total: 0, count: 0, page: 1, receipts: [], filteredCount: 0, committeeIds: [], employers: [], occupations: [] };
   if (!cycle || !candidates.data?.length) return result;
   const links = await db.from('fec_candidate_committee').select('committee_id').eq('cycle', cycle)
     .in('candidate_id', candidates.data.map(row => row.candidate_id));
@@ -53,8 +54,19 @@ export async function getMemberIndividualContributions(memberId: string, request
   result.count = published.reduce((sum, row) => sum + Number(row.receipt_count), 0);
   result.total = published.reduce((sum, row) => sum + Math.round(Number(row.total_amount) * 100), 0) / 100;
   const ids = published.map(row => row.committee_id);
+  result.committeeIds = ids;
+  const receiptTable = filters.employer || filters.occupation ? 'fec_individual_receipts_normalized' : 'fec_individual_contribution';
+  result.filteredCount = result.count;
+  if (Object.keys(filters).length) {
+    const filteredQuery = db.from(receiptTable).select('sub_id', { count: 'exact', head: true })
+      .eq('cycle', cycle).in('receiving_committee_id', ids);
+    applyContributionFilters(filteredQuery, filters, true);
+    const filtered = await filteredQuery;
+    if (filtered.error) throw filtered.error;
+    result.filteredCount = filtered.count ?? 0;
+  }
   const pageNumber = requestedPage && /^\d{1,8}$/.test(requestedPage) ? Number(requestedPage) : 1;
-  result.page = Math.max(1, Math.min(pageNumber, Math.max(1, Math.ceil(result.count / CONTRIBUTION_PAGE_SIZE))));
+  result.page = Math.max(1, Math.min(pageNumber, Math.max(1, Math.ceil(result.filteredCount / CONTRIBUTION_PAGE_SIZE))));
   const offset = (result.page - 1) * CONTRIBUTION_PAGE_SIZE;
 
   const loadGroups = async () => {
@@ -76,10 +88,11 @@ export async function getMemberIndividualContributions(memberId: string, request
     }
     return groups;
   };
+  const receiptQuery = db.from(receiptTable).select('sub_id,contributor_name,receiving_committee_id,employer,occupation,city,state,amount,receipt_date,source_url')
+      .eq('cycle', cycle).in('receiving_committee_id', ids);
+  applyContributionFilters(receiptQuery, filters, true);
   const [receipts, groups] = await Promise.all([
-    db.from('fec_individual_contribution').select('sub_id,contributor_name,receiving_committee_id,employer,occupation,city,state,amount,receipt_date,source_url')
-      .eq('cycle', cycle).in('receiving_committee_id', ids)
-      .order('receipt_date', { ascending: false, nullsFirst: false }).order('sub_id', { ascending: false }).order('receiving_committee_id')
+    receiptQuery.order('receipt_date', { ascending: false, nullsFirst: false }).order('sub_id', { ascending: false }).order('receiving_committee_id')
       .range(offset, offset + CONTRIBUTION_PAGE_SIZE - 1),
     loadGroups(),
   ]);

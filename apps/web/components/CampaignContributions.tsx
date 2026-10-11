@@ -1,3 +1,5 @@
+import ContributionFilters from '@/components/ContributionFilters';
+import { contributionHref, type ContributionFilters as Filters } from '@/lib/contributionFilters';
 import Link from 'next/link';
 import { ArrowUpRight, HandCoins } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,23 +22,23 @@ function EmptyState({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">{children}</div>;
 }
 
-export default async function CampaignContributions({ memberId, cycle, page }: { memberId: string; cycle?: string; page?: string }) {
+export default async function CampaignContributions({ memberId, cycle, page, filters = {} }: { memberId: string; cycle?: string; page?: string; filters?: Filters }) {
   let data;
   try {
-    data = await getMemberContributions(memberId, cycle, page);
+    data = await getMemberContributions(memberId, cycle, page, filters);
   } catch {
     console.error('Campaign contribution lookup failed', { memberId });
-    return <div className="space-y-6"><ContributionKindLinks kind="committees" /><EmptyState>Campaign contributions are temporarily unavailable. <Link href={`?tab=contributions`} className="font-medium text-primary hover:underline">Try again</Link>.</EmptyState></div>;
+    return <div className="space-y-6"><ContributionKindLinks kind="committees" /><EmptyState>Campaign contributions are temporarily unavailable. <Link href={contributionHref('committees')} className="font-medium text-primary hover:underline">Try again</Link>.</EmptyState></div>;
   }
   const period = data.cycle;
-  const href = (next: number) => `?tab=contributions&cycle=${period}&contributionPage=${next}`;
-  const pageCount = Math.max(1, Math.ceil(data.count / CONTRIBUTION_PAGE_SIZE));
+  const href = (next: number) => contributionHref('committees', period, filters, next);
+  const pageCount = Math.max(1, Math.ceil(data.filteredCount / CONTRIBUTION_PAGE_SIZE));
   return <div className="space-y-6">
     <ContributionKindLinks kind="committees" cycle={period} />
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><h2 className="flex items-center gap-2 text-xl font-semibold"><HandCoins className="h-5 w-5 text-primary" />Campaign contributions</h2><p className="mt-1 text-sm text-muted-foreground">Direct contributions from political parties and PACs to this member’s campaigns.</p></div>
       {period ? <form className="flex shrink-0 items-end gap-2" action={`/congress-members/${memberId}`}>
-        <input type="hidden" name="tab" value="contributions" />
+        <input type="hidden" name="tab" value="contributions" /><input type="hidden" name="contributionKind" value="committees" />
         <div className="space-y-1.5"><label htmlFor="contribution-cycle" className="block text-xs font-medium text-muted-foreground">Reporting period</label>
           <select id="contribution-cycle" name="cycle" defaultValue={period} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {data.cycles.map(value => <option key={value} value={value}>{value - 1}–{value}</option>)}
@@ -68,12 +70,14 @@ export default async function CampaignContributions({ memberId, cycle, page }: {
           <ol className="divide-y divide-border/60">{data.groups.slice(0, 10).map((group, index) => <li key={group.giving_committee_id ?? group.group_name} className="flex items-start gap-3 py-4 first:pt-0 last:pb-0">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
             <div className="min-w-0 flex-1">{group.giving_committee_id ? <a className="text-sm font-medium text-primary hover:underline" href={committeeUrl(group.giving_committee_id, period)} target="_blank" rel="noopener noreferrer">{group.group_name}<ArrowUpRight aria-hidden="true" className="ml-1 inline h-3.5 w-3.5" /><span className="sr-only"> (FEC, opens in a new tab)</span></a> : <p className="text-sm font-medium">{group.group_name}</p>}
-              <p className="mt-1 text-xs text-muted-foreground">{group.contribution_count.toLocaleString('en-US')} records{!group.giving_committee_id ? ' · Committee ID unavailable' : ''}</p>
+              <Link href={contributionHref('committees', period, group.giving_committee_id ? { committee: group.giving_committee_id } : { reportedGroup: group.group_name })} className="mt-1 block text-xs text-primary hover:underline">View transactions</Link><p className="mt-1 text-xs text-muted-foreground">{group.contribution_count.toLocaleString('en-US')} records{!group.giving_committee_id ? ' · Committee ID unavailable' : ''}</p>
             </div><span className="shrink-0 text-sm font-semibold tabular-nums">{money(group.total_amount)}</span>
           </li>)}</ol>
         </CardContent></Card>
 
         <Card><CardHeader><CardTitle className="text-xl">Contribution transactions</CardTitle><p className="text-sm text-muted-foreground">Most recent receipts first. Open a source record to review the original filing.</p></CardHeader><CardContent>
+          <ContributionFilters key={JSON.stringify(filters)} kind="committees" cycle={period} filters={filters} />
+          {!data.filteredCount ? <p role="status" className="mb-4 text-sm text-muted-foreground">No transactions match these filters.</p> : null}
           <div className="relative overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Reported party and PAC contributions for {period - 1}–{period}</caption>
             <thead><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground"><th scope="col" className="pb-3 pr-4 font-medium">Contributor</th><th scope="col" className="whitespace-nowrap pb-3 pr-4 font-medium">Receipt date</th><th scope="col" className="pb-3 pr-4 text-right font-medium">Amount</th><th scope="col" className="pb-3 text-right font-medium">Source</th></tr></thead>
             <tbody>{data.receipts.map(receipt => <tr key={receipt.sub_id} className="border-b border-border/60 last:border-0">
@@ -83,7 +87,7 @@ export default async function CampaignContributions({ memberId, cycle, page }: {
             </tr>)}</tbody>
           </table></div>
           <nav aria-label="Contribution transaction pages" className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4">
-            <p className="text-xs text-muted-foreground">Page {data.page} of {pageCount} · {data.count.toLocaleString('en-US')} records</p>
+            <p className="text-xs text-muted-foreground">Page {data.page} of {pageCount} · {data.filteredCount.toLocaleString('en-US')} matching records</p>
             <div className="flex gap-2">{data.page > 1 ? <Link scroll={false} href={href(data.page - 1)} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Previous</Link> : <Button variant="outline" size="sm" disabled>Previous</Button>}{data.page < pageCount ? <Link scroll={false} href={href(data.page + 1)} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Next</Link> : <Button variant="outline" size="sm" disabled>Next</Button>}</div>
           </nav>
         </CardContent></Card>

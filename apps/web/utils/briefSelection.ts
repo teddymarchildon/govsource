@@ -4,7 +4,8 @@ import type { Brief } from '../types/brief';
 export function briefInstitution(brief: Brief) {
   switch (brief.primary_item_type) {
     case 'bill':
-    case 'law': return 'congress';
+    case 'law':
+    case 'campaign_finance': return 'congress';
     case 'executive_order': return 'white-house';
     case 'agency_document': return 'agencies';
     case 'cluster': return 'courts';

@@ -21,8 +21,9 @@ const BriefInputSchema = z.object({
   dek: z.string().trim().max(360).nullable().optional(),
   points: z.array(BriefPointSchema).max(5).default([]),
   context_markdown: z.string().max(12000).nullable().optional(),
-  primary_item_type: z.enum(['bill', 'law', 'agency_document', 'executive_order', 'cluster']),
+  primary_item_type: z.enum(['bill', 'law', 'agency_document', 'executive_order', 'cluster', 'campaign_finance']),
   primary_item_id: z.number().int().positive(),
+  contribution_cycle: z.number().int().min(1980).max(2200).refine(value => value % 2 === 0).nullable().optional(),
   policy_areas: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
   sources: z.array(BriefSourceSchema).max(20).default([]),
   author_name: z.string().trim().max(160).nullable().optional(),
@@ -40,7 +41,7 @@ const UpdateBriefSchema = BriefInputSchema.extend({
 });
 
 const BRIEF_LIST_FIELDS =
-  'id,created_at,updated_at,version,status,title,display_title,slug,dek,points,primary_item_type,primary_item_id,policy_areas,sources,author_name,published_at,is_featured,featured_until,auto_generated';
+  'id,created_at,updated_at,version,status,title,display_title,slug,dek,points,primary_item_type,primary_item_id,contribution_cycle,policy_areas,sources,author_name,published_at,is_featured,featured_until,auto_generated';
 const BRIEF_DETAIL_FIELDS = `${BRIEF_LIST_FIELDS},context_markdown,editor_notes`;
 
 function slugify(value: string) {
@@ -58,6 +59,7 @@ function cleanNullable(value: string | null | undefined) {
 }
 
 function normalizeInput(input: z.infer<typeof BriefInputSchema>) {
+  if (input.primary_item_type === 'campaign_finance' && !input.contribution_cycle) throw new Error('A reporting cycle is required for contribution Briefs.');
   const points = normalizeBriefPoints(input.points);
   const sources = input.sources.map((source, index) => ({
     id: source.id || `source_${index + 1}`,
@@ -92,6 +94,7 @@ function normalizeInput(input: z.infer<typeof BriefInputSchema>) {
     context_markdown: cleanNullable(input.context_markdown),
     primary_item_type: input.primary_item_type,
     primary_item_id: input.primary_item_id,
+    contribution_cycle: input.primary_item_type === 'campaign_finance' ? input.contribution_cycle : null,
     policy_areas: [...new Set(input.policy_areas.map((area) => area.trim()).filter(Boolean))],
     sources,
     author_name: cleanNullable(input.author_name),
@@ -112,6 +115,11 @@ async function requireAdmin() {
 }
 
 async function primaryItemExists(type: z.infer<typeof BriefInputSchema>['primary_item_type'], id: number) {
+  if (type === 'campaign_finance') {
+    const { data, error } = await getAdminClient().from('congressman').select('id').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return Boolean(data);
+  }
   if (type === 'bill' || type === 'law') {
     let query = getAdminClient().from('bill').select('id,law_enacted_date').eq('id', id);
     query = type === 'law' ? query.not('law_enacted_date', 'is', null) : query.is('law_enacted_date', null);
@@ -209,7 +217,7 @@ export async function POST(request: Request) {
     if (error) {
       console.error('[brief-admin] Failed to create Brief', error);
       const duplicate = error.code === '23505';
-      return NextResponse.json({ error: duplicate ? 'That slug is already in use.' : 'Failed to create Brief' }, { status: duplicate ? 409 : 500 });
+      return NextResponse.json({ error: duplicate ? 'That slug or candidate/reporting-period overview already exists.' : 'Failed to create Brief' }, { status: duplicate ? 409 : 500 });
     }
     return NextResponse.json({ brief: data }, { status: 201 });
   } catch (error) {
@@ -243,7 +251,7 @@ export async function PATCH(request: Request) {
     if (error) {
       console.error('[brief-admin] Failed to update Brief', error);
       const duplicate = error.code === '23505';
-      return NextResponse.json({ error: duplicate ? 'That slug is already in use.' : 'Failed to update Brief' }, { status: duplicate ? 409 : 500 });
+      return NextResponse.json({ error: duplicate ? 'That slug or candidate/reporting-period overview already exists.' : 'Failed to update Brief' }, { status: duplicate ? 409 : 500 });
     }
     if (!data) {
       return NextResponse.json({ error: 'This Brief changed in another session. Reload it before saving.' }, { status: 409 });

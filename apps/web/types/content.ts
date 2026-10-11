@@ -4,6 +4,7 @@ export const CONTENT_TYPES = [
   'agency_document',
   'executive_order',
   'cluster',
+  'campaign_finance',
 ] as const;
 
 export type ContentType = (typeof CONTENT_TYPES)[number];

@@ -4,11 +4,13 @@ import CongressMemberDetailClient from './CongressMemberDetailClient';
 import { getCongressMemberDetail } from '@/lib/repositories/congress';
 import CampaignContributions from '@/components/CampaignContributions';
 import IndividualContributions from '@/components/IndividualContributions';
+import ContributionOverview from '@/components/ContributionOverview';
+import { normalizeContributionFilters, type ContributionQuery } from '@/lib/contributionFilters';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
-type CongressMemberPageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; cycle?: string; contributionPage?: string; contributionKind?: string }> };
+type CongressMemberPageProps = { params: Promise<{ id: string }>; searchParams: Promise<ContributionQuery> };
 
 export async function generateMetadata({ params }: CongressMemberPageProps): Promise<Metadata> {
   const { id } = await params;
@@ -26,11 +28,12 @@ export default async function CongressMemberDetailPage({ params, searchParams }:
   const query = await searchParams;
   const detail = await getCongressMemberDetail(id);
   if (!detail) notFound();
+  const filters = normalizeContributionFilters(query);
   const activeTab = ['bills', 'terms', 'statistics', 'contributions'].includes(query.tab ?? '') ? query.tab! : 'bills';
   return <CongressMemberDetailClient {...detail} activeTab={activeTab} contributions={activeTab === 'contributions' ?
-    <Suspense key={`${query.contributionKind}-${query.cycle}-${query.contributionPage}`} fallback={<p role="status" className="py-12 text-center text-sm text-muted-foreground">Loading campaign contributions…</p>}>
+    <Suspense key={JSON.stringify(query)} fallback={<p role="status" className="py-12 text-center text-sm text-muted-foreground">Loading campaign contributions…</p>}>
       {query.contributionKind === 'individuals'
-        ? <IndividualContributions memberId={String(detail.member.id)} cycle={query.cycle} page={query.contributionPage} />
-        : <CampaignContributions memberId={String(detail.member.id)} cycle={query.cycle} page={query.contributionPage} />}
+        ? <IndividualContributions memberId={String(detail.member.id)} cycle={query.cycle} page={query.contributionPage} filters={filters} />
+        : query.contributionKind === 'committees' ? <CampaignContributions memberId={String(detail.member.id)} cycle={query.cycle} page={query.contributionPage} filters={filters} /> : <ContributionOverview memberId={String(detail.member.id)} cycle={query.cycle} />}
     </Suspense> : null} />;
 }

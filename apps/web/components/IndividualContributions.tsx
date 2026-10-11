@@ -1,3 +1,5 @@
+import ContributionFilters from '@/components/ContributionFilters';
+import { contributionHref, type ContributionFilters as Filters } from '@/lib/contributionFilters';
 import Link from 'next/link';
 import { ArrowUpRight, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,29 +14,29 @@ const date = (value: string) => new Date(value).toLocaleDateString('en-US', { mo
 function EmptyState({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">{children}</div>;
 }
-function GroupSummary({ title, groups }: { title: string; groups: IndividualGroup[] }) {
+function GroupSummary({ title, groups, kind, cycle }: { title: string; groups: IndividualGroup[]; kind: 'employer' | 'occupation'; cycle: number }) {
   const missing = groups.find(group => group.label === null);
   const named = groups.filter(group => group.label !== null);
   return <Card><CardHeader><CardTitle className="text-xl">{title}</CardTitle><p className="text-sm text-muted-foreground">Top ten reported totals from individual contributions.</p></CardHeader><CardContent>
     {named.length ? <ol className="divide-y divide-border/60">{named.slice(0, 10).map((group, index) => <li key={group.label} className="flex items-start gap-3 py-3 first:pt-0">
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
-      <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{group.label}</p><p className="mt-1 text-xs text-muted-foreground">{group.count.toLocaleString('en-US')} {group.count === 1 ? 'record' : 'records'}</p></div>
+      <div className="min-w-0 flex-1"><Link href={contributionHref('individuals', cycle, { [kind]: group.label! })} className="break-words text-sm font-medium text-primary hover:underline">{group.label}</Link><p className="mt-1 text-xs text-muted-foreground">{group.count.toLocaleString('en-US')} {group.count === 1 ? 'record' : 'records'}</p></div>
       <span className="shrink-0 text-sm font-semibold tabular-nums">{money(group.total)}</span>
     </li>)}</ol> : <p className="text-sm text-muted-foreground">No reported values are available.</p>}
     {missing ? <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">Not reported: {money(missing.total)} across {missing.count.toLocaleString('en-US')} records.</p> : null}
   </CardContent></Card>;
 }
 
-export default async function IndividualContributions({ memberId, cycle, page }: { memberId: string; cycle?: string; page?: string }) {
+export default async function IndividualContributions({ memberId, cycle, page, filters = {} }: { memberId: string; cycle?: string; page?: string; filters?: Filters }) {
   let data;
-  try { data = await getMemberIndividualContributions(memberId, cycle, page); }
+  try { data = await getMemberIndividualContributions(memberId, cycle, page, filters); }
   catch {
     console.error('Individual contribution lookup failed', { memberId });
     return <div className="space-y-6"><ContributionKindLinks kind="individuals" /><EmptyState>Individual contributions are temporarily unavailable. <Link href="?tab=contributions&contributionKind=individuals" className="font-medium text-primary hover:underline">Try again</Link>.</EmptyState></div>;
   }
   const period = data.cycle;
-  const pageCount = Math.max(1, Math.ceil(data.count / CONTRIBUTION_PAGE_SIZE));
-  const href = (next: number) => `?tab=contributions&contributionKind=individuals&cycle=${period}&contributionPage=${next}`;
+  const pageCount = Math.max(1, Math.ceil(data.filteredCount / CONTRIBUTION_PAGE_SIZE));
+  const href = (next: number) => contributionHref('individuals', period, filters, next);
   return <div className="space-y-6">
     <ContributionKindLinks kind="individuals" cycle={period} />
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -64,8 +66,10 @@ export default async function IndividualContributions({ memberId, cycle, page }:
           ['Contribution records', data.count.toLocaleString('en-US'), 'Transactions, not unique people'],
           ['Campaigns covered', `${data.coveredCommittees} of ${data.eligibleCommittees}`, `${period - 1}–${period} reporting period`],
         ].map(([label, value, helper]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 break-words text-2xl font-bold lg:text-3xl">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></CardContent></Card>)}</div>
-        <div className="grid gap-6 lg:grid-cols-2"><GroupSummary title="By reported employer" groups={data.employers} /><GroupSummary title="By reported occupation" groups={data.occupations} /></div>
+        <div className="grid gap-6 lg:grid-cols-2"><GroupSummary title="By reported employer" groups={data.employers} kind="employer" cycle={period} /><GroupSummary title="By reported occupation" groups={data.occupations} kind="occupation" cycle={period} /></div>
         <Card><CardHeader><CardTitle className="text-xl">Individual contribution transactions</CardTitle><p className="text-sm text-muted-foreground">Most recent receipts first. Reporting periods may include receipts dated outside those years.</p></CardHeader><CardContent>
+          <ContributionFilters key={JSON.stringify(filters)} kind="individuals" cycle={period} filters={filters} />
+          {!data.filteredCount ? <p role="status" className="mb-4 text-sm text-muted-foreground">No transactions match these filters.</p> : null}
           <div className="relative overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Itemized individual contributions in {period - 1}–{period}</caption>
             <thead><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">{['Contributor', 'Reported employer / occupation', 'Receipt date', 'Amount', 'Source'].map(label => <th scope="col" key={label} className={`pb-3 pr-4 font-medium ${['Amount', 'Source'].includes(label) ? 'text-right' : ''}`}>{label}</th>)}</tr></thead>
             <tbody>{data.receipts.map(receipt => <tr key={`${receipt.receiving_committee_id}:${receipt.sub_id}`} className="border-b border-border/60 last:border-0">
@@ -77,7 +81,7 @@ export default async function IndividualContributions({ memberId, cycle, page }:
             </tr>)}</tbody>
           </table></div>
           <nav aria-label="Individual contribution pages" className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4">
-            <p className="text-xs text-muted-foreground">Page {data.page} of {pageCount} · {data.count.toLocaleString('en-US')} records</p><div className="flex gap-2">
+            <p className="text-xs text-muted-foreground">Page {data.page} of {pageCount} · {data.filteredCount.toLocaleString('en-US')} matching records</p><div className="flex gap-2">
               {data.page > 1 ? <Link scroll={false} href={href(data.page - 1)} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Previous</Link> : <Button variant="outline" size="sm" disabled>Previous</Button>}
               {data.page < pageCount ? <Link scroll={false} href={href(data.page + 1)} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Next</Link> : <Button variant="outline" size="sm" disabled>Next</Button>}
             </div>

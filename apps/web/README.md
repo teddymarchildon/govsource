@@ -55,3 +55,34 @@ npm run build
 npm run start
 npm run lint
 ```
+
+## Contribution overviews
+
+Member profiles now open the Contributions tab on an overview with separate
+party/PAC and itemized individual totals, top groups, and receipt-month charts.
+Select a group or month to filter transactions. Search, date, signed-amount,
+employer and occupation filters are preserved in the URL and pagination; summary
+cards continue to describe the full reporting period. Employer/occupation filters
+match the same capitalization/spacing normalization as the summary groups.
+
+Apply `supabase/migrations/20261011005959_contribution_overviews.sql` before
+deploying this feature, followed by `supabase/migrations/20261011010041_contribution_views_read_only.sql`. It adds invoker-security reporting views, the
+`campaign_finance` Brief type, and a unique member/reporting-cycle constraint.
+It does not generate or publish any briefs, or change ingestion schedules.
+
+In `/admin/briefs`, use **Draft a contribution overview**, select a member and
+cycle ending year, and review the result in the existing editor. Initial drafts
+use deterministic prose templates over the same repository summaries as the UI;
+no model call or automatic publication occurs. The aggregate evidence is retained
+in the existing generation metadata. Repeating the action opens the existing
+brief, including an archived one, without replacing editorial changes. Published
+briefs appear on the member overview and in the Campaign finance brief feed.
+
+This release covers verified member-linked campaigns, not all election candidates.
+Missing coverage is not zero fundraising; signed amounts are before refunds and
+exclude unitemized donations. Briefs include their data dates and do not refresh
+automatically. The existing editorial revision behavior remains unchanged.
+
+Run `npm run test:contributions`, `npm run test:briefs`, and `npx tsc --noEmit` in
+`apps/web`; run `npm run test:database` in `services/data-sync` for schema,
+reporting-view, uniqueness, and access checks.

@@ -146,6 +146,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
         <div className="relative">
           <input
             type="text"
+            aria-label="Search Congress members"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -180,17 +181,16 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
               {congressmen.map((congressman) => (
                 <li
                   key={congressman.id}
-                  onClick={() => handleSelect(congressman)}
-                  className="p-2 hover:bg-gray-100 cursor-pointer"
+                  className="hover:bg-gray-100"
                 >
-                  <div className="flex items-center">
+                  <button type="button" onClick={() => handleSelect(congressman)} className="flex w-full items-center p-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                     <span className="text-sm font-medium">
                       {congressman.full_name}
                     </span>
                     <span className="ml-2 text-xs text-gray-500">
                       ({congressman.party}-{congressman.state})
                     </span>
-                  </div>
+                  </button>
                 </li>
               ))}
             </ul>

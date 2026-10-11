@@ -11,7 +11,7 @@ import { BriefReadingAnalytics } from './BriefAnalytics';
 const markdownClass = 'prose prose-sm mt-3 max-w-none text-base leading-[1.65] prose-headings:font-serif prose-headings:text-xl prose-p:my-3 prose-a:text-primary';
 
 export default function BriefArticle({ brief, children }: { brief: Brief; children?: ReactNode }) {
-  const primaryHref = getContentHref({ id: brief.primary_item_id, type: brief.primary_item_type });
+  const primaryHref = getContentHref({ id: brief.primary_item_id, type: brief.primary_item_type, cycle: brief.contribution_cycle });
   const sourcesById = new Map(brief.sources.map((source, index) => [source.id, { ...source, number: index + 1 }]));
   const published = brief.published_at ? new Date(brief.published_at) : null;
   const hasDate = published && !Number.isNaN(published.getTime());

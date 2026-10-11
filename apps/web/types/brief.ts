@@ -29,6 +29,7 @@ export interface Brief {
   context_markdown: string | null;
   primary_item_type: ContentType;
   primary_item_id: string;
+  contribution_cycle?: number | null;
   policy_areas: string[];
   sources: BriefSource[];
   author_name: string | null;
