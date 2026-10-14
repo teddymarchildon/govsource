@@ -75,7 +75,14 @@ Generation waits for a successful source run; a failed/incomplete source is held
 
 Every nonempty headline, dek, point and context claim requires an exact supporting quotation. Numeric literals must occur in cited passages. A separate verifier checks entailment, legal status and omitted qualifications. A passing top-level score is insufficient: every field must be checked and supported. Two repair attempts are allowed; unresolved claims are withheld. Transient failures retry up to three worker attempts. Time-budget deferral saves extraction work without consuming failure attempts.
 
-Whitespace-only copying differences are resolved back to the literal source quotation before validation; words, punctuation, numbers and passage identity must still match. Validated drafts are checkpointed before verification, so a timeout or provider failure resumes the same draft without paying to rewrite it. Rejected drafts still use the existing bounded repair process.
+Copying differences in whitespace, line wrapping after hyphens, double quotation
+mark styles, and sentence-initial capitalization can be resolved back to a literal
+source substring before validation. The stored quotation must occur exactly in
+the original cited passage. This does not repair changed words or numbers, erase
+page markers, or join distant text across ellipses. Independent verification still
+checks that the original source entails the claim. Validated drafts are checkpointed
+before verification, so a timeout or provider failure resumes the same draft without
+paying to rewrite it. Rejected drafts still use the existing bounded repair process.
 
 For existing extraction failures, run `python scripts/recover_brief_extractions.py` to preview jobs whose saved extraction now passes. Add `--apply` to requeue only those jobs, preserving the validated extraction and prior history. Source revision and metadata must still match, and a concurrent job update prevents recovery. This performs no model calls and publishes nothing; the jobs must complete normal draft and independent verification stages.
 

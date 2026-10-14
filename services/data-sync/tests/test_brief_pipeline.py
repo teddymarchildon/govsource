@@ -153,6 +153,32 @@ def test_wrapped_quote_is_restored_to_literal_source_without_changing_words():
     assert citation_errors(c,[{**PASSAGE,'text':text}])
 
 
+@pytest.mark.parametrize('source,copied',[
+    ('Based on a two-\nyear average price of $1.93 per pound.',
+     'Based on a two-year average price of $1.93 per pound.'),
+    ('Specifically, proposed 19 CFR 123.101 requires notice.',
+     'Proposed 19 CFR 123.101 requires notice.'),
+    ("``(2) Amount.--The agency shall pay 50 percent.''.",
+     '"(2) Amount.--The agency shall pay 50 percent."'),
+])
+def test_typesetting_recovery_stores_exact_source(source,copied):
+    c=claim('The agency describes a requirement.')
+    c['evidence'][0]['quote']=copied
+    assert citation_errors(c,[{**PASSAGE,'text':source}])==[]
+    assert c['evidence'][0]['quote'] in source
+
+
+@pytest.mark.parametrize('copied',[
+    'The agency shall pay 60 percent.',
+    'The agency shall not pay 50 percent.',
+    'The agency ... pay 50 percent.',
+    'The agency shall pay 50 percent. Small firms are exempt.',
+])
+def test_typesetting_recovery_never_changes_substantive_content(copied):
+    c=claim();c['evidence'][0]['quote']=copied
+    assert citation_errors(c,[{**PASSAGE,'text':'The agency shall pay 50 percent.'}])
+
+
 def test_all_prose_including_headline_needs_evidence():
     d=draft();assert validate_draft(d,{'passages':[PASSAGE]})==[]
     d['title']['evidence']=[]

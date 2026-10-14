@@ -40,6 +40,23 @@ SELECTION_INSTRUCTIONS = (
 )
 
 
+def restore_literal_quote(quote: str, source: str) -> str:
+    # Formatting recovery only. Return the exact source substring; never use
+    # approximate similarity to approve evidence or erase words/page markers.
+    copied=quote.strip().strip('"“”')
+    if len(copied)<12:
+        return quote
+    copied=re.sub(r'(?<=\w)-\s+(?=\w)','-',copied)
+    pattern=r'\s+'.join(re.escape(word) for word in copied.split())
+    pattern=pattern.replace(r'\-',r'-\s*')
+    pattern=re.sub('["“”]',lambda _:r'(?:"|“|”|``|\'\')',pattern)
+    # Sentence-initial capitalization only, never case-fold acronyms or words.
+    if re.match(r'^[A-Z][a-z]',copied):
+        pattern=f'[{copied[0]}{copied[0].lower()}]'+pattern[1:]
+    match=re.search(pattern,source)
+    return match.group(0) if match else quote
+
+
 def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
     by_id = {p['id']:p['text'] for p in passages}
     if not isinstance(claim,dict) or not isinstance(claim.get('text'),str):
@@ -60,6 +77,8 @@ def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
             match = re.search(pattern,source)
             if match:
                 quote = ref['quote'] = match.group(0)
+            else:
+                quote = ref['quote'] = restore_literal_quote(quote,source)
         if len(quote.strip()) < 12 or quote not in by_id.get(ref.get('passage_id'), ''):
             errors.append('Evidence quotation is missing or does not match its source')
     # Every numeric literal must occur in one of the cited passages. Semantic verification
