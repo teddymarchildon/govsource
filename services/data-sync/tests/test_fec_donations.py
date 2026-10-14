@@ -41,8 +41,8 @@ def test_real_rows_normalize_without_using_donor_candidate_as_recipient(row):
     assert not any('street' in k or 'employer' in k for k in receipt)
 
 
-@pytest.mark.parametrize('change', [{'memo_code': 'X'}, {'memoed_subtotal': True}, {'entity_type': 'IND'}, {'is_individual': True}])
-def test_memos_and_individuals_not_added_to_group_totals(change):
+@pytest.mark.parametrize('change', [{'memo_code': 'X'}, {'memoed_subtotal': True}])
+def test_memos_not_added_to_group_totals(change):
     assert normalize_receipt({**ROWS[0], **change}, 2026, '11B') == []
 
 
@@ -194,3 +194,21 @@ def test_nullable_and_out_of_scope_candidate_links_do_not_drop_receipts(ids):
     assert any(r['kind'] == 'contribution' for r in result)
     assert [r['data']['candidate_id'] for r in result if r['kind'] == 'link'] == (
         ['H4NH02399'] if ids and 'H4NH02399' in ids else [])
+
+
+def test_tribal_receipt_uses_report_line_not_individual_flag():
+    row = {**ROWS[0], 'entity_type': 'COM', 'is_individual': True}
+    assert normalize_receipt(row, 2026, row['line_number'])[-1]['data']['amount']
+
+
+def test_old_committee_staging_restarts_for_report_line_scope():
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from sync_fec_donations import DatabaseStore
+    db = Mock()
+    old = {'version': 1, 'phase': 'receipts', 'fetched': 100, 'scope': 'all'}
+    fresh = {'version': 1, 'phase': 'receipts', 'fetched': 0, 'scope': 'all'}
+    db.rpc.return_value.execute.side_effect = [SimpleNamespace(data=old), SimpleNamespace(data=None), SimpleNamespace(data=fresh)]
+    assert DatabaseStore(db, 2026, 'all').checkpoint == fresh
+    assert db.rpc.call_args_list[-1].args[1]['p_restart'] is True
+    assert db.rpc.call_args_list[-1].args[1]['p_scope'] == 'all'

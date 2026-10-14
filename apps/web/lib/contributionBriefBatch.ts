@@ -1,3 +1,4 @@
+import { verifyContributionFigures } from './contributionVerification';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildContributionBrief } from './contributionBrief';
 import { getMemberContributions } from './repositories/contributions';
@@ -17,11 +18,11 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
   const year = now.getUTCFullYear();
   const cycle = year + year % 2;
   const cutoff = contributionImportCutoff(now);
-  const summary = { cycle, created: [] as number[], existing: 0, ineligible: 0, reason: '' };
+  const summary = { cycle, created: [] as number[], existing: 0, ineligible: 0, reason: '', blocked: [] as { memberId: number; reason: string }[] };
   const coverage = await db.from('fec_sync_state').select('last_full_success_at').eq('cycle', cycle).maybeSingle();
   if (coverage.error) throw coverage.error;
   if (!coverage.data?.last_full_success_at || new Date(coverage.data.last_full_success_at) < new Date(cutoff)) {
-    return { ...summary, reason: 'Waiting for a successful nationwide committee import this week.' };
+    return { ...summary, blocked: [{ memberId: 0, reason: 'Nationwide committee import is not fresh this week.' }], reason: 'Waiting for a successful nationwide committee import this week.' };
   }
   const existing = await db.from('brief').select('primary_item_id', { count: 'exact' })
     .eq('primary_item_type', 'campaign_finance').eq('contribution_cycle', cycle);
@@ -29,6 +30,17 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
   summary.existing = existing.count ?? 0;
   // Count all statuses, including archived and published, so reviews never cause more pilot drafts.
   const remaining = Math.max(0, CONTRIBUTION_PILOT_SIZE - summary.existing);
+  // Audit existing briefs even when all pilot slots are occupied. Never rewrite published copy.
+  for (const row of existing.data ?? []) {
+    const id = Number(row.primary_item_id);
+    try {
+      const [committees, individuals] = await Promise.all([
+        getMemberContributions(String(id), String(cycle), undefined, {}, db),
+        getMemberIndividualContributions(String(id), String(cycle), undefined, {}, db),
+      ]);
+      await verifyContributionFigures(committees, individuals, now);
+    } catch (error) { summary.blocked.push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' }); }
+  }
   if (!remaining) return { ...summary, reason: 'Pilot cap reached; existing briefs were left unchanged.' };
   const seen = new Set<number>((existing.data ?? []).map(row => Number(row.primary_item_id)));
   const candidates = new Set<number>();
@@ -55,7 +67,14 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
     }
     const member = await db.from('congressman').select('id,full_name').eq('id', id).single();
     if (member.error) throw member.error;
-    const draft = buildContributionBrief(member.data, committees, individuals);
+    let verification;
+    try { verification = await verifyContributionFigures(committees, individuals, now); }
+    catch (error) {
+      summary.blocked.push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' });
+      // Fail closed without spending the entire job timeout trying other campaigns.
+      break;
+    }
+    const draft = buildContributionBrief(member.data, committees, individuals, verification);
     const inserted = await db.from('brief').insert({ ...draft,
       // Keep these outside the verified-job publication pipeline; review is always manual.
       status: 'review', auto_generated: false,

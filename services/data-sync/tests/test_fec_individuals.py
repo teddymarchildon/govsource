@@ -32,7 +32,7 @@ def test_memo_receipts_are_excluded(changes):
 
 
 @pytest.mark.parametrize('changes', [
-    {'line_number': '11B'}, {'committee_id': 'C00546358'}, {'is_individual': False, 'entity_type': 'PAC'},
+    {'line_number': '11B'}, {'committee_id': 'C00546358'},
     {'contributor_employer': {}}, {'contribution_receipt_amount': 'NaN'}, {'memo_code': 'unexpected'},
 ])
 def test_invalid_or_out_of_scope_individual_receipts_fail(changes):
@@ -53,7 +53,7 @@ def test_individual_api_filters():
     client.individual_receipts(2026, 'C00442921', {'last_index': '9999999999999999999'})
     path, params = client.get.call_args.args
     assert path == '/schedules/schedule_a/'
-    assert params['line_number'] == 'F3-11AI' and params['is_individual'] == 'true'
+    assert params['line_number'] == 'F3-11AI' and 'is_individual' not in params
     assert params['last_index'] == '9999999999999999999'
 
 
@@ -158,3 +158,22 @@ def test_network_error_at_budget_boundary_is_not_a_successful_pause(monkeypatch)
     with pytest.raises(FECError, match='retry budget exhausted') as exc:
         client.get('/example', {})
     assert not isinstance(exc.value, RequestBudgetReached)
+
+
+@pytest.mark.parametrize('entity', ['IND', 'ORG', 'COM'])
+def test_itemized_report_line_keeps_inconsistent_flags_and_other_persons(entity):
+    data = normalize_receipt(receipt(entity_type=entity, is_individual=False), 2026, '11AI', individual=True)[-1]['data']
+    assert data['amount'] == '100.01'
+
+
+def test_old_staged_filter_scope_restarts_before_resuming():
+    from types import SimpleNamespace
+    from sync_fec_individuals import IndividualStore
+    db = Mock()
+    old = {'version': 1, 'phase': 'receipts', 'fetched': 100, 'cursor': {'last_index': '1'}}
+    fresh = {'version': 1, 'phase': 'receipts', 'fetched': 0, 'cursor': {}}
+    db.rpc.return_value.execute.side_effect = [SimpleNamespace(data=old), SimpleNamespace(data=None), SimpleNamespace(data=fresh)]
+    store = IndividualStore(db, 2026, 'C00442921')
+    assert store.checkpoint == fresh
+    assert [call.args[0] for call in db.rpc.call_args_list] == ['begin_fec_individual_sync', 'finish_fec_individual_sync', 'begin_fec_individual_sync']
+    assert db.rpc.call_args_list[-1].args[1]['p_restart'] is True

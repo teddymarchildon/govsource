@@ -184,13 +184,11 @@ def normalize_receipt(row, cycle, line, scope='all', *, individual=False):
         return []
     if row.get('memoed_subtotal') not in (False, None) or row.get('memo_code') not in (None, ''):
         raise FECError('Unrecognized FEC memo flag')
-    # Some legacy rows have no entity_type. The report line determines category;
-    # explicit individual rows do not belong in the groups-only dataset.
-    is_individual = row.get('entity_type') == 'IND' or row.get('is_individual') is True
-    if individual and (line != '11AI' or not is_individual):
-        raise FECError('Receipt is not an itemized individual contribution')
-    if not individual and is_individual:
-        return []
+    # Report lines define the FEC categories. is_individual is inconsistent:
+    # Eames is IND/false; tribal gifts on 11C are COM/true. Organizations
+    # reported on 11(a) also belong in that broader reporting category.
+    if individual and line != '11AI':
+        raise FECError('Receipt is not on the itemized individual/other-person line')
     nested = row.get('committee')
     if not isinstance(nested, dict) or nested.get('cycle') != cycle:
         raise FECError('Missing cycle-specific receiving committee metadata')
@@ -262,6 +260,11 @@ class DatabaseStore:
             'p_cycle': cycle, 'p_token': self.token, 'p_scope': scope, 'p_restart': restart,
         }).execute().data
 
+        if self.checkpoint.get('fetched', 0) and self.checkpoint.get('report_line_scope') != 2:
+            db.rpc('finish_fec_sync', {**{'p_cycle': cycle, 'p_token': self.token}, 'p_status': 'partial',
+                'p_error': 'Restarting staged data for report-line category correction'}).execute()
+            self.checkpoint = db.rpc('begin_fec_sync', {**{'p_cycle': cycle, 'p_token': self.token}, 'p_restart': True, 'p_scope': scope}).execute().data
+
     def save(self, records, checkpoint):
         self.db.rpc('stage_fec_page', {'p_cycle': self.cycle, 'p_token': self.token,
             'p_expected': self.checkpoint, 'p_checkpoint': checkpoint, 'p_records': records}).execute()
@@ -314,6 +317,7 @@ def sync(client, store, cycle):
             excluded += not normalized
         cursor = next_cursor(body, checkpoint['cursor'])
         updated = copy.deepcopy(checkpoint)
+        updated['report_line_scope'] = 2
         updated['fetched'] += len(body['results'])
         updated['excluded'] += excluded
         if cursor is None:
@@ -330,7 +334,7 @@ def sync(client, store, cycle):
     while checkpoint['phase'] == 'candidates':
         ids = store.pending()
         if not ids:
-            updated = {**checkpoint, 'phase': 'complete'}
+            updated = {**checkpoint, 'report_line_scope': 2, 'phase': 'complete'}
             store.save([], updated)
             checkpoint = updated
             break

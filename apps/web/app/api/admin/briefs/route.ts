@@ -1,3 +1,7 @@
+import { verifyContributionFigures, assertContributionContent } from '@/lib/contributionVerification';
+import { buildContributionBrief } from '@/lib/contributionBrief';
+import { getMemberContributions } from '@/lib/repositories/contributions';
+import { getMemberIndividualContributions } from '@/lib/repositories/individualContributions';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { BriefPointSchema, normalizeBriefPoints } from '@/lib/briefPoints';
@@ -107,6 +111,21 @@ function normalizeInput(input: z.infer<typeof BriefInputSchema>) {
   };
 }
 
+async function verifyPublication(payload: ReturnType<typeof normalizeInput>) {
+  if (payload.primary_item_type !== 'campaign_finance' || !['published', 'scheduled'].includes(payload.status)) return;
+  // Scheduled copy could become stale before its visibility time; publish only after a live check.
+  if (payload.status === 'scheduled') throw new Error('Contribution briefs require verification at publication time and cannot be scheduled.');
+  const db = getAdminClient();
+  const id = String(payload.primary_item_id), cycle = String(payload.contribution_cycle);
+  const [committees, individuals] = await Promise.all([
+    getMemberContributions(id, cycle, undefined, {}, db),
+    getMemberIndividualContributions(id, cycle, undefined, {}, db),
+  ]);
+  const verification = await verifyContributionFigures(committees, individuals);
+  const expected = buildContributionBrief({ id: payload.primary_item_id, full_name: '' }, committees, individuals, verification);
+  assertContributionContent(payload, expected);
+}
+
 async function requireAdmin() {
   const { user, isAdmin } = await getCurrentUserAndAdminStatus();
   if (!user) return { error: NextResponse.json({ error: 'Authentication required' }, { status: 401 }) };
@@ -209,6 +228,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The selected government record does not exist or has the wrong type.' }, { status: 400 });
     }
     const payload = normalizeInput(parsed.data);
+    await verifyPublication(payload);
     const { data, error } = await getAdminClient()
       .from('brief')
       .insert({ ...payload, created_by: auth.user.id, updated_by: auth.user.id })
@@ -241,6 +261,7 @@ export async function PATCH(request: Request) {
     }
     const { id, version, ...input } = parsed.data;
     const payload = normalizeInput(input);
+    await verifyPublication(payload);
     const { data, error } = await getAdminClient()
       .from('brief')
       .update({ ...payload, updated_by: auth.user.id })

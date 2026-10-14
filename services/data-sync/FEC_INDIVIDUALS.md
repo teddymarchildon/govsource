@@ -7,9 +7,9 @@ GovSource Congress member through the verified FEC/Bioguide mapping.
 
 ## Scope and interpretation
 
-Requests use `line_number=F3-11AI`, `is_individual=true`, the selected
+Requests use `line_number=F3-11AI`, the selected
 `two_year_transaction_period`, and the receiving campaign's committee ID.
-Memo entries (`memo_code=X` or `memoed_subtotal=true`) are excluded. Signed
+The reporting line, not the inconsistent OpenFEC `is_individual` flag, defines the category. This includes other persons such as LLCs and tribal governments when reported on that line. Memo entries (`memo_code=X` or `memoed_subtotal=true`) are excluded. Signed
 corrections are retained. Data is not net of refunds and excludes unitemized
 contributions; these totals are not complete individual fundraising totals.
 Transaction counts are not counts of unique people. No cross-record donor
@@ -110,3 +110,26 @@ Database tests cover atomic replacement, rollback, empty completed scans,
 summary reconciliation, leases and public/service-only access. Frontend tests
 cover multiple campaigns, ambiguity, partial coverage, complete summary
 pagination, missing values and error handling.
+
+## Contribution brief publication checks
+
+Contribution briefs reconcile imported category totals in cents to current FEC
+committee financial summaries before drafting and again at publication. Partial,
+ambiguous, stale (>8 days), mismatched, or unavailable-source coverage is blocked.
+The same checks run daily and after imports, including when the five-brief pilot
+is full; failures fail the GitHub Actions run and list member IDs and differences
+in its job summary. GitHub notification delivery follows repository/account settings.
+Published editorial snapshots are never automatically rewritten.
+
+The admin publisher requires the current verified template points, sources and
+coverage text. Use **Refresh unpublished draft** after an import or a verification
+failure. Scheduling contribution briefs is disabled because their source check
+must happen at publication time. Other brief categories retain their existing flow.
+No new automatic publication is enabled: editorial approval is still required.
+
+Imports staged under the former donor-flag filters restart once under the new
+report-line scope, preserving previously published records until a complete import
+succeeds. Existing records are corrected by the next completed refresh, not by a
+code deployment alone. Party/other-committee totals use lines 11(b) and 11(c);
+itemized individual/other-person totals use line 11(a)(i). Memo entries remain
+excluded, signed corrections remain included, and refunds are not subtracted.

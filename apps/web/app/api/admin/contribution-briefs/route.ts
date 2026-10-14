@@ -1,3 +1,4 @@
+import { verifyContributionFigures } from '@/lib/contributionVerification';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
@@ -5,7 +6,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 import { getContributionOverview } from '@/lib/repositories/contributionOverview';
 import { buildContributionBrief } from '@/lib/contributionBrief';
 
-const Input = z.object({ memberId: z.number().int().positive(), cycle: z.number().int().min(1980).max(2200).refine(n => n % 2 === 0) });
+const Input = z.object({ refresh: z.boolean().default(false), memberId: z.number().int().positive(), cycle: z.number().int().min(1980).max(2200).refine(n => n % 2 === 0) });
 
 export async function POST(request: Request) {
   const { user, isAdmin } = await getCurrentUserAndAdminStatus();
@@ -13,22 +14,28 @@ export async function POST(request: Request) {
   if (!isAdmin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
   const parsed = Input.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Choose a member and a valid two-year reporting cycle.' }, { status: 400 });
-  const { memberId, cycle } = parsed.data;
+  const { memberId, cycle, refresh } = parsed.data;
   const db = createAdminClient();
   const existing = () => db.from('brief').select('*').eq('primary_item_type', 'campaign_finance')
     .eq('primary_item_id', memberId).eq('contribution_cycle', cycle).maybeSingle();
   try {
     const found = await existing();
     if (found.error) throw found.error;
-    if (found.data) return NextResponse.json({ brief: found.data, existing: true });
+    if (found.data && (!refresh || !['draft', 'review'].includes(found.data.status))) return NextResponse.json({ brief: found.data, existing: true });
     const member = await db.from('congressman').select('id,full_name').eq('id', memberId).maybeSingle();
     if (member.error) throw member.error;
     if (!member.data) return NextResponse.json({ error: 'Congress member not found.' }, { status: 404 });
     const { committees, individuals } = await getContributionOverview(String(memberId), String(cycle));
     if (committees.cycle !== cycle) return NextResponse.json({ error: 'This reporting period has not been published yet.' }, { status: 422 });
     let draft;
-    try { draft = buildContributionBrief(member.data, committees, individuals); }
+    try { draft = buildContributionBrief(member.data, committees, individuals, await verifyContributionFigures(committees, individuals)); }
     catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Coverage is insufficient.' }, { status: 422 }); }
+    if (found.data) {
+      const saved = await db.from('brief').update({ ...draft, updated_by: user.id }).eq('id', found.data.id).eq('version', found.data.version).select('*').maybeSingle();
+      if (saved.error) throw saved.error;
+      if (!saved.data) return NextResponse.json({ error: 'The draft changed during review. Reload it before refreshing.' }, { status: 409 });
+      return NextResponse.json({ brief: saved.data, refreshed: true });
+    }
     const { data, error } = await db.from('brief').insert({ ...draft, created_by: user.id, updated_by: user.id }).select('*').single();
     if (error?.code === '23505') {
       const concurrent = await existing();

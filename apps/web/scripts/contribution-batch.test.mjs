@@ -3,9 +3,9 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 const code = ts.transpileModule(readFileSync(new URL('../lib/contributionBriefBatch.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-function setup({ existing = [], fresh = true, individualFresh = true, fail = false, concurrent = false } = {}) {
+function setup({ existing = [], fresh = true, individualFresh = true, fail = false, concurrent = false, reconciliationFails = false } = {}) {
   const inserts = []; let reads = 0; const exports = {};
-  new Function('require', 'exports', code)(name => name.endsWith('contributionBrief') ? { buildContributionBrief: () => ({ status: 'review', auto_generated: false, generation_metadata: {} }) }
+  new Function('require', 'exports', code)(name => name.endsWith('contributionVerification') ? { verifyContributionFigures: async () => { if (reconciliationFails) throw new Error('FEC mismatch'); } } : name.endsWith('contributionBrief') ? { buildContributionBrief: () => ({ status: 'review', auto_generated: false, generation_metadata: {} }) }
     : name.endsWith('/contributions') ? { getMemberContributions: async () => ({ cycle: 2026, linked: true, count: 10 }) }
     : { getMemberIndividualContributions: async () => ({ cycle: 2026, linked: true, count: 10, coveredCommittees: 1, eligibleCommittees: 1, refreshedAt: individualFresh ? '2026-10-11T11:00:00Z' : '2026-10-04T11:00:00Z' }) }, exports);
   const db = { from(table) {
@@ -46,4 +46,12 @@ test('concurrent admin creations consume pilot slots', async () => {
 test('database failures fail the job', async () => { await assert.rejects(setup({ fail: true }).run()); });
 test('week starts Sunday UTC', () => {
   assert.equal(setup().exports.contributionImportCutoff(new Date('2026-10-17T23:59:59Z')), '2026-10-11T00:00:00.000Z');
+});
+
+
+test('reconciliation failure blocks new drafts and audits even a full pilot', async () => {
+  const f = setup({ reconciliationFails: true });
+  const result = await f.run(); assert.equal(result.created.length, 0); assert.equal(result.blocked.length, 1);
+  const full = await setup({ existing: [1, 2, 3, 4, 5], reconciliationFails: true }).run();
+  assert.equal(full.blocked.length, 5);
 });

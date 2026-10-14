@@ -26,7 +26,7 @@ class IndividualClient(FECClient):
     def individual_receipts(self, cycle, committee, cursor):
         return self.get('/schedules/schedule_a/', {
             'committee_id': committee, 'two_year_transaction_period': cycle,
-            'line_number': 'F3-11AI', 'is_individual': 'true',
+            'line_number': 'F3-11AI',
             'recipient_committee_type': ['H', 'S'], 'recipient_committee_designation': ['P', 'A'],
             'per_page': 100, 'sort': 'contribution_receipt_date', 'sort_nulls_last': 'true', **cursor,
         })
@@ -37,6 +37,11 @@ class IndividualStore:
         self.db = db
         self.args = {'p_cycle': cycle, 'p_committee': committee, 'p_token': str(uuid4())}
         self.checkpoint = db.rpc('begin_fec_individual_sync', {**self.args, 'p_restart': restart}).execute().data
+
+        if self.checkpoint.get('fetched', 0) and self.checkpoint.get('report_line_scope') != 2:
+            db.rpc('finish_fec_individual_sync', {**self.args, 'p_status': 'partial',
+                'p_error': 'Restarting staged data for report-line category correction'}).execute()
+            self.checkpoint = db.rpc('begin_fec_individual_sync', {**self.args, 'p_restart': True}).execute().data
 
     def save(self, records, checkpoint):
         self.db.rpc('stage_fec_individual_page', {**self.args, 'p_expected': self.checkpoint,
@@ -82,7 +87,7 @@ def sync_individuals(client, store, cycle, committee, expected_candidate=None):
                 raise FECError('FEC campaign attribution changed; refresh candidate mappings first')
             records.extend(r['data'] for r in normalized if r['kind'] == 'contribution')
         cursor = next_cursor(body, cp['cursor'])
-        updated = {**cp, 'cursor': cursor or {}, 'phase': 'complete' if cursor is None else 'receipts',
+        updated = {**cp, 'report_line_scope': 2, 'cursor': cursor or {}, 'phase': 'complete' if cursor is None else 'receipts',
             'fetched': cp['fetched'] + len(body['results']), 'excluded': cp['excluded'] + excluded}
         store.save(records, updated)
     return store.publish()

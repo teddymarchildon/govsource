@@ -7,7 +7,7 @@ export default function ContributionKindLinks({ kind, cycle }: { kind: 'overview
       href={`?tab=contributions&contributionKind=${value}${cycle ? `&cycle=${cycle}` : ''}`}
       aria-current={kind === value ? 'page' : undefined}
       className={buttonVariants({ variant: kind === value ? 'default' : 'outline', size: 'sm' })}>
-      {value === 'overview' ? 'Overview' : value === 'committees' ? 'Parties & PACs' : 'Individuals'}
+      {value === 'overview' ? 'Overview' : value === 'committees' ? 'Parties & other committees' : 'Individuals & other persons'}
     </Link>)}
   </nav>;
 }

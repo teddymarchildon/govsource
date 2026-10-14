@@ -1,5 +1,7 @@
 name: Draft contribution brief pilot
 on:
+  schedule:
+    - cron: '17 13 * * *'
   workflow_run:
     workflows: [Weekly reference data sync, Sync FEC individual contributions]
     types: [completed]
@@ -12,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   draft:
-    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:

@@ -251,20 +251,20 @@ export default function BriefsAdminPage({
     }
   };
 
-  const generateContributionBrief = async () => {
+  const generateContributionBrief = async (refresh = false) => {
     setGenerating(true);
     setMessage(null);
     try {
       const response = await fetch('/api/admin/contribution-briefs', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId: Number(contributionMember), cycle: Number(contributionCycle) }),
+        body: JSON.stringify({ memberId: Number(contributionMember), cycle: Number(contributionCycle), refresh }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Could not generate overview');
       setSelected(payload.brief);
       setForm(buildForm(payload.brief));
       setEditing(true);
-      setMessage({ type: 'success', text: payload.existing ? 'Opened the existing overview for this member and period.' : 'Overview drafted from contribution summaries. Review it before publishing.' });
+      setMessage({ type: 'success', text: payload.refreshed ? 'Draft refreshed and reconciled with the FEC. Review it before publishing.' : payload.existing ? 'Opened the existing overview for this member and period.' : 'Overview drafted from contribution summaries. Review it before publishing.' });
       await loadBriefs();
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Could not generate overview' });
@@ -284,11 +284,12 @@ export default function BriefsAdminPage({
 
       <section aria-labelledby="contribution-generator" className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
         <h2 id="contribution-generator" className="text-lg font-semibold">Draft a contribution overview</h2>
-        <p className="mt-1 text-sm text-gray-600">Create an editable, source-linked brief from published contribution summaries. One overview per member and reporting period; existing briefs are opened without being replaced.</p>
+        <p className="mt-1 text-sm text-gray-600">Create an editable, source-linked brief from published contribution summaries. One overview per member and reporting period; existing briefs are opened without being replaced. Refresh replaces an unpublished draft with newly verified figures; published briefs are preserved.</p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1"><p className="mb-1 text-sm font-medium">Congress member</p><CongressmanSearchSelect onSelect={member => setContributionMember(member ? String(member.id) : '')} selectedId={contributionMember} /></div>
           <label className="text-sm font-medium">Cycle ending year<Input type="number" min="1980" max="2200" step="2" className="mt-1 w-32" value={contributionCycle} onChange={event => setContributionCycle(event.target.value)} /></label>
-          <Button disabled={!contributionMember || generating || saving} onClick={generateContributionBrief}>{generating ? 'Drafting…' : 'Draft overview'}</Button>
+          <Button disabled={!contributionMember || generating || saving} onClick={() => generateContributionBrief()}>{generating ? 'Drafting…' : 'Draft overview'}</Button>
+          <Button variant="outline" disabled={!contributionMember || generating || saving} onClick={() => generateContributionBrief(true)}>Refresh unpublished draft</Button>
         </div>
       </section>
 

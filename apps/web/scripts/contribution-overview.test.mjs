@@ -28,7 +28,7 @@ test('overview uses exact repository totals with separate categories, coverage, 
   assert.ok(!text.includes('$142.13'));
   assert.ok(brief.context_markdown.includes('2026-09-19'));
   assert.equal(brief.generation_metadata.evidence.committees.total, committees.total);
-  for (const point of brief.points) for (const ref of point.source_refs) assert.ok(ref === 'primary' || brief.sources.some(source => source.id === ref));
+  for (const point of brief.points) for (const ref of point.source_refs) assert.ok(brief.sources.some(source => source.id === ref));
 });
 
 test('missing individual coverage is not represented as zero giving', () => {
@@ -66,11 +66,12 @@ test('filters escape wildcard search, normalize exact employer values and preser
   assert.deepEqual(calls, [['ilike', 'contributor_name', '%A\\%\\_B%'], ['eq', 'employer_normalized', 'EXAMPLE CO'], ['gte', 'receipt_date', '2026-01-01'], ['gte', 'amount', '-2.50']]);
 });
 
-function handler({ auth = { user: { id: 'admin' }, isAdmin: true }, found = null, overview = { committees, individuals }, concurrent = false } = {}) {
-  let inserted = null, reads = 0;
+function handler({ auth = { user: { id: 'admin' }, isAdmin: true }, found = null, overview = { committees, individuals }, concurrent = false, verificationFails = false, refreshConflict = false } = {}) {
+  let inserted = null, reads = 0, updating = false;
   const db = { from(table) {
     return { select() { return this; }, eq() { return this; },
-      async maybeSingle() { return { data: table === 'congressman' ? member : (++reads > 1 && concurrent ? { id: 4, title: 'Existing review' } : found), error: null }; },
+      update(value) { inserted = value; updating = true; return this; },
+      async maybeSingle() { if (updating) return { data: refreshConflict ? null : { ...inserted, id: 4 } }; return { data: table === 'congressman' ? member : (++reads > 1 && concurrent ? { id: 4, title: 'Existing review' } : found), error: null }; },
       insert(value) { inserted = value; return this; },
       async single() { return concurrent ? { error: { code: '23505' } } : { data: { ...inserted, id: 4 }, error: null }; },
     };
@@ -80,6 +81,7 @@ function handler({ auth = { user: { id: 'admin' }, isAdmin: true }, found = null
     '@/utils/supabase/admin': { createAdminClient: () => db },
     '@/lib/repositories/contributionOverview': { getContributionOverview: async () => overview },
     '@/lib/contributionBrief': { buildContributionBrief },
+    '@/lib/contributionVerification': { verifyContributionFigures: async () => { if (verificationFails) throw new Error('FEC mismatch'); return undefined; } },
   }), inserted: () => inserted };
 }
 const request = (body = { memberId: 1, cycle: 2026 }) => new Request('https://example.com/api/admin/contribution-briefs', { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body) });
@@ -142,4 +144,25 @@ test('monthly summaries load beyond a database page, combine campaigns and retai
     { month: '2026-01-01', total: 5, count: 500 }, { month: null, total: -1.25, count: 1 },
   ]);
   assert.deepEqual(await getContributionMonths(2026, [], 'committees'), []);
+});
+
+
+test('ties, retired categories and all scope references are explicit', () => {
+  const brief = buildContributionBrief(member, { ...committees, groups: [...committees.groups, { ...committees.groups[0], group_name: 'TIED PAC' }] }, { ...individuals, employers: [{ label: 'RETIRED', total: 42.12 }] });
+  assert.match(brief.points[1].text, /is tied for the largest/);
+  assert.match(brief.points[3].text, /RETIRED are not employers/);
+  for (const point of brief.points) for (const ref of point.source_refs) assert.ok(brief.sources.some(s => s.id === ref));
+});
+
+
+test('refresh verifies before replacing an unpublished draft and preserves published briefs', async () => {
+  const input = { memberId: 1, cycle: 2026, refresh: true };
+  const failed = handler({ found: { id: 4, version: 2, status: 'review' }, verificationFails: true });
+  assert.equal((await failed.route.POST(request(input))).status, 422); assert.equal(failed.inserted(), null);
+  const good = handler({ found: { id: 4, version: 2, status: 'review' } });
+  assert.equal((await good.route.POST(request(input))).status, 200); assert.equal(good.inserted().status, 'review');
+  const changed = handler({ found: { id: 4, version: 2, status: 'review' }, refreshConflict: true });
+  assert.equal((await changed.route.POST(request(input))).status, 409);
+  const published = handler({ found: { id: 4, version: 3, status: 'published' } });
+  assert.equal((await published.route.POST(request(input))).status, 200); assert.equal(published.inserted(), null);
 });
