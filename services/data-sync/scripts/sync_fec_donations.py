@@ -232,8 +232,8 @@ def normalize_receipt(row, cycle, line, scope='all', *, individual=False):
     sub_id = identifier(str(row.get('sub_id') or ''), r'[0-9]+')
     source = row.get('pdf_url')
     if not isinstance(source, str) or not source.startswith('https://docquery.fec.gov/'):
-        receipt_path = 'receipts/individual-contributions' if individual else 'receipts'
-        source = f'https://www.fec.gov/data/{receipt_path}/?data_type=processed&committee_id={recipient}&two_year_transaction_period={cycle}'
+        receipt_path = 'receipts'
+        source = f'https://www.fec.gov/data/{receipt_path}/?data_type=processed&committee_id={recipient}&two_year_transaction_period={cycle}&line_number=F3-{line}'
     data = {
         'sub_id': sub_id, 'giving_committee_id': giver, 'contributor_name': name,
         'receiving_committee_id': recipient, 'amount': format(amount, '.2f'),

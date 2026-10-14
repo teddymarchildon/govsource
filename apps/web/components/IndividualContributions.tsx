@@ -96,5 +96,5 @@ function safeSource(source: string, committee: string, cycle: number) {
     const url = new URL(source);
     if (url.protocol === 'https:' && ['www.fec.gov', 'docquery.fec.gov'].includes(url.hostname)) return source;
   } catch { /* Use the FEC receipt search when a source URL is missing or invalid. */ }
-  return `https://www.fec.gov/data/receipts/individual-contributions/?committee_id=${committee}&two_year_transaction_period=${cycle}`;
+  return `https://www.fec.gov/data/receipts/?line_number=F3-11AI&committee_id=${committee}&two_year_transaction_period=${cycle}`;
 }
