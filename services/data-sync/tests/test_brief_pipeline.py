@@ -119,6 +119,29 @@ def test_repair_cannot_silently_drop_an_invalid_fact():
     assert 'write' not in ai.stages
 
 
+def test_repair_hints_preserve_literal_markers_without_accepting_bad_quotes():
+    from process_briefs import literal_source_hints
+    source='The Secretary shall consult the Department of Agriculture,\n[[Page 140 STAT. 1060]]\nDepartment of Defense, and the Coast Guard.'
+    c=claim();c['evidence'][0]['quote']=source.replace('\n[[Page 140 STAT. 1060]]\n',' ')
+    passages=[{**PASSAGE,'text':source}]
+    hints=literal_source_hints({'fact_1':c},passages)
+    assert hints['fact_1'][0]['original_source_excerpt']==source
+    assert citation_errors(c,passages)  # A nearby source match is never approval.
+
+
+def test_draft_repair_receives_previous_draft_and_literal_source():
+    class RepairDraftAI(FakeAI):
+        def call(self,stage,instructions,payload,*args,**kwargs):
+            result=super().call(stage,instructions,payload,*args,**kwargs)
+            if stage=='write' and self.stages.count('write')==1:
+                result['title']['evidence'][0]['quote']=TEXT.replace('proposed','final')
+            elif stage=='write':
+                assert payload['previous_draft']['title']['evidence'][0]['quote']==TEXT.replace('proposed','final')
+                assert payload['literal_source_hints']['title'][0]['original_source_excerpt']==TEXT
+            return result
+    assert process(DB(),job(),'lease',ai_factory=RepairDraftAI)=='verified'
+
+
 def test_wrapped_quote_is_restored_to_literal_source_without_changing_words():
     text='The agency requires\n    annual reporting for large operators.'
     c=claim();c['evidence'][0]['quote']='The agency requires annual reporting for large operators.'

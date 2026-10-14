@@ -8,6 +8,7 @@ import re
 import sys
 import time
 from copy import deepcopy
+from difflib import SequenceMatcher
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from typing import Any
@@ -72,6 +73,29 @@ def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
 
 def draft_claims(draft: dict) -> dict[str, dict]:
     return {'title':draft['title'],'dek':draft['dek'],**{f'point_{i}':v for i,v in enumerate(draft['points'],1)},'context':draft['context']}
+
+
+def literal_source_hints(claims: dict, passages: list[dict]) -> dict:
+    """Offer original text for repair; approximate matches never validate a quote."""
+    by_id={p['id']:p['text'] for p in passages}
+    hints={}
+    for field,claim in claims.items():
+        for ref in claim.get('evidence',[]):
+            source=by_id.get(ref.get('passage_id'),'')
+            quote=ref.get('quote','')
+            if not source or quote in source:
+                continue
+            tokens=list(re.finditer(r'\S+',source))
+            words=quote.split()
+            match=SequenceMatcher(None,words,[t.group() for t in tokens],autojunk=False).find_longest_match()
+            if match.size<3:
+                continue
+            start=max(0,match.b-match.a-12)
+            end=min(len(tokens),match.b+max(match.size,len(words)-match.a)+12)
+            excerpt=source[tokens[start].start():tokens[end-1].end()]
+            hints.setdefault(field,[]).append({'passage_id':ref['passage_id'],
+                'original_source_excerpt':excerpt[:6000]})
+    return hints
 
 
 def validate_draft(draft: dict, packet: dict) -> list[str]:
@@ -199,6 +223,8 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
                 'its wording if needed. Already valid facts are preserved by the worker. '
                 f'Every evidence entry must use passage_id "{passage["id"]}" exactly.',
                 {'passage':passage,'previous_extraction':prior,'repair_fact_indexes':invalid,
+                 'literal_source_hints':literal_source_hints(
+                     {f'fact_{i+1}':prior['facts'][i] for i in invalid},[passage]) if prior else {},
                  'feedback':repair['feedback']},EXTRACTION)
             if prior:
                 if len(facts['facts'])!=len(invalid):
@@ -240,12 +266,17 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             'Every nonempty field needs supporting exact quotes and passage IDs from the extracted evidence. '
             'Context may be empty (text="", evidence=[]). Do not speculate about why it matters. '
             'Describe the actual change and affected parties where supported. Address repair feedback. '
+            'When repairing, use the previous draft and fix the identified problems while preserving supported '
+            'claims. Source excerpts are literal copying aids, not a substitute for evidence or validation. '
             + PLAIN_ENGLISH_STYLE,
-            {'metadata':job['source_metadata'],'evidence':extracted,'feedback':feedback},DRAFT)
+            {'metadata':job['source_metadata'],'evidence':extracted,'feedback':feedback,
+             'previous_draft':work.get('previous_draft'),
+             'literal_source_hints':literal_source_hints(draft_claims(work['previous_draft']),packet['passages'])
+                 if work.get('previous_draft') else {}},DRAFT)
         feedback = validate_draft(draft,packet)
         if feedback:
             work.pop('draft',None)
-            work.update({'repair':repair+1,'feedback':feedback})
+            work.update({'repair':repair+1,'feedback':feedback,'previous_draft':draft})
             checkpoint()
             last_draft,last_report = draft,{'passed':False,'deterministic_passed':False,'issues':feedback}
             continue
@@ -283,7 +314,7 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             return 'verified'
         feedback = report.get('issues',[])+report.get('material_omissions',[])+[c['reason'] for c in report['claims'] if not c['supported']]
         work.pop('draft',None)
-        work.update({'repair':repair+1,'feedback':feedback})
+        work.update({'repair':repair+1,'feedback':feedback,'previous_draft':draft})
         checkpoint()
     complete(db,job,token,'withheld','Verification failed after two repairs',draft=last_draft,report=last_report,ai=ai)
     return 'withheld'
