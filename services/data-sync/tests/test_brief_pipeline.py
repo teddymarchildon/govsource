@@ -194,6 +194,18 @@ def test_wrong_section_can_resolve_only_to_unique_literal_match_in_same_document
         assert citation_errors(claim(),[passages[0],*alternatives])
 
 
+@pytest.mark.parametrize('source,passes',[
+    ('The agency shall pay at least 50 percent of the estimated costs.',True),
+    ('The agency shall pay 150 percent of the estimated costs.',False),
+    ('The agency shall pay 50 dollars of the estimated costs.',False),
+    ('The agency shall pay 0.50 percent of the estimated costs.',False),
+])
+def test_percent_display_requires_same_numeric_value_and_unit(source,passes):
+    c=claim('The agency shall pay at least 50% of estimated costs.')
+    c['evidence'][0]['quote']=source
+    assert (citation_errors(c,[{**PASSAGE,'text':source}])==[])==passes
+
+
 def test_all_prose_including_headline_needs_evidence():
     d=draft();assert validate_draft(d,{'passages':[PASSAGE]})==[]
     d['title']['evidence']=[]

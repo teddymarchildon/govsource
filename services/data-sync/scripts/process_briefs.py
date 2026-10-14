@@ -99,7 +99,12 @@ def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
     # checks whether the number belongs to the correct entity/date/qualification.
     cited = ' '.join(by_id.get(r.get('passage_id'),'') for r in refs)
     for number in re.findall(r'\b\d[\d,.%]*', claim['text']):
-        if number.rstrip('.,') not in cited:
+        literal=number.rstrip('.,')
+        # "50%" and "50 percent" denote the same literal amount; the verifier
+        # still checks the entity, denominator, and legal qualification.
+        spelled_percent=(literal.endswith('%') and re.search(
+            r'(?<![\d.,])'+re.escape(literal[:-1])+r'\s+percent\b',cited))
+        if literal not in cited and not spelled_percent:
             errors.append(f'Unsupported number: {number}')
     return errors
 
