@@ -75,6 +75,50 @@ def test_exact_quotes_and_numbers_are_checked():
     assert citation_errors(bad,[PASSAGE])
 
 
+def test_selection_receives_full_evidence_not_just_notice_metadata():
+    class EvidenceAI(FakeAI):
+        def call(self,stage,instructions,payload,*args,**kwargs):
+            if stage=='selection':
+                assert payload['passages']==[PASSAGE]
+                assert payload['previous_coverage']==[]
+            return super().call(stage,instructions,payload,*args,**kwargs)
+    assert process(DB(),job(),'lease',ai_factory=EvidenceAI)=='verified'
+
+
+def test_targeted_extraction_repair_preserves_valid_facts_and_qualifications():
+    valid=claim('Small operators are exempt.')
+    bad=claim();bad['evidence'][0]['quote']='Invented quotation.'
+    class TargetedAI(FakeAI):
+        def call(self,stage,instructions,payload,*args,**kwargs):
+            result=super().call(stage,instructions,payload,*args,**kwargs)
+            if stage=='extract' and self.stages.count('extract')==1:
+                return {'facts':[valid,bad], 'qualifications':['Original exception']}
+            if stage=='extract':
+                assert payload['repair_fact_indexes']==[1]
+                return {'facts':[claim()], 'qualifications':['Repair qualification']}
+            if stage=='write':
+                facts=payload['evidence'][0]
+                assert facts['facts']==[valid,claim()]
+                assert facts['qualifications']==['Original exception','Repair qualification']
+            return result
+    assert process(DB(),job(),'lease',ai_factory=TargetedAI)=='verified'
+
+
+def test_repair_cannot_silently_drop_an_invalid_fact():
+    class DroppingAI(FakeAI):
+        def call(self,stage,*args,**kwargs):
+            result=super().call(stage,*args,**kwargs)
+            if stage=='extract':
+                if self.stages.count('extract')==1:
+                    result['facts'][0]['evidence'][0]['quote']='Invented quotation.'
+                else:
+                    result['facts']=[]
+            return result
+    ai=DroppingAI(None,None)
+    assert process(DB(),job(),'lease',ai_factory=lambda *args:ai)=='withheld'
+    assert 'write' not in ai.stages
+
+
 def test_wrapped_quote_is_restored_to_literal_source_without_changing_words():
     text='The agency requires\n    annual reporting for large operators.'
     c=claim();c['evidence'][0]['quote']='The agency requires annual reporting for large operators.'

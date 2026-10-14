@@ -79,6 +79,15 @@ Whitespace-only copying differences are resolved back to the literal source quot
 
 For existing extraction failures, run `python scripts/recover_brief_extractions.py` to preview jobs whose saved extraction now passes. Add `--apply` to requeue only those jobs, preserving the validated extraction and prior history. Source revision and metadata must still match, and a concurrent job update prevents recovery. This performs no model calls and publishes nothing; the jobs must complete normal draft and independent verification stages.
 
+Selection version 3 reads the complete evidence packet and recognizes substantive
+regional and sector-specific proposals, licenses, sanctions, and public-participation
+opportunities. A notice label or prior appearance on an agency website does not
+by itself establish low importance or duplicate site coverage. Extraction repairs
+replace only invalid facts and preserve validated facts and qualifications; every
+replacement still needs literal supporting quotations. Verification evaluates
+omissions that change the meaning of the brief rather than demanding every source
+detail. No quotation, independent verification, budget, or publication gate is bypassed.
+
 Full text is never silently truncated. Packets above 300,000 characters, missing readable text, ambiguous bill versions, enacted bills without enrolled/law text, or court packets without a lead/combined opinion are deferred with a reason. PDF-only records currently wait for a stored readable format; OCR is not part of this release.
 
 Publication and job completion are one database transaction. Retrying returns the already-created brief. A new development creates a new brief. A changed source for the same development can correct an untouched automated brief while preserving its URL and previous version. If an editor has modified that brief, automatic replacement is withheld. The article shows an updated date when its version changes.

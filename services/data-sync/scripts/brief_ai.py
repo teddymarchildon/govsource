@@ -11,7 +11,7 @@ import time
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = 'continuous-v2-plain-english'
+PROMPT_VERSION = 'continuous-v3-substantive-selection-targeted-repair'
 
 
 def obj(**properties: Any) -> dict:

@@ -7,6 +7,7 @@ import logging
 import re
 import sys
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from typing import Any
@@ -22,6 +23,20 @@ from sync_common import create_supabase_client
 
 log = logging.getLogger(__name__)
 SOURCE_NAMES = {'bill':'congress','agency_document':'federal_register','cluster':'courtlistener'}
+
+SELECTION_INSTRUCTIONS = (
+    'Assess whether this development merits a factual public-service news brief using the original passages. '
+    'Prioritize enactment, chamber passage, substantive executive orders, Supreme Court merits decisions, '
+    'and consequential proposed/final agency actions. National reach and final legal effect are NOT prerequisites: '
+    'sector-specific or regional changes to rights, obligations, benefits, safety, sanctions, permits, funding, '
+    'or meaningful opportunities for public participation can be important. A notice can announce a substantive '
+    'decision, license, proposal, withdrawal, or deadline; judge its contents, not its document label. '
+    'Skip purely ceremonial actions, housekeeping with no practical change, routine meeting announcements, '
+    'and bill introductions without a substantive advancement. Do not infer duplicate coverage merely because '
+    'a document previously appeared on an agency website. Compare the supplied previous coverage: '
+    'new_development is false only when it already covers this same development without a meaningful change '
+    'or correction. Importance and novelty are separate decisions. Explain the concrete impact and decision.'
+)
 
 
 def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
@@ -154,12 +169,8 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
     def checkpoint():
         validate_json_text(work)
         db.rpc('save_brief_work',{'p_id':job['id'],'p_token':token,'p_work':work}).execute()
-    selection = work.get('selection') or ai.call('selection',
-        'Assess newsworthiness of this development. Prioritize enactment, chamber passage, substantive executive orders, '
-        'Supreme Court merits decisions and consequential proposed/final agency rules. Routine notices, ceremonial actions '
-        'and duplicate coverage are not important. Explain your decision. Compare previous coverage: new_development must '
-        'be false if no meaningful change or source correction is established. Metadata is sufficient for triage only.',
-        {'metadata':job['source_metadata'],'previous_coverage':previous}, SELECTION)
+    selection = work.get('selection') or ai.call('selection',SELECTION_INSTRUCTIONS,
+        {'metadata':job['source_metadata'],'passages':packet['passages'],'previous_coverage':previous}, SELECTION)
     work['selection']=selection
     checkpoint()
     if selection.get('important') is not True or selection.get('new_development') is not True:
@@ -173,14 +184,34 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
         while repair['attempts'] < 3:
             if deadline and time.monotonic()>deadline:
                 raise TimeoutError('Run time budget reached')
+            prior=repair.get('previous')
+            invalid=[i for i,fact in enumerate(prior['facts']) if citation_errors(fact,[passage])] if prior else []
             facts = ai.call('extract',
                 'Extract factual claims and all material qualifications from this passage. Each fact needs a verbatim supporting '
                 'quote (at least 12 characters) and this passage_id. Copy quotes exactly, including whitespace and punctuation; '
                 'do not paraphrase quotes or insert ellipses. Every number in a claim must occur in this passage. '
                 'Preserve dates, scope, exceptions and opinion type. Address validation feedback using the original passage. '
                 'Do not require facts where the passage contains none. '
+                'Prefer concise, atomic facts and short contiguous quotations. Preserve literal page markers and '
+                'typesetting punctuation inside quotes; never join distant text with ellipses. Use separate evidence '
+                'entries for separate quotations. On repair, return exactly one corrected fact for each zero-based '
+                'repair_fact_indexes entry, in that order, and no other facts. Keep the fact supported, correcting '
+                'its wording if needed. Already valid facts are preserved by the worker. '
                 f'Every evidence entry must use passage_id "{passage["id"]}" exactly.',
-                {'passage':passage,'previous_extraction':repair.get('previous'),'feedback':repair['feedback']},EXTRACTION)
+                {'passage':passage,'previous_extraction':prior,'repair_fact_indexes':invalid,
+                 'feedback':repair['feedback']},EXTRACTION)
+            if prior:
+                if len(facts['facts'])!=len(invalid):
+                    repair.update(attempts=repair['attempts']+1,
+                        feedback=[f'Return exactly {len(invalid)} corrected facts, one per repair_fact_indexes entry.'])
+                    work['extraction_repair']=repair
+                    checkpoint()
+                    continue
+                merged=deepcopy(prior)
+                for index,replacement in zip(invalid,facts['facts']):
+                    merged['facts'][index]=replacement
+                merged['qualifications']=list(dict.fromkeys(prior.get('qualifications',[])+facts['qualifications']))
+                facts=merged
             errors = [f'fact_{i}: {error}' for i,fact in enumerate(facts['facts'],1)
                       for error in citation_errors(fact,[passage])]
             if not errors:
@@ -231,6 +262,10 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             'Check EVERY factual claim including headline, dek, context, dates, amounts, affected entities, '
             'legal status, majority vs dissent, effective dates and unsupported stakes. Identify material omissions '
             'or qualifications that change the meaning. '
+            'This is a concise brief, not an exhaustive abstract. An omitted detail is material only if it makes '
+            'a stated claim misleading about scope, legal effect, timing, affected parties, or exceptions. '
+            'Do not demand unrelated procedural history, citations to authority, or every provision merely '
+            'because it appears in the source. Explain how each material omission changes a specific claim. '
             'Reject access-blocking/error pages as evidence. Confirm the passages describe the document '
             'identified by the metadata and reject a brief about an unrelated topic. '
             'Return exactly one claims entry for each nonempty field '
