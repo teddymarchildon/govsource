@@ -181,6 +181,19 @@ def test_typesetting_recovery_never_changes_substantive_content(copied):
     assert citation_errors(c,[{**PASSAGE,'text':'The agency shall pay 50 percent.'}])
 
 
+def test_wrong_section_can_resolve_only_to_unique_literal_match_in_same_document():
+    c=claim()
+    passages=[{**PASSAGE,'text':'An unrelated introduction to the same document.'},
+              {**PASSAGE,'id':'s2'}]
+    assert citation_errors(c,passages)==[]
+    assert c['evidence'][0]=={'passage_id':'s2','quote':TEXT}
+    for alternatives in (
+        [{**PASSAGE,'id':'s2','source_id':'different_document'}],
+        [{**PASSAGE,'id':'s2'},{**PASSAGE,'id':'s3'}],
+    ):
+        assert citation_errors(claim(),[passages[0],*alternatives])
+
+
 def test_all_prose_including_headline_needs_evidence():
     d=draft();assert validate_draft(d,{'passages':[PASSAGE]})==[]
     d['title']['evidence']=[]

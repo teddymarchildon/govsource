@@ -84,6 +84,11 @@ checks that the original source entails the claim. Validated drafts are checkpoi
 before verification, so a timeout or provider failure resumes the same draft without
 paying to rewrite it. Rejected drafts still use the existing bounded repair process.
 
+A mislabeled passage can also be corrected when its quotation resolves to exactly
+one passage in the same source document. Cross-document and ambiguous matches
+remain invalid. The corrected reference and literal quotation are saved before
+independent verification.
+
 For existing extraction failures, run `python scripts/recover_brief_extractions.py` to preview jobs whose saved extraction now passes. Add `--apply` to requeue only those jobs, preserving the validated extraction and prior history. Source revision and metadata must still match, and a concurrent job update prevents recovery. This performs no model calls and publishes nothing; the jobs must complete normal draft and independent verification stages.
 
 Selection version 3 reads the complete evidence packet and recognizes substantive

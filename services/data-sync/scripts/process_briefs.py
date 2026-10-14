@@ -59,6 +59,7 @@ def restore_literal_quote(quote: str, source: str) -> str:
 
 def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
     by_id = {p['id']:p['text'] for p in passages}
+    source_ids = {p['id']:p.get('source_id') for p in passages}
     if not isinstance(claim,dict) or not isinstance(claim.get('text'),str):
         return ['Invalid claim']
     if not claim['text'].strip():
@@ -79,6 +80,19 @@ def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
                 quote = ref['quote'] = match.group(0)
             else:
                 quote = ref['quote'] = restore_literal_quote(quote,source)
+            if quote not in source and source_ids.get(ref.get('passage_id')):
+                # A writer can copy the right quotation but mislabel its chunk.
+                # Resolve only one literal match within the SAME source document.
+                matches=[]
+                for passage in passages:
+                    if passage.get('source_id')!=source_ids[ref['passage_id']]:
+                        continue
+                    literal=restore_literal_quote(quote,passage['text'])
+                    if len(literal.strip())>=12 and literal in passage['text']:
+                        matches.append((passage['id'],literal))
+                if len(matches)==1:
+                    ref['passage_id'],ref['quote']=matches[0]
+                    quote=ref['quote']
         if len(quote.strip()) < 12 or quote not in by_id.get(ref.get('passage_id'), ''):
             errors.append('Evidence quotation is missing or does not match its source')
     # Every numeric literal must occur in one of the cited passages. Semantic verification
