@@ -6,9 +6,24 @@ from dotenv import load_dotenv
 from sync_common import create_supabase_client
 
 
+def latest_publication(db, now):
+    # Match the public feed; future schedules and unpublished drafts do not count.
+    rows=(db.table('brief').select('published_at')
+        .in_('status',['published','scheduled']).not_.is_('slug','null')
+        .lte('published_at',now.isoformat())
+        .order('published_at',desc=True).limit(1).execute().data)
+    return rows[0]['published_at'] if rows else None
+
+
 def problems(overview, now=None):
     now=now or datetime.now(timezone.utc)
     alerts=[]
+    if 'last_published_at' in overview:
+        stamp=overview['last_published_at']
+        if not stamp:
+            alerts.append('No publicly visible briefs have been published')
+        elif now-datetime.fromisoformat(stamp.replace('Z','+00:00'))>=timedelta(hours=48):
+            alerts.append(f'No briefs published in the last 48 hours; last publication: {stamp}')
     if overview.get('counts',{}).get('verified',0) and not overview.get('settings',{}).get('publication_enabled',True):
         alerts.append('Publication is paused with verified briefs waiting')
     for source in overview['sources']:
@@ -38,8 +53,11 @@ def problems(overview, now=None):
 
 if __name__=='__main__':
     load_dotenv()
-    data=create_supabase_client().rpc('brief_pipeline_overview').execute().data
-    alerts=problems(data)
+    db=create_supabase_client()
+    now=datetime.now(timezone.utc)
+    data=db.rpc('brief_pipeline_overview').execute().data
+    data['last_published_at']=latest_publication(db,now)
+    alerts=problems(data,now)
     for alert in alerts:
         print(f'::error::{alert}')
     blocked=data.get('source_error_counts',{})
@@ -49,6 +67,7 @@ if __name__=='__main__':
     if any(count for reason,count in queue_blocked.items() if reason not in ('active_worker','retry_scheduled')):
         print('::warning::Current brief jobs blocked: '+json.dumps(queue_blocked))
     print(json.dumps({'alerts':len(alerts),'counts':data['counts'],'spending':data['spending'],
+        'last_published_at':data['last_published_at'],
         'current_waiting':data.get('current_waiting'),'backfill_waiting':data.get('backfill_waiting'),
         'last_progress_at':data.get('last_progress_at'),'source_error_counts':blocked,
         **{key:data.get(key) for key in ('eligible_current_waiting','oldest_eligible_current_waiting',

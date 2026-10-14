@@ -29,6 +29,13 @@ The manual Federal Register recovery workflow uses the same source lock and wrap
 
 Configure GitHub failed-workflow notifications to receive health/failure alerts. Health checks fail on stale sources, expired workers, backlog older than 24 hours, and repeatedly unavailable evidence. Successful runs produce logs without messages to external channels.
 
+Health checks also fail after 48 hours without a publicly visible brief, even
+when workers are succeeding, the queue is empty, or publication is paused. The
+four-hour scheduled check reports the last publication timestamp in its error
+and summary. Drafts and future scheduled publications do not reset the clock;
+an empty public feed also raises an alert. This uses the existing GitHub Actions
+failure notifications and requires no database migration.
+
 The processor workflow drains verified results before and after generation, including after individual generation failures. Each generation run handles up to 25 jobs within its existing 20-minute time budget. `python scripts/process_briefs.py --publish-only --limit 30` drains verified work without discovery or model calls; it still honors every database publication gate. Publication logs show the pause switch, verified count, daily cap, usage, and published IDs. A paused pipeline with verified work now raises a health alert.
 
 Daily CourtListener runs also retry failed/expired court-reference refreshes, or refresh references older than seven days, using the existing shared lock and daily request allowance. A live lease is never displaced.

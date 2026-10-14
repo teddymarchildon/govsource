@@ -254,6 +254,31 @@ def test_paused_publication_is_visible_in_health():
     assert any('Publication is paused' in p for p in problems(overview))
 
 
+@pytest.mark.parametrize('age_hours,expected', [(47.99,False),(48,True),(72,True)])
+@pytest.mark.parametrize('enabled', [False,True])
+def test_publication_drought_alerts_even_with_healthy_empty_queue(age_hours,expected,enabled):
+    from datetime import datetime,timedelta,timezone
+    now=datetime(2026,10,14,tzinfo=timezone.utc)
+    overview={'sources':[], 'counts':{}, 'eligible_current_waiting':0,
+        'settings':{'publication_enabled':enabled}, 'last_current_progress_at':now.isoformat(),
+        'last_published_at':(now-timedelta(hours=age_hours)).isoformat()}
+    alerts=problems(overview,now)
+    assert bool(alerts)==expected
+    if expected:
+        assert '48 hours' in alerts[0] and overview['last_published_at'] in alerts[0]
+
+
+def test_empty_public_feed_alerts():
+    assert problems({'sources':[], 'last_published_at':None})==[
+        'No publicly visible briefs have been published']
+
+
+def test_publication_timestamp_accepts_offsets():
+    from datetime import datetime,timezone
+    overview={'sources':[], 'last_published_at':'2026-10-11T20:00:00-04:00'}
+    assert '48 hours' in problems(overview,datetime(2026,10,14,tzinfo=timezone.utc))[0]
+
+
 @pytest.mark.parametrize('enabled',[False,True])
 def test_publication_drain_honors_pause_and_database_gates(enabled):
     calls=[]
