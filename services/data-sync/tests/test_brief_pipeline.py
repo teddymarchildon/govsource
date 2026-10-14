@@ -158,6 +158,8 @@ def test_wrapped_quote_is_restored_to_literal_source_without_changing_words():
      'Based on a two-year average price of $1.93 per pound.'),
     ('Specifically, proposed 19 CFR 123.101 requires notice.',
      'Proposed 19 CFR 123.101 requires notice.'),
+    ('The CAM Proposal would change the requirement.',
+     'the CAM Proposal would change the requirement.'),
     ("``(2) Amount.--The agency shall pay 50 percent.''.",
      '"(2) Amount.--The agency shall pay 50 percent."'),
 ])

@@ -51,8 +51,8 @@ def restore_literal_quote(quote: str, source: str) -> str:
     pattern=pattern.replace(r'\-',r'-\s*')
     pattern=re.sub('["“”]',lambda _:r'(?:"|“|”|``|\'\')',pattern)
     # Sentence-initial capitalization only, never case-fold acronyms or words.
-    if re.match(r'^[A-Z][a-z]',copied):
-        pattern=f'[{copied[0]}{copied[0].lower()}]'+pattern[1:]
+    if re.match(r'^[A-Za-z][a-z]',copied):
+        pattern=f'[{copied[0].upper()}{copied[0].lower()}]'+pattern[1:]
     match=re.search(pattern,source)
     return match.group(0) if match else quote
 
