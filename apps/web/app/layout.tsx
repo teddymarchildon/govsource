@@ -51,6 +51,13 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${inter.variable}`}>
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1561540818681527"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className={`${inter.className} font-sans`}>
         <AuthProvider>
           <NavigationProvider>
