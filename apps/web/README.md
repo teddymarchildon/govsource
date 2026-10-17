@@ -70,7 +70,21 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the domain model and contribution r
 - OpenAI (document assistant)
 - Stripe (subscriptions + billing)
 
-Set `ADMIN_EMAILS` to a comma-separated list of accounts allowed to use `/admin`. The existing administrator remains the fallback for backwards compatibility.
+Admin access is managed in Supabase's `public.admin_user` table, linked to
+Authentication users by `user_id`. In the Supabase dashboard, copy an existing
+user's UUID from **Authentication → Users**, then insert that UUID into the
+`user_id` column of **Table Editor → admin_user**. Delete their membership row to
+revoke access. Keep at least one administrator assigned. Only trusted database
+operators can edit membership; app users cannot read or modify this table, and
+the application's server role has read-only access.
+
+The admin-users migration seeds the existing verified account
+`ted.marchildon@gmail.com`. Apply the migration before deploying this code. All
+admin pages and APIs check membership for the authenticated user on every request;
+removal applies to subsequent requests without signing out. Database errors deny
+access. `ADMIN_EMAILS` and the previous hardcoded email fallback are no longer
+used; a leftover deployment variable can be removed. New environments without the
+seed account must add their initial admin through the dashboard.
 
 ## Scripts
 

@@ -11,7 +11,8 @@
     "test:sitemap": "node --test scripts/sitemap-records.test.js",
     "test:contributions": "node --test scripts/contributions.test.mjs scripts/individual-contributions.test.mjs scripts/contribution-overview.test.mjs scripts/contribution-batch.test.mjs scripts/contribution-verification.test.mjs scripts/contribution-publication.test.mjs",
     "postbuild": "next-sitemap",
-    "briefs:contributions": "node --conditions=react-server --import tsx scripts/generate-contribution-briefs.ts"
+    "briefs:contributions": "node --conditions=react-server --import tsx scripts/generate-contribution-briefs.ts",
+    "test:admin": "node --test scripts/admin-auth.test.mjs"
   },
   "dependencies": {
     "@dqbd/tiktoken": "^1.0.21",
