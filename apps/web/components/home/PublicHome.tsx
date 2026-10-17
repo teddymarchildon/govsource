@@ -136,14 +136,6 @@ export default function PublicHome({
 
   return (
     <div className="-mx-4 -mb-4 overflow-hidden md:-mx-6 md:-mb-6">
-      <section aria-label="About GovSource" className="border-b border-border bg-muted/20 py-5 md:py-6">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl">
-            <p className="font-serif text-lg font-semibold">Federal government, made easier to follow.</p>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">GovSource brings together public records and clear explanations of what’s happening across Congress, the White House, federal agencies, and the courts.</p>
-          </div>
-        </div>
-      </section>
       <section className="border-b border-border bg-background py-5 md:py-6">
         <div className="container mx-auto px-4">
           <div className="mb-5 flex items-center justify-between gap-4 border-b border-border pb-3">
