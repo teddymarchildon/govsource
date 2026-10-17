@@ -371,7 +371,8 @@ export default function BriefsAdminPage({
                 <label className="block text-sm font-medium">Status<select className="mt-1 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm" value={form.status} onChange={(event) => setField('status', event.target.value as BriefStatus)}>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                 <label className="block text-sm font-medium">Publish at<Input className="mt-1" type="datetime-local" value={form.published_at} onChange={(event) => setField('published_at', event.target.value)} /></label>
               </div>
-              <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={form.is_featured} onChange={(event) => setField('is_featured', event.target.checked)} />Feature on homepage</label>
+              <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={form.is_featured} onChange={(event) => setField('is_featured', event.target.checked)} />Prefer as an automatic homepage lead</label>
+              <p className="text-xs text-muted-foreground">To choose an exact lead or supporting slot on any tab, use <Link href="/admin/front-pages" className="text-primary underline">Customize front pages</Link>. Saved selections take priority over this preference.</p>
               {form.is_featured ? <label className="block text-sm font-medium">Featured until<Input className="mt-1" type="datetime-local" value={form.featured_until} onChange={(event) => setField('featured_until', event.target.value)} /></label> : null}
 
               <div className="flex justify-end gap-3 border-t pt-5"><Button variant="outline" onClick={() => setEditing(false)}>Close</Button><Button onClick={saveBrief} disabled={saving || generating}>{saving ? 'Saving…' : 'Save Brief'}</Button></div>

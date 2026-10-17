@@ -1,9 +1,13 @@
 import Link from 'next/link';
 import BriefCard from './BriefCard';
-import { getPublishedBriefs } from '@/lib/repositories/briefs';
+import { getPublishedBriefs, withFrontPageSelections } from '@/lib/repositories/briefs';
+import BriefFrontPage from './BriefFrontPage';
+import { selectFrontPageBriefs } from '@/utils/briefSelection';
 
 export default async function BriefFeed({ campaignFinance = false }: { campaignFinance?: boolean }) {
-  const briefs = await getPublishedBriefs(48, campaignFinance);
+  const recent = await getPublishedBriefs(48, campaignFinance);
+  const briefs = campaignFinance ? await withFrontPageSelections('campaign-finance', recent) : recent;
+  const remaining = campaignFinance ? selectFrontPageBriefs(briefs).remaining : briefs;
 
   return (
     <div className="container mx-auto max-w-7xl px-0 py-5 md:py-6">
@@ -18,9 +22,12 @@ export default async function BriefFeed({ campaignFinance = false }: { campaignF
       </nav>
 
       {briefs.length ? (
+        <>
+        {campaignFinance ? <section aria-label="Campaign Finance top stories" className="mt-6 border-b border-border pb-6"><BriefFrontPage briefs={briefs} placement="section:campaign-finance" /></section> : null}
         <div className="mt-5 grid gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-          {briefs.map((brief) => <BriefCard key={brief.id} brief={brief} />)}
+          {remaining.map((brief) => <BriefCard key={brief.id} brief={brief} />)}
         </div>
+        </>
       ) : (
         <div className="mt-8 rounded-xl border border-dashed bg-card px-6 py-16 text-center">
           <h2 className="font-serif text-2xl font-semibold">{campaignFinance ? 'Campaign contribution Briefs are coming soon' : 'No published Briefs yet'}</h2>

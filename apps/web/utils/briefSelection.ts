@@ -15,15 +15,18 @@ export function briefInstitution(brief: Brief) {
 export function selectFrontPageBriefs(input: Brief[], now = Date.now()) {
   const briefs = [...new Map(input.filter((brief) => brief.slug).map((brief) => [brief.id, brief])).values()]
     .sort((a, b) => Date.parse(b.published_at || '') - Date.parse(a.published_at || '') || b.id.localeCompare(a.id, undefined, { numeric: true }));
-  const lead = briefs.find((brief) => brief.is_featured && (!brief.featured_until || Date.parse(brief.featured_until) > now)) || briefs[0];
+  const pinned = (slot: number) => briefs.find((brief) => brief.editorial_slot === slot);
+  const unpinned = briefs.filter((brief) => brief.editorial_slot === undefined);
+  const lead = pinned(0) || unpinned.find((brief) => brief.is_featured && (!brief.featured_until || Date.parse(brief.featured_until) > now)) || unpinned[0] || pinned(1) || pinned(2) || briefs[0];
   if (!lead) return { lead: undefined, supporting: [], latest: [], remaining: [] };
 
   const chosen = new Set([lead.id]);
   const institutions = new Set([briefInstitution(lead)]);
   const supporting: Brief[] = [];
   for (let slot = 0; slot < 2; slot++) {
-    const candidates = briefs.filter((brief) => !chosen.has(brief.id));
-    const next = candidates.find((brief) => !institutions.has(briefInstitution(brief))) || candidates[0];
+    const candidates = unpinned.filter((brief) => !chosen.has(brief.id));
+    const assigned = pinned(slot + 1);
+    const next = assigned && !chosen.has(assigned.id) ? assigned : candidates.find((brief) => !institutions.has(briefInstitution(brief))) || candidates[0];
     if (!next) break;
     supporting.push(next);
     chosen.add(next.id);

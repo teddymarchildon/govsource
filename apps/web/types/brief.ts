@@ -16,6 +16,8 @@ export interface BriefSource {
 }
 
 export interface Brief {
+  /** Request-scoped front-page slot; never stored on the Brief itself. */
+  editorial_slot?: number;
   id: string;
   created_at: string;
   updated_at: string;

@@ -6,6 +6,7 @@ import { isContentType } from '@/utils/contentReferences';
 import type { Brief } from '@/types/brief';
 import type { ContentReference } from '@/types/content';
 import { GOVERNMENT_SECTIONS, SECTION_CONTENT_TYPES, type GovernmentSection } from '@/types/section';
+import { FRONT_PAGE_SLOTS, type FrontPage } from '@/types/frontPage';
 
 type BriefRow = Omit<Brief, 'id' | 'primary_item_id' | 'related_items'> & {
   id: string | number;
@@ -113,9 +114,10 @@ export const getPublishedBriefsBySection = cache(async (
     briefs.set(brief.id, brief);
   });
 
-  return [...briefs.values()]
+  const recent = [...briefs.values()]
     .sort((a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime())
     .slice(0, limit);
+  return withFrontPageSelections(section, recent);
 });
 
 export const getPublishedBriefBySlug = cache(async (slug: string): Promise<Brief | null> => {
@@ -158,8 +160,34 @@ export const getHomepageBriefs = cache(async (): Promise<Brief[]> => {
       briefs.set(brief.id, brief);
     }
   }
-  return [...briefs.values()];
+  return withFrontPageSelections('home', [...briefs.values()]);
 });
+
+// Fetch assigned stories independently of recency limits, but always through the
+// public visibility filter so archiving/unpublishing cannot expose private copy.
+export async function withFrontPageSelections(section: FrontPage, recent: Brief[]): Promise<Brief[]> {
+  const { data: settings, error } = await createAdminClient().from('brief_front_page')
+    .select('lead_brief_id,supporting_brief_id,secondary_brief_id').eq('section', section).maybeSingle();
+  if (error) {
+    // Keep public pages usable during a rolling deployment before the migration.
+    if (error.code === '42P01' || error.code === 'PGRST205') return recent;
+    throw error;
+  }
+  const base = recent.map(brief => ({ ...brief, is_featured: section === 'home' && brief.is_featured }));
+  if (!settings) return base;
+  const ids = FRONT_PAGE_SLOTS.map(slot => settings[slot]).filter(id => id !== null).map(String);
+  if (!ids.length) return base;
+  const { data, error: fetchError } = await liveBriefWithRelationsQuery().in('id', ids);
+  if (fetchError) throw fetchError;
+  const briefs = new Map(base.map(brief => [brief.id, brief]));
+  for (const row of data ?? []) {
+    const typed = row as unknown as BriefRow & { related_items?: RelatedItemRow[] };
+    const brief = normalizeBrief(typed, typed.related_items ?? []);
+    briefs.set(brief.id, { ...brief, is_featured: section === 'home' && brief.is_featured,
+      editorial_slot: FRONT_PAGE_SLOTS.findIndex(slot => String(settings[slot]) === brief.id) });
+  }
+  return [...briefs.values()];
+}
 
 export const getPublishedContributionBrief = cache(async (memberId: string, cycle: number): Promise<Brief | null> => {
   const { data, error } = await liveBriefWithRelationsQuery()

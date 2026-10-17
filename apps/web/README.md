@@ -139,3 +139,29 @@ job. They remain outside the automatic publisher and require editorial review in
 or refresh existing ones. Increase the explicit pilot cap in code only after review.
 Run locally with `npm run briefs:contributions` using server-side `SUPABASE_URL`
 and `SUPABASE_SERVICE_ROLE_KEY`; this command writes unpublished drafts.
+
+## Front-page editorial selections
+
+Apply `supabase/migrations/20261017205830_brief_front_pages.sql` before using
+**Admin → Customize front pages** (`/admin/front-pages`). Choose a lead and up to
+two supporting Briefs independently for Today, Campaign Finance, Congress, White
+House, Agencies, and Courts. Search published Briefs by headline or summary, move
+selections between slots, and **Save this page**. Each tab has its own save state;
+an asterisk marks unsaved edits. A Brief may be highlighted on multiple tabs.
+
+Selections override recency and the legacy homepage feature checkbox. Empty slots
+use automatic selection; clearing all slots restores the automatic layout. The
+legacy checkbox remains a homepage fallback when no lead is selected. Only live
+Briefs can be selected, and public reads recheck visibility: archived, unpublished,
+or future-dated stories never appear through a saved placement. Older selected
+Briefs are loaded independently of recent-feed limits. Other slots and Latest
+Briefs exclude stories already used in the lead/supporting area.
+
+Assignments are private to the server-side admin API. Saves update all three
+slots atomically and reject stale versions from another editing session. The
+migration does not alter Brief publication status or existing homepage choices.
+Public pages continue using automatic selection if the new table is not yet
+available, while the admin screen reports the missing migration.
+
+Validation: `npm run test:briefs` and `npx tsc --noEmit` in `apps/web`;
+`node tests/database/brief_front_pages.mjs` in `services/data-sync`.

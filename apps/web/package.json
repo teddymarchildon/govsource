@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:briefs": "node --test scripts/brief-selection.test.mjs scripts/brief-reading.test.mjs scripts/brief-pipeline-api.test.mjs",
+    "test:briefs": "node --test scripts/brief-selection.test.mjs scripts/brief-reading.test.mjs scripts/brief-pipeline-api.test.mjs scripts/front-pages-api.test.mjs",
     "test:sitemap": "node --test scripts/sitemap-records.test.js",
     "test:contributions": "node --test scripts/contributions.test.mjs scripts/individual-contributions.test.mjs scripts/contribution-overview.test.mjs scripts/contribution-batch.test.mjs scripts/contribution-verification.test.mjs scripts/contribution-publication.test.mjs",
     "postbuild": "next-sitemap",

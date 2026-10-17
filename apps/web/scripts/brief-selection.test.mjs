@@ -43,3 +43,26 @@ test('handles empty, single and small pools without manufacturing stories', () =
   assert.deepEqual(one.latest, []);
   assert.equal(selectFrontPageBriefs([brief(1), brief(2)], now).supporting.length, 1);
 });
+
+test('editorial slots override recency, featured flags and institution diversity', () => {
+  const input = [brief(99, 'law', { is_featured: true }),
+    brief(1, 'cluster', { editorial_slot: 0, published_at: '2025-01-01' }),
+    brief(2, 'cluster', { editorial_slot: 1, published_at: '2025-01-01' }),
+    brief(3, 'cluster', { editorial_slot: 2, published_at: '2025-01-01' })];
+  const result = selectFrontPageBriefs(input, now);
+  assert.equal(result.lead.id, '1');
+  assert.deepEqual(result.supporting.map(b => b.id), ['2', '3']);
+  assert.deepEqual(result.latest.map(b => b.id), ['99']);
+});
+
+test('empty lead fills automatically without stealing an assigned supporting slot', () => {
+  const result = selectFrontPageBriefs([brief(1, 'law', { editorial_slot: 2 }), brief(2), brief(3)], now);
+  assert.equal(result.lead.id, '3');
+  assert.deepEqual(result.supporting.map(b => b.id), ['2', '1']);
+});
+
+test('a single supporting story remains visible when there are no other stories', () => {
+  const result = selectFrontPageBriefs([brief(1, 'law', { editorial_slot: 1 })], now);
+  assert.equal(result.lead.id, '1');
+  assert.deepEqual(result.supporting, []);
+});

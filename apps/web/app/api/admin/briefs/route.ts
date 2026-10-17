@@ -195,6 +195,8 @@ export async function GET(request: Request) {
   const status = params.get('status');
   const itemType = params.get('primaryItemType');
   const search = params.get('search')?.trim();
+  if (params.get('live') === 'true') query = query.in('status', ['published', 'scheduled'])
+    .not('slug', 'is', null).not('published_at', 'is', null).lte('published_at', new Date().toISOString());
   if (status && status !== 'all') query = query.eq('status', status);
   if (itemType && itemType !== 'all') query = query.eq('primary_item_type', itemType);
   if (search) {
