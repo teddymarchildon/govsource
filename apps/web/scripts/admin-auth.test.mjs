@@ -53,3 +53,34 @@ test('membership is queried again for every request', async () => {
   const { check, calls } = setup({ user: { id: 'member' }, member: true });
   await check(); await check(); assert.equal(calls.length, 2);
 });
+
+const statusOutput = ts.transpileModule(readFileSync(new URL('../app/api/account/admin-status/route.ts', import.meta.url), 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+async function statusResponse(auth) {
+  const context = { exports: {}, require(name) {
+    if (name === 'next/server') return { NextResponse: { json: (body, options) => Response.json(body, options) } };
+    if (name === '@/utils/adminAuth') return { getCurrentUserAndAdminStatus: async () => {
+      if (auth instanceof Error) throw auth;
+      return auth;
+    } };
+    throw new Error(`Unexpected import: ${name}`);
+  } };
+  vm.runInNewContext(statusOutput, context);
+  return context.exports.GET();
+}
+test('status endpoint exposes only current account ID and admin flag without caching', async () => {
+  for (const isAdmin of [true, false]) {
+    const response = await statusResponse({ user: { id: 'current', email: 'private@example.com' }, isAdmin });
+    assert.deepEqual(await response.json(), { userId: 'current', isAdmin });
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.equal(response.headers.get('vary'), 'Cookie');
+  }
+});
+test('signed-out and failed status checks never return admin access', async () => {
+  const signedOut = await statusResponse({ user: null, isAdmin: true });
+  assert.deepEqual(await signedOut.json(), { userId: null, isAdmin: false });
+  const failed = await statusResponse(new Error('Auth service unavailable'));
+  assert.equal(failed.status, 503);
+  assert.deepEqual(await failed.json(), { userId: null, isAdmin: false });
+});

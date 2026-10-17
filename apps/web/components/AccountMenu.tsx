@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Bookmark, ChevronDown, CreditCard, LogOut, Settings2, UserRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Bookmark, ChevronDown, CreditCard, LogOut, Settings2, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -12,6 +12,25 @@ export default function AccountMenu() {
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
+  const userId = user?.id;
+
+  useEffect(() => {
+    setAdminUserId(null);
+    if (!open || !userId) return;
+    const controller = new AbortController();
+    // Refresh on each menu opening; ignore results from a previous session.
+    fetch('/api/account/admin-status', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) return;
+        const status = await response.json();
+        if (!controller.signal.aborted && status.isAdmin === true && status.userId === userId) {
+          setAdminUserId(userId);
+        }
+      })
+      .catch(() => { /* Keep the link hidden if status cannot be verified. */ });
+    return () => controller.abort();
+  }, [open, userId]);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -47,6 +66,7 @@ export default function AccountMenu() {
             { label: 'Watching', href: '/profile', icon: Bookmark },
             { label: 'Preferences', href: '/profile?section=preferences', icon: Settings2 },
             { label: 'Account & billing', href: '/profile?section=account', icon: CreditCard },
+            ...(userId && adminUserId === userId ? [{ label: 'Admin dashboard', href: '/admin', icon: ShieldCheck }] : []),
           ].map(({ label, href, icon: Icon }) => (
             <Link key={href} href={href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />{label}
