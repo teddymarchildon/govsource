@@ -377,6 +377,11 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Watching</h2>
               {watchingContent}
             </div>
+            <div className="border-t border-border px-4 py-4">
+              <Link href="/about" aria-current={pathname === '/about' ? 'page' : undefined} onClick={() => setIsMobileNavOpen(false)} className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                About GovSource
+              </Link>
+            </div>
           </aside>
         </div>
       )}

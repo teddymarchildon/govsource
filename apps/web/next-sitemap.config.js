@@ -24,6 +24,7 @@ module.exports = {
   additionalPaths: async (config) => {
     const publicIndexes = [
       '/',
+      '/about',
       '/agencies',
       '/agency-rules',
       '/briefs',

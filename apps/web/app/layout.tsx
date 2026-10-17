@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 import BriefAnalytics from '@/components/briefs/BriefAnalytics';
 import TopNav from '../components/TopNav';
 import { AuthProvider } from '../contexts/AuthContext';
@@ -61,12 +62,13 @@ export default async function RootLayout({
       <body className={`${inter.className} font-sans`}>
         <AuthProvider>
           <NavigationProvider>
-            <div className="min-h-screen bg-background">
+            <div className="flex min-h-screen flex-col bg-background">
               <Header />
               <TopNav topics={topics.map(({ id, slug, name }) => ({ id, slug, name }))} />
-              <main className="p-4 pt-14 md:p-6 md:pt-24">
+              <main className="flex-1 p-4 pt-14 md:p-6 md:pt-24">
                 {children}
               </main>
+              <Footer />
             </div>
           </NavigationProvider>
         </AuthProvider>
