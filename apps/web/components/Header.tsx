@@ -85,6 +85,14 @@ export default function Header() {
                 GovSource
               </span>
             </Link>
+            <Link
+              href="/about"
+              aria-label="About GovSource"
+              aria-current={pathname === '/about' ? 'page' : undefined}
+              className="ml-3 hidden rounded-sm px-1 py-2 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline-flex"
+            >
+              About
+            </Link>
           </div>
 
           {/* Mobile menu button */}
