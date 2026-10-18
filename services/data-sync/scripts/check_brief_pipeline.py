@@ -2,6 +2,8 @@
 """Fail scheduled health checks only for actionable pipeline conditions."""
 from datetime import datetime,timedelta,timezone
 import json
+import os
+from pathlib import Path
 from dotenv import load_dotenv
 from sync_common import create_supabase_client
 
@@ -58,6 +60,19 @@ if __name__=='__main__':
     data=db.rpc('brief_pipeline_overview').execute().data
     data['last_published_at']=latest_publication(db,now)
     alerts=problems(data,now)
+    budget_deferred=data.get('budget_deferred_current',0)
+    if budget_deferred:
+        print(f"::warning::{budget_deferred} current briefs are waiting for the daily AI budget reset at {data.get('budget_resets_at')}; "
+            f"accounted ${data['spending'].get('accounted_usd',0)} of ${data['settings']['daily_budget_usd']}. Overdue work remains in health checks.")
+    if os.getenv('GITHUB_STEP_SUMMARY'):
+        with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+            summary.write(
+                '# Brief pipeline health\n\n'
+                + ('Attention required' if alerts else 'Healthy') + '\n\n'
+                + '\n'.join('- '+alert for alert in alerts) + '\n\n'
+                + f"Current waiting: {data.get('current_waiting',0)}. Budget-deferred: {budget_deferred}.\n\n"
+                + f"AI budget: ${data['spending'].get('accounted_usd',0)} / ${data['settings']['daily_budget_usd']}; "
+                + f"resets at {data.get('budget_resets_at')}.\n")
     for alert in alerts:
         print(f'::error::{alert}')
     blocked=data.get('source_error_counts',{})
@@ -67,7 +82,8 @@ if __name__=='__main__':
     if any(count for reason,count in queue_blocked.items() if reason not in ('active_worker','retry_scheduled')):
         print('::warning::Current brief jobs blocked: '+json.dumps(queue_blocked))
     print(json.dumps({'alerts':len(alerts),'counts':data['counts'],'spending':data['spending'],
-        'last_published_at':data['last_published_at'],
+        'last_published_at':data['last_published_at'],'budget_deferred_current':budget_deferred,
+        'budget_resets_at':data.get('budget_resets_at'),'daily_budget_usd':data['settings']['daily_budget_usd'],
         'current_waiting':data.get('current_waiting'),'backfill_waiting':data.get('backfill_waiting'),
         'last_progress_at':data.get('last_progress_at'),'source_error_counts':blocked,
         **{key:data.get(key) for key in ('eligible_current_waiting','oldest_eligible_current_waiting',

@@ -22,6 +22,7 @@ await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906223838_con
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260906224831_brief_source_refresh_tracking.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20260919165433_resilient_brief_processing.sql','utf8'));
 await db.exec(readFileSync(root+'apps/web/supabase/migrations/20261011003652_actionable_brief_queue_health.sql','utf8'));
+await db.exec(readFileSync(root+'apps/web/supabase/migrations/20261018203900_fair_brief_queue.sql','utf8'));
 const scalar=async (sql,params=[])=>Object.values((await db.query(sql,params)).rows[0])[0];
 const token='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 await db.exec("insert into bill(id,title) values (1,'Example bill');");
@@ -167,4 +168,31 @@ assert.equal(await scalar("select has_function_privilege('anon','public.brief_jo
 assert.equal(await scalar("select has_function_privilege('authenticated','public.brief_job_blocker(public.brief_job,bigint,boolean)','execute')"),false);
 assert.equal(await scalar("select has_function_privilege('service_role','public.brief_job_blocker(public.brief_job,bigint,boolean)','execute')"),true);
 console.log('PASS: queue health matches worker eligibility, blocked diagnostics, expired/exhausted workers, backfill, and permissions');
+// Overdue low-priority work cannot be overtaken by fresh urgent work.
+await db.exec(`
+ update brief_job set status='withheld' where status in ('pending','retry','processing');
+ insert into bill(id,title) values(101,'Old notice'),(102,'Fresh urgent development'),(103,'Newer overdue development');
+`);
+const fairIds=[];
+for (const [id,priority] of [[101,30],[102,95],[103,70]]) {
+ const metadata=await scalar("select brief_source_bundle('bill',$1)",[id]);
+ fairIds.push(await scalar("select enqueue_brief_job('bill',$1,1,$2,$2,'bill',$3,$4,$5)",[id,'fair-'+id,metadata,packet,priority]));
+}
+await db.query("update brief_job set created_at=now()-interval '3 days' where id=$1",[fairIds[0]]);
+await db.query("update brief_job set created_at=now()-interval '2 days' where id=$1",[fairIds[2]]);
+for (const expected of [fairIds[0],fairIds[2],fairIds[1]]) {
+ const claimed=(await db.query("select * from claim_brief_job($1,'current')",[token])).rows[0];
+ assert.equal(claimed.id,expected,'overdue FIFO before fresh priority');
+}
+// With no overdue work, urgency still wins; active leases stay exclusive.
+await db.query("update brief_job set status='pending',created_at=now(),lease_until=null,lease_token=null where id=any($1)",[fairIds]);
+assert.equal((await db.query("select * from claim_brief_job($1,'current')",[token])).rows[0].id,fairIds[1]);
+assert.equal((await db.query("select * from claim_brief_job($1,'current')",[other])).rows[0].id,fairIds[2]);
+assert.equal(await scalar("select has_function_privilege('anon','public.claim_brief_job(uuid,text)','execute')"),false);
+await db.query('select defer_brief_budget($1,$2)',[fairIds[1],token]);
+const budgetHealth=await scalar('select brief_pipeline_overview()');
+assert.equal(budgetHealth.budget_deferred_current,1);
+assert.ok(new Date(budgetHealth.budget_resets_at)>new Date());
+assert.equal(budgetHealth.current_waiting,3,'budget deferrals remain visible');
+console.log('PASS: overdue FIFO, fresh editorial priority, and exclusive leases');
 await db.close();

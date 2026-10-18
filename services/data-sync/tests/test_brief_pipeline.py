@@ -555,3 +555,13 @@ def test_backfill_progress_cannot_mask_stalled_current_queue():
                 'last_current_progress_at': None,
                 'last_progress_at': datetime.now(timezone.utc).isoformat()}
     assert any('no processing progress' in p for p in problems(overview))
+
+
+def test_budget_limit_does_not_hide_overdue_work():
+    from datetime import datetime, timezone
+    overview={'sources':[], 'budget_deferred_current':10,
+        'settings':{'daily_budget_usd':5}, 'spending':{'accounted_usd':4.99},
+        'oldest_eligible_current_waiting':'2026-10-14T00:00:00Z',
+        'eligible_current_waiting':389, 'last_current_progress_at':'2026-10-18T16:00:00Z'}
+    assert problems(overview,datetime(2026,10,18,20,tzinfo=timezone.utc)) == [
+        'Current-news brief backlog contains work older than 24 hours']
