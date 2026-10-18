@@ -10,7 +10,7 @@ on:
         type: string
         default: ''
       committee:
-        description: 'Optional receiving committee ID; blank processes eligible member campaigns'
+        description: 'Receiving committee ID(s), comma-separated; blank processes eligible member campaigns'
         type: string
         default: ''
 

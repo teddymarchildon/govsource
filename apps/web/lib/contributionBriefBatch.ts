@@ -1,4 +1,4 @@
-import { verifyContributionFigures } from './contributionVerification';
+import { ContributionDataPending, verifyContributionFigures } from './contributionVerification';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildContributionBrief } from './contributionBrief';
 import { getMemberContributions } from './repositories/contributions';
@@ -18,11 +18,11 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
   const year = now.getUTCFullYear();
   const cycle = year + year % 2;
   const cutoff = contributionImportCutoff(now);
-  const summary = { cycle, created: [] as number[], existing: 0, ineligible: 0, reason: '', blocked: [] as { memberId: number; reason: string }[] };
+  const summary = { cycle, created: [] as number[], existing: 0, ineligible: 0, reason: '', waiting: [] as { memberId: number; reason: string }[], blocked: [] as { memberId: number; reason: string }[] };
   const coverage = await db.from('fec_sync_state').select('last_full_success_at').eq('cycle', cycle).maybeSingle();
   if (coverage.error) throw coverage.error;
   if (!coverage.data?.last_full_success_at || new Date(coverage.data.last_full_success_at) < new Date(cutoff)) {
-    return { ...summary, blocked: [{ memberId: 0, reason: 'Nationwide committee import is not fresh this week.' }], reason: 'Waiting for a successful nationwide committee import this week.' };
+    return { ...summary, waiting: [{ memberId: 0, reason: 'Nationwide committee import is not fresh this week.' }], reason: 'Waiting for a successful nationwide committee import this week.' };
   }
   const existing = await db.from('brief').select('primary_item_id', { count: 'exact' })
     .eq('primary_item_type', 'campaign_finance').eq('contribution_cycle', cycle);
@@ -39,7 +39,7 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
         getMemberIndividualContributions(String(id), String(cycle), undefined, {}, db),
       ]);
       await verifyContributionFigures(committees, individuals, now);
-    } catch (error) { summary.blocked.push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' }); }
+    } catch (error) { (error instanceof ContributionDataPending ? summary.waiting : summary.blocked).push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' }); }
   }
   if (!remaining) return { ...summary, reason: 'Pilot cap reached; existing briefs were left unchanged.' };
   const seen = new Set<number>((existing.data ?? []).map(row => Number(row.primary_item_id)));
@@ -70,7 +70,7 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
     let verification;
     try { verification = await verifyContributionFigures(committees, individuals, now); }
     catch (error) {
-      summary.blocked.push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' });
+      (error instanceof ContributionDataPending ? summary.waiting : summary.blocked).push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' });
       // Fail closed without spending the entire job timeout trying other campaigns.
       break;
     }

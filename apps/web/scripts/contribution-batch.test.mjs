@@ -3,9 +3,10 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 const code = ts.transpileModule(readFileSync(new URL('../lib/contributionBriefBatch.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-function setup({ existing = [], fresh = true, individualFresh = true, fail = false, concurrent = false, reconciliationFails = false } = {}) {
+function setup({ existing = [], fresh = true, individualFresh = true, fail = false, concurrent = false, reconciliationFails = false, waiting = false } = {}) {
+  class ContributionDataPending extends Error {}
   const inserts = []; let reads = 0; const exports = {};
-  new Function('require', 'exports', code)(name => name.endsWith('contributionVerification') ? { verifyContributionFigures: async () => { if (reconciliationFails) throw new Error('FEC mismatch'); } } : name.endsWith('contributionBrief') ? { buildContributionBrief: () => ({ status: 'review', auto_generated: false, generation_metadata: {} }) }
+  new Function('require', 'exports', code)(name => name.endsWith('contributionVerification') ? { ContributionDataPending, verifyContributionFigures: async () => { if (waiting) throw new ContributionDataPending('Waiting for FEC reconciliation'); if (reconciliationFails) throw new Error('FEC mismatch'); } } : name.endsWith('contributionBrief') ? { buildContributionBrief: () => ({ status: 'review', auto_generated: false, generation_metadata: {} }) }
     : name.endsWith('/contributions') ? { getMemberContributions: async () => ({ cycle: 2026, linked: true, count: 10 }) }
     : { getMemberIndividualContributions: async () => ({ cycle: 2026, linked: true, count: 10, coveredCommittees: 1, eligibleCommittees: 1, refreshedAt: individualFresh ? '2026-10-11T11:00:00Z' : '2026-10-04T11:00:00Z' }) }, exports);
   const db = { from(table) {
@@ -54,4 +55,19 @@ test('reconciliation failure blocks new drafts and audits even a full pilot', as
   const result = await f.run(); assert.equal(result.created.length, 0); assert.equal(result.blocked.length, 1);
   const full = await setup({ existing: [1, 2, 3, 4, 5], reconciliationFails: true }).run();
   assert.equal(full.blocked.length, 5);
+});
+
+
+test('data waiting blocks all writes but does not become an execution failure', async () => {
+  for (const existing of [[], [1, 2, 3, 4, 5]]) {
+    const f = setup({ existing, waiting: true });
+    const result = await f.run();
+    assert.equal(result.waiting.length, existing.length || 1);
+    assert.equal(result.blocked.length, 0);
+    assert.equal(result.created.length, 0);
+    assert.equal(f.inserts.length, 0);
+  }
+  const stale = await setup({ fresh: false }).run();
+  assert.equal(stale.waiting.length, 1);
+  assert.equal(stale.blocked.length, 0);
 });

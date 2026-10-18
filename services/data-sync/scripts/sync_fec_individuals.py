@@ -115,7 +115,7 @@ def main(argv=None):
     year = datetime.now(timezone.utc).year
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cycle', type=int, default=year + year % 2)
-    parser.add_argument('--committee', help='Import one receiving campaign; required for a dry run')
+    parser.add_argument('--committee', help='Receiving committee ID or comma-separated IDs; required for a dry run')
     parser.add_argument('--write', action='store_true')
     parser.add_argument('--restart', action='store_true', help='Discard this campaign’s incomplete staging')
     parser.add_argument('--max-requests', type=int, default=int(os.getenv('FEC_MAX_API_REQUESTS', '2200')))
@@ -125,7 +125,7 @@ def main(argv=None):
         parser.error('Use an even reporting period, positive request budget and nonnegative interval')
     if (not args.write or args.restart) and not args.committee:
         parser.error('--committee is required for dry runs and explicit restarts')
-    scope = committee_id(args.committee) if args.committee else None
+    scopes = list(dict.fromkeys(committee_id(value.strip()) for value in args.committee.split(','))) if args.committee else []
     logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
     for name in ('urllib3', 'httpx', 'httpcore'):
         logging.getLogger(name).setLevel(logging.WARNING)
@@ -133,7 +133,14 @@ def main(argv=None):
     try:
         client = IndividualClient(require_env('FEC_API_KEY'), args.max_requests, args.minimum_interval)
         db = create_supabase_client(postgrest_timeout=65) if args.write else None
-        queue = read_queue(db, args.cycle, scope) if db else [{'committee_id': scope, 'candidate_id': None}]
+        if not db:
+            queue = [{'committee_id': scope, 'candidate_id': None} for scope in scopes]
+        elif scopes:
+            queue = [item for scope in scopes for item in read_queue(db, args.cycle, scope)]
+        else:
+            queue = read_queue(db, args.cycle)
+        if scopes and set(scopes) != {row['committee_id'] for row in queue}:
+            raise FECError('One or more requested campaigns has no eligible mapping')
         if not queue:
             raise FECError('No eligible campaigns: import and map candidates first')
         for item in queue:

@@ -17,7 +17,7 @@ test('Lee discrepancies are blocked; reconciled figures retain source coverage',
 });
 test('Fischer missing LLC and Paul new-quarter totals cannot pass', async () => {
   await assert.rejects(verifyContributionFigures({ ...c, total: 339154.16 }, { ...i, total: 315280.48 }, now, async () => new Response(html('339,154.16', '316,280.48'))), /1000.00/);
-  await assert.rejects(verifyContributionFigures({ ...c, total: 97046.15 }, { ...i, total: 2223210.11 }, now, async () => new Response(html('100,546.15', '2,674,152.80', '09/30/2026'))), /reconciliation failed/);
+  await assert.rejects(verifyContributionFigures({ ...c, total: 97046.15 }, { ...i, total: 2223210.11 }, now, async () => new Response(html('100,546.15', '2,674,152.80', '09/30/2026'))), /Waiting for FEC reconciliation/);
 });
 test('unavailable sources, stale imports, ambiguity, partial coverage and malformed summaries fail closed', async () => {
   for (const change of [{ refreshedAt: null }, { refreshedAt: '2026-09-01' }, { excludedCommittees: 1 }, { nationwide: false }]) await assert.rejects(verifyContributionFigures({ ...c, ...change }, i, now, fetcher));
@@ -29,4 +29,17 @@ test('financial copy and citations cannot change between verification and public
   const expected = { points: [{ text: '$100', source_refs: ['summary'] }], sources: [{ id: 'summary' }], context_markdown: 'June 30' };
   assertContributionContent(expected, expected);
   for (const change of [{ points: [{ text: '$999' }] }, { sources: [] }, { context_markdown: 'September 30' }]) assert.throws(() => assertContributionContent({ ...expected, ...change }, expected));
+});
+
+
+test('pending data throws at the publication boundary; operational errors are not waiting', async () => {
+  await assert.rejects(verifyContributionFigures(c, { ...i, total: 1 }, now, fetcher), exports.ContributionDataPending);
+  await assert.rejects(verifyContributionFigures(c, { ...i, refreshedAt: '2026-09-01' }, now, fetcher), exports.ContributionDataPending);
+  await assert.rejects(verifyContributionFigures(c, i, now, async () => new Response('broken', { status: 503 })), error => !(error instanceof exports.ContributionDataPending));
+  await assert.rejects(verifyContributionFigures(c, i, now, async () => new Response('unexpected layout')), error => !(error instanceof exports.ContributionDataPending));
+});
+
+
+test('excess imported money remains a failure, not an upstream-data wait', async () => {
+  await assert.rejects(verifyContributionFigures({ ...c, total: c.total + 1 }, i, now, fetcher), error => !(error instanceof exports.ContributionDataPending) && /exceed/.test(error.message));
 });

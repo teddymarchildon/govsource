@@ -177,3 +177,35 @@ def test_old_staged_filter_scope_restarts_before_resuming():
     assert store.checkpoint == fresh
     assert [call.args[0] for call in db.rpc.call_args_list] == ['begin_fec_individual_sync', 'finish_fec_individual_sync', 'begin_fec_individual_sync']
     assert db.rpc.call_args_list[-1].args[1]['p_restart'] is True
+
+
+@pytest.mark.parametrize('requested,expected', [
+    ('C00442921,C00496075,C00442921', ['C00442921', 'C00496075']),
+    ('C00442921', ['C00442921']),
+])
+def test_targeted_refresh_visits_each_requested_campaign_once(monkeypatch, requested, expected):
+    import sync_fec_individuals as mod
+    monkeypatch.setattr(mod, 'load_dotenv', lambda *a: None)
+    monkeypatch.setattr(mod, 'require_env', lambda *a: 'test-key')
+    monkeypatch.setattr(mod, 'create_supabase_client', lambda **kw: Mock())
+    client = Mock(requests=0, max_requests=2200)
+    monkeypatch.setattr(mod, 'IndividualClient', lambda *a: client)
+    monkeypatch.setattr(mod, 'read_queue', lambda db, cycle, committee: [{'committee_id': committee, 'candidate_id': None}])
+    monkeypatch.setattr(mod, 'IndividualStore', lambda *a: Mock())
+    sync = Mock(return_value=1)
+    monkeypatch.setattr(mod, 'sync_individuals', sync)
+    assert mod.main(['--write', '--committee', requested]) == 0
+    assert [call.args[3] for call in sync.call_args_list] == expected
+
+
+def test_missing_target_does_not_silently_refresh_only_other_campaigns(monkeypatch):
+    import sync_fec_individuals as mod
+    monkeypatch.setattr(mod, 'load_dotenv', lambda *a: None)
+    monkeypatch.setattr(mod, 'require_env', lambda *a: 'test-key')
+    monkeypatch.setattr(mod, 'create_supabase_client', lambda **kw: Mock())
+    monkeypatch.setattr(mod, 'IndividualClient', lambda *a: Mock(requests=0))
+    monkeypatch.setattr(mod, 'read_queue', lambda *a: [])
+    sync = Mock()
+    monkeypatch.setattr(mod, 'sync_individuals', sync)
+    assert mod.main(['--write', '--committee', 'C00442921']) == 1
+    sync.assert_not_called()

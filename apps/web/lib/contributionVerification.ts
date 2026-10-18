@@ -1,6 +1,12 @@
 import type { MemberContributions } from './repositories/contributions';
 import type { IndividualContributions } from './repositories/individualContributions';
 
+// A data hold still throws at every drafting/publication boundary. Only the
+// scheduled job may report it as waiting instead of an execution failure.
+export class ContributionDataPending extends Error {
+  constructor(message: string) { super(message); this.name = 'ContributionDataPending'; }
+}
+
 export type ContributionVerification = { checkedAt: string; coverageStart: string; coverageEnd: string; sources: { id: string; label: string; url: string }[] };
 const cents = (n: number) => {
   const value = Math.round(n * 100);
@@ -36,7 +42,8 @@ export async function verifyContributionFigures(committees: MemberContributions,
     || JSON.stringify(ids) !== JSON.stringify([...new Set(individuals.committeeIds)].sort())) throw new Error('Contribution coverage is incomplete or ambiguous.');
   for (const value of [committees.refreshedAt, individuals.refreshedAt]) {
     const age = now.getTime() - Date.parse(value ?? '');
-    if (!Number.isFinite(age) || age < 0 || age > 8 * 86400000) throw new Error('Contribution imports are stale; refresh before drafting or publishing.');
+    if (!Number.isFinite(age) || age < 0) throw new Error('Invalid contribution import timestamp.');
+    if (age > 8 * 86400000) throw new ContributionDataPending('Contribution imports are stale; waiting for a refresh before drafting or publishing.');
   }
   let committeeCents = 0, individualCents = 0;
   const ends = new Set<string>();
@@ -51,9 +58,15 @@ export async function verifyContributionFigures(committees: MemberContributions,
     committeeCents += summary.committeeCents; individualCents += summary.individualCents; ends.add(summary.to);
     sources.push({ id: `summary_${id}`, label: `FEC financial summary: ${id}`, url });
   }
-  if (ends.size !== 1) throw new Error('Campaign committees have different reporting coverage dates.');
-  if (committeeCents !== cents(committees.total) || individualCents !== cents(individuals.total)) {
-    throw new Error(`FEC reconciliation failed: committee difference $${((committeeCents - cents(committees.total)) / 100).toFixed(2)}; itemized difference $${((individualCents - cents(individuals.total)) / 100).toFixed(2)}. Refresh or reconcile original filings before publication.`);
+  if (ends.size !== 1) throw new ContributionDataPending('Campaign committees have different reporting coverage dates; waiting for aligned FEC data.');
+  const committeeDifference = committeeCents - cents(committees.total);
+  const individualDifference = individualCents - cents(individuals.total);
+  if (committeeDifference || individualDifference) {
+    const differences = `committee difference $${(committeeDifference / 100).toFixed(2)}; itemized difference $${(individualDifference / 100).toFixed(2)}.`;
+    // A shortfall can be an unfinished import or lagging processed FEC data.
+    // Do not claim the cause is proven, or treat excess imported money as lag.
+    if (committeeDifference < 0 || individualDifference < 0) throw new Error(`FEC reconciliation failed: ${differences} Imported totals exceed the FEC summary; review original filings before publication.`);
+    throw new ContributionDataPending(`Waiting for FEC reconciliation: ${differences} Refresh or reconcile original filings before publication; publication remains blocked.`);
   }
   return { checkedAt: now.toISOString(), coverageStart: `${cycle - 1}-01-01`, coverageEnd: [...ends][0], sources };
 }
