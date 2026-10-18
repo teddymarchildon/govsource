@@ -437,8 +437,9 @@ def main() -> int:
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
     db = create_supabase_client()
+    deadline = time.monotonic()+args.max_minutes*60
     if args.prefilter_only or args.prefilter_dry_run:
-        log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=not args.prefilter_dry_run)))
+        log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=not args.prefilter_dry_run,deadline=deadline)))
         return 0
     if args.publish_only:
         log.info('brief_pipeline_summary %s',json.dumps({'published':publish_ready(db,args.limit)}))
@@ -449,8 +450,7 @@ def main() -> int:
         log.info('Seeded %s source changes',db.rpc('seed_brief_source_changes',{'p_days':args.seed_days}).execute().data)
     summary = discover(db,args.discovery_limit)
     if not args.discover_only:
-        log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=True)))
-    deadline = time.monotonic()+args.max_minutes*60
+        log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=True,deadline=deadline-180)))
     summary['failed'] = 0
     if not args.discover_only:
         # Each worker owns its HTTP client; database claims and budget reservations

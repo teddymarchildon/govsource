@@ -5,6 +5,7 @@ approve publication and never discard saved AI work or corrections to coverage.
 """
 import logging
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from brief_evidence import validate_packet, EvidenceReviewRequired
 
@@ -63,7 +64,7 @@ def previous_coverage(db, job):
         'primary_item_type',list({job['item_type'],job['source_type']})).limit(1).execute().data or []
 
 
-def filter_queue(db, queue='current', apply=False):
+def filter_queue(db, queue='current', apply=False, deadline=float('inf')):
     """Keyset scan so nonmatching or budget-deferred jobs cannot block free filtering.
 
     Compare-and-set excludes active workers and concurrent edits. Source changes
@@ -73,6 +74,9 @@ def filter_queue(db, queue='current', apply=False):
     cursor = 0
     cutoff = (datetime.now(timezone.utc).date()-timedelta(days=30)).isoformat()
     while True:
+        if time.monotonic()>deadline:
+            summary['incomplete'] = True
+            break
         query = db.table('brief_job').select('*').in_('status',['pending','retry']).gt('id',cursor).order('id').limit(100)
         query = (query.lt('development_date',cutoff) if queue == 'backfill'
                  else query.or_(f'development_date.is.null,development_date.gte.{cutoff}'))
@@ -80,6 +84,9 @@ def filter_queue(db, queue='current', apply=False):
         if not jobs:
             break
         for job in jobs:
+            if time.monotonic()>deadline:
+                summary['incomplete'] = True
+                return summary
             cursor = job['id']
             summary['scanned'] += 1
             reason = prefilter_reason(job)
