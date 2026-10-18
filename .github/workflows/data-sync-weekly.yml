@@ -10,6 +10,10 @@ on:
         description: Run only the FEC import (leave reference data alone)
         type: boolean
         default: false
+      fec_committees:
+        description: 'Optional comma-separated receiving committee IDs; blank imports nationwide'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -94,6 +98,7 @@ jobs:
       FEC_API_KEY: ${{ secrets.FEC_API_KEY }}
       FEC_MAX_API_REQUESTS: '2200'
       FEC_MINIMUM_REQUEST_INTERVAL: '4'
+      INPUT_FEC_COMMITTEES: ${{ inputs.fec_committees }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -115,7 +120,20 @@ jobs:
           exit "$missing"
       # FEC candidate IDs include challengers; no dependency on member ingestion.
       - name: Import current reporting period
-        run: python scripts/sync_fec_donations.py --write
+        shell: bash
+        run: |
+          if [[ -z "$INPUT_FEC_COMMITTEES" ]]; then
+            python scripts/sync_fec_donations.py --write
+          else
+            if [[ ! "$INPUT_FEC_COMMITTEES" =~ ^C[0-9]{8}(,C[0-9]{8})*$ ]]; then
+              echo "::error::Use comma-separated FEC committee IDs."
+              exit 1
+            fi
+            IFS=',' read -r -a committees <<< "$INPUT_FEC_COMMITTEES"
+            for committee in "${committees[@]}"; do
+              python scripts/sync_fec_donations.py --write --committee "$committee"
+            done
+          fi
       - name: Link published FEC candidates to Congress members
         run: python scripts/map_fec_candidates.py --write --report reports/fec-member-mapping.json
       - name: Save member mapping report
