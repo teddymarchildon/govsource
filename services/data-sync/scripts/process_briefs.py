@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 from brief_ai import AI, BudgetExhausted, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
 from brief_style import PLAIN_ENGLISH_STYLE
+from brief_prefilter import prefilter_reason, filter_queue
 from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint, validate_packet
 from generate_briefs_batch import dek_is_complete, slugify
 from import_briefs_supabase import validate_manifest
@@ -220,10 +221,14 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
     except EvidenceReviewRequired as exc:
         complete(db,job,token,'withheld',str(exc))
         return 'withheld'
-    ai = ai_factory(db,job['id'])
-    ai.deadline = deadline
     packet = job['evidence']
     previous = db.table('brief').select('title,dek,published_at,generation_metadata').eq('primary_item_id',job['item_id']).in_('primary_item_type',[job['item_type'],job['source_type']]).order('published_at',desc=True).limit(5).execute().data or []
+    reason = prefilter_reason(job,has_previous=bool(previous))
+    if reason:
+        complete(db,job,token,'skipped',reason)
+        return 'skipped'
+    ai = ai_factory(db,job['id'])
+    ai.deadline = deadline
     work = job.get('work') or {}
     if work.get('prompt_version',PROMPT_VERSION) != PROMPT_VERSION:
         work={}
@@ -421,6 +426,8 @@ def main() -> int:
     parser.add_argument('--workers',type=int,choices=(1,2),default=1)
     parser.add_argument('--queue',choices=('current','backfill'),default='current')
     parser.add_argument('--discover-only',action='store_true')
+    parser.add_argument('--prefilter-only',action='store_true',help='Apply free conservative filters without AI calls')
+    parser.add_argument('--prefilter-dry-run',action='store_true',help='Preview free filters without changing jobs')
     parser.add_argument('--seed-days',type=int,help='Queue existing unbriefed records updated in the prior 1-90 days')
     parser.add_argument('--publish',action='store_true',help='Publish verified jobs only when DB publication switch is enabled')
     parser.add_argument('--publish-only',action='store_true',help='Drain verified results without discovery or model calls')
@@ -430,6 +437,9 @@ def main() -> int:
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
     db = create_supabase_client()
+    if args.prefilter_only or args.prefilter_dry_run:
+        log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=not args.prefilter_dry_run)))
+        return 0
     if args.publish_only:
         log.info('brief_pipeline_summary %s',json.dumps({'published':publish_ready(db,args.limit)}))
         return 0
@@ -438,6 +448,8 @@ def main() -> int:
             parser.error('--seed-days must be 1-90')
         log.info('Seeded %s source changes',db.rpc('seed_brief_source_changes',{'p_days':args.seed_days}).execute().data)
     summary = discover(db,args.discovery_limit)
+    if not args.discover_only:
+        log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=True)))
     deadline = time.monotonic()+args.max_minutes*60
     summary['failed'] = 0
     if not args.discover_only:

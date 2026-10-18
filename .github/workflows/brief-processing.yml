@@ -9,6 +9,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      mode:
+        description: Process normally, preview free filters, or apply only free filters
+        type: choice
+        default: process
+        options: [process, prefilter-preview, prefilter-only]
       queue:
         description: Process current developments or historical backfill
         type: choice
@@ -40,6 +45,7 @@ jobs:
       BRIEF_PRICING_MODELS: ${{ vars.BRIEF_PRICING_MODELS || 'gpt-5-mini' }}
       BRIEF_INPUT_USD_PER_MILLION: ${{ vars.BRIEF_INPUT_USD_PER_MILLION || '0.25' }}
       BRIEF_OUTPUT_USD_PER_MILLION: ${{ vars.BRIEF_OUTPUT_USD_PER_MILLION || '2.00' }}
+      BRIEF_MODE: ${{ inputs.mode || 'process' }}
       BRIEF_QUEUE: ${{ inputs.queue || 'current' }}
     steps:
       - uses: actions/checkout@v6
@@ -50,9 +56,16 @@ jobs:
           cache-dependency-path: services/data-sync/requirements.runtime.txt
       - run: pip install -r requirements.runtime.txt
       - name: Publish already verified results
+        if: ${{ !inputs.mode || inputs.mode == 'process' }}
         run: python scripts/process_briefs.py --publish-only --limit 30
       - name: Process durable jobs and publish only verified results
-        run: python scripts/run_pipeline_source.py processor -- --limit 100 --max-minutes 20 --workers 2 --queue "$BRIEF_QUEUE"
+        run: |
+          case "$BRIEF_MODE" in
+            prefilter-preview) python scripts/process_briefs.py --prefilter-dry-run --queue "$BRIEF_QUEUE" ;;
+            prefilter-only) python scripts/process_briefs.py --prefilter-only --queue "$BRIEF_QUEUE" ;;
+            process) python scripts/run_pipeline_source.py processor -- --limit 100 --max-minutes 20 --workers 2 --queue "$BRIEF_QUEUE" ;;
+            *) exit 2 ;;
+          esac
       - name: Publish verified results even after an individual job fails
-        if: ${{ always() && !cancelled() }}
+        if: ${{ always() && !cancelled() && (!inputs.mode || inputs.mode == 'process') }}
         run: python scripts/process_briefs.py --publish-only --limit 30
