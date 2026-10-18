@@ -3,12 +3,12 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 const code = ts.transpileModule(readFileSync(new URL('../lib/contributionBriefBatch.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-function setup({ existing = [], fresh = true, individualFresh = true, fail = false, concurrent = false, reconciliationFails = false, waiting = false } = {}) {
+function setup({ existing = [], fresh = true, individualFresh = true, fail = false, concurrent = false, reconciliationFails = false, waiting = false, Clock = Date } = {}) {
   class ContributionDataPending extends Error {}
-  const inserts = []; let reads = 0; const exports = {};
-  new Function('require', 'exports', code)(name => name.endsWith('contributionVerification') ? { ContributionDataPending, verifyContributionFigures: async () => { if (waiting) throw new ContributionDataPending('Waiting for FEC reconciliation'); if (reconciliationFails) throw new Error('FEC mismatch'); } } : name.endsWith('contributionBrief') ? { buildContributionBrief: () => ({ status: 'review', auto_generated: false, generation_metadata: {} }) }
+  const inserts = []; const verificationTimes = []; let reads = 0; const exports = {};
+  new Function('require', 'exports', 'Date', code)(name => name.endsWith('contributionVerification') ? { ContributionDataPending, verifyContributionFigures: async (_c, _i, now) => { verificationTimes.push(now); if (waiting) throw new ContributionDataPending('Waiting for FEC reconciliation'); if (reconciliationFails) throw new Error('FEC mismatch'); } } : name.endsWith('contributionBrief') ? { buildContributionBrief: () => ({ status: 'review', auto_generated: false, generation_metadata: {} }) }
     : name.endsWith('/contributions') ? { getMemberContributions: async () => ({ cycle: 2026, linked: true, count: 10 }) }
-    : { getMemberIndividualContributions: async () => ({ cycle: 2026, linked: true, count: 10, coveredCommittees: 1, eligibleCommittees: 1, refreshedAt: individualFresh ? '2026-10-11T11:00:00Z' : '2026-10-04T11:00:00Z' }) }, exports);
+    : { getMemberIndividualContributions: async () => ({ cycle: 2026, linked: true, count: 10, coveredCommittees: 1, eligibleCommittees: 1, refreshedAt: individualFresh ? '2026-10-11T11:00:00Z' : '2026-10-04T11:00:00Z' }) }, exports, Clock);
   const db = { from(table) {
     let inserting = false;
     const q = {
@@ -25,7 +25,7 @@ function setup({ existing = [], fresh = true, individualFresh = true, fail = fal
       },
     }; return q;
   } };
-  return { run: () => exports.generateContributionBriefBatch(db, new Date('2026-10-11T13:00:00Z')), inserts, exports };
+  return { run: () => exports.generateContributionBriefBatch(db, new Date('2026-10-11T13:00:00Z')), inserts, exports, verificationTimes, runLive: () => exports.generateContributionBriefBatch(db) };
 }
 test('pilot creates at most five unpublished briefs', async () => {
   const f = setup(); assert.equal((await f.run()).created.length, 5);
@@ -70,4 +70,18 @@ test('data waiting blocks all writes but does not become an execution failure', 
   const stale = await setup({ fresh: false }).run();
   assert.equal(stale.waiting.length, 1);
   assert.equal(stale.blocked.length, 0);
+});
+
+
+test('live audits use a fresh time after reading imports, not the batch start', async () => {
+  const base = Date.parse('2026-10-11T13:00:00Z');
+  let tick = 0;
+  class Clock extends Date {
+    constructor(...args) { super(...(args.length ? args : [base + tick++ * 1000])); }
+  }
+  const f = setup({ existing: [1, 2, 3, 4, 5], Clock });
+  await f.runLive();
+  assert.equal(f.verificationTimes.length, 5);
+  assert.ok(f.verificationTimes.every(time => time.getTime() > base));
+  assert.equal(new Set(f.verificationTimes.map(time => time.getTime())).size, 5);
 });

@@ -14,10 +14,11 @@ export function contributionImportCutoff(now: Date) {
   return start.toISOString();
 }
 
-export async function generateContributionBriefBatch(db: SupabaseClient, now = new Date()) {
-  const year = now.getUTCFullYear();
+export async function generateContributionBriefBatch(db: SupabaseClient, now?: Date) {
+  const batchTime = now ?? new Date();
+  const year = batchTime.getUTCFullYear();
   const cycle = year + year % 2;
-  const cutoff = contributionImportCutoff(now);
+  const cutoff = contributionImportCutoff(batchTime);
   const summary = { cycle, created: [] as number[], existing: 0, ineligible: 0, reason: '', waiting: [] as { memberId: number; reason: string }[], blocked: [] as { memberId: number; reason: string }[] };
   const coverage = await db.from('fec_sync_state').select('last_full_success_at').eq('cycle', cycle).maybeSingle();
   if (coverage.error) throw coverage.error;
@@ -38,7 +39,7 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
         getMemberContributions(String(id), String(cycle), undefined, {}, db),
         getMemberIndividualContributions(String(id), String(cycle), undefined, {}, db),
       ]);
-      await verifyContributionFigures(committees, individuals, now);
+      await verifyContributionFigures(committees, individuals, now ?? new Date());
     } catch (error) { (error instanceof ContributionDataPending ? summary.waiting : summary.blocked).push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' }); }
   }
   if (!remaining) return { ...summary, reason: 'Pilot cap reached; existing briefs were left unchanged.' };
@@ -68,7 +69,7 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now = n
     const member = await db.from('congressman').select('id,full_name').eq('id', id).single();
     if (member.error) throw member.error;
     let verification;
-    try { verification = await verifyContributionFigures(committees, individuals, now); }
+    try { verification = await verifyContributionFigures(committees, individuals, now ?? new Date()); }
     catch (error) {
       (error instanceof ContributionDataPending ? summary.waiting : summary.blocked).push({ memberId: id, reason: error instanceof Error ? error.message : 'Contribution verification failed.' });
       // Fail closed without spending the entire job timeout trying other campaigns.
