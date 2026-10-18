@@ -36,7 +36,7 @@ and summary. Drafts and future scheduled publications do not reset the clock;
 an empty public feed also raises an alert. This uses the existing GitHub Actions
 failure notifications and requires no database migration.
 
-The processor workflow drains verified results before and after generation, including after individual generation failures. Each generation run handles up to 25 jobs within its existing 20-minute time budget. `python scripts/process_briefs.py --publish-only --limit 30` drains verified work without discovery or model calls; it still honors every database publication gate. Publication logs show the pause switch, verified count, daily cap, usage, and published IDs. A paused pipeline with verified work now raises a health alert.
+The processor workflow drains verified results before and after generation, including after individual generation failures. Each generation run handles up to 100 jobs within its existing 20-minute time budget. `python scripts/process_briefs.py --publish-only --limit 30` drains verified work without discovery or model calls; it still honors every database publication gate. Publication logs show the pause switch, verified count, daily cap, usage, and published IDs. A paused pipeline with verified work now raises a health alert.
 
 Daily CourtListener runs also retry failed/expired court-reference refreshes, or refresh references older than seven days, using the existing shared lock and daily request allowance. A live lease is never displaced.
 
@@ -153,3 +153,40 @@ result writes. Affected jobs are withheld for review with a safe reason, without
 publishing or modifying source quotations. The paid call remains accounted for,
 and subsequent jobs continue. Database and transport failures still fail the
 worker; this does not use blanket workflow error suppression.
+
+
+## Free screening of routine candidates
+
+`brief_prefilter.py` runs before paid screening, including a keyset-paginated
+sweep of the selected queue before generation. A budget-deferred or substantive
+item does not prevent later routine items from being filtered. The daily AI cap
+and publication limit are unchanged.
+
+The initial rules skip only introduction/referral-only bills with complete action
+and text metadata, explicit unchanged paperwork renewals, closed scientific
+grant-review meetings, and internal Senior Executive Service performance-review
+board memberships. Mixed/new/revised collections, uncertain notices, rules,
+presidential documents, court opinions, advanced bills, saved AI work, and items
+with previous coverage remain eligible for normal screening. Full evidence is
+validated first. Optional missing bill summaries/cosponsors do not block an
+introduction-only decision.
+
+Skipped jobs retain their evidence, fingerprint, and a versioned `Prefilter
+routine-v1` reason. The queue sweep compares status, source revision and update
+time before writing, so it cannot take a job from a concurrent worker. Source
+changes still use normal revision discovery. No filtered job can publish.
+
+Manual workflow modes in **Generate and verify briefs**:
+
+- `mode=prefilter-preview`: report matches without writes, AI calls, or publication.
+- `mode=prefilter-only`: apply the free filters without AI calls or publication.
+- `mode=process` (default): discovery, free filtering, normal generation and gated publication.
+
+All modes accept `queue=current` or `queue=backfill`. The CLI equivalents are
+`python scripts/process_briefs.py --prefilter-dry-run --queue current` and
+`python scripts/process_briefs.py --prefilter-only --queue current`.
+
+Filtering is intentionally conservative and does not guarantee an empty queue:
+substantive work still requires the normal budget and verification. Health checks
+continue reporting real overdue work rather than treating every old notice as
+low-value or resetting its age.
