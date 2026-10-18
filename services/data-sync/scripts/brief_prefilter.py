@@ -26,7 +26,7 @@ def prefilter_reason(job, has_previous=False):
     kind = job.get('source_type')
     reason = None
     if kind == 'bill':
-        if row.get('law_enacted_date') or row.get('law_number') or row.get('sync_pending') or row.get('sync_missing_fields'):
+        if row.get('law_enacted_date') or row.get('law_number') or row.get('sync_pending') or set(row.get('sync_missing_fields') or []) & {'actions','texts'}:
             return None
         actions, texts = row.get('actions') or [], row.get('texts') or []
         # Check the whole action/version history, not just the latest referral.
@@ -43,13 +43,13 @@ def prefilter_reason(job, has_previous=False):
         # judicial/policy changes must still receive editorial screening.
         if (re.search(r'\b(information collection|collection activities|paperwork reduction)\b', title)
                 and re.search(r'\b(?:extension|renewal)[, ]+(?:of [^.]{0,80}?)?without change\b', body)
-                and not re.search(r'\b(revision|revised|revising|reinstatement|reinstate|new collection|new information collection|vacated|rescinded|rescind|new requirement|new rule)\b', body)):
+                and not re.search(r'\b(revision|revised|revising|reinstatement|reinstate|new collection|new information collection|vacated|rescinded|rescind|new requirements?|new rule|new reporting|new data collection|changes to eligibility)\b', body)):
             reason = 'Paperwork collection renewal explicitly without change'
         # Closed scientific peer review is administrative, not a public hearing
         # or a decision on funding eligibility, allocations, or policy.
         if (not reason and re.search(r'\bnotice of closed meetings?\b', title)
                 and re.search(r'\breview and evaluat(?:e|ion of) (?:the )?grant applications\b', body)
-                and not re.search(r'\b(rulemaking|policy change|funding opportunit|eligibility|allocation|public hearing|scoping)\b', body)):
+                and not re.search(r'\b(rulemaking|policy change|funding opportunities|eligibility|allocations?|public hearing|scoping|approve awards|vote|voting)\b', body)):
             reason = 'Closed meeting solely for scientific grant-application review'
         if (not reason and re.fullmatch(r'.*performance review board(?: members| membership)?', title)
                 and 'senior executive' in body

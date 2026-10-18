@@ -148,3 +148,8 @@ def test_queue_sweep_dry_run_and_concurrent_worker_protection(apply,conflict,exp
         assert ('updated_at',j['updated_at']) in db.writes[0].filters
         assert ('source_revision',2) in db.writes[0].filters
         assert db.writes[0].payload['status']=='skipped'
+
+
+def test_optional_missing_summaries_do_not_prevent_introduction_filter():
+    j=bill();j['source_metadata']['sync_missing_fields']=['summaries','cosponsors']
+    assert prefilter_reason(j)
