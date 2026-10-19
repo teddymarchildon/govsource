@@ -1,0 +1,36 @@
+name: Catch up delayed pipelines
+on:
+  schedule:
+    - cron: '19,49 * * * *'
+  workflow_run:
+    workflows:
+      - Sync Federal Register records
+      - Sync changed Congress records
+      - Sync Supreme Court opinions
+      - Classify recent records into topics
+      - Check brief pipeline health
+      - Weekly reference data sync
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: govsource-pipeline-catch-up
+  cancel-in-progress: false
+jobs:
+  check:
+    if: ${{ vars.BRIEF_PIPELINE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python services/data-sync/scripts/catch_up_pipelines.py
+        env:
+          GH_TOKEN: ${{ github.token }}

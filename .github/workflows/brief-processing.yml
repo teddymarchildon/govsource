@@ -63,7 +63,7 @@ jobs:
           case "$BRIEF_MODE" in
             prefilter-preview) python scripts/process_briefs.py --prefilter-dry-run --queue "$BRIEF_QUEUE" ;;
             prefilter-only) python scripts/process_briefs.py --prefilter-only --queue "$BRIEF_QUEUE" ;;
-            process) python scripts/run_pipeline_source.py processor -- --limit 100 --max-minutes 20 --workers 2 --queue "$BRIEF_QUEUE" ;;
+            process) python scripts/run_pipeline_source.py processor -- --limit 100 --max-minutes 20 --workers 4 --queue "$BRIEF_QUEUE" ;;
             *) exit 2 ;;
           esac
       - name: Publish verified results even after an individual job fails

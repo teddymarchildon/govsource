@@ -423,7 +423,7 @@ def main() -> int:
     parser.add_argument('--limit',type=int,default=10)
     parser.add_argument('--discovery-limit',type=int,default=100)
     parser.add_argument('--max-minutes',type=int,default=20)
-    parser.add_argument('--workers',type=int,choices=(1,2),default=1)
+    parser.add_argument('--workers',type=int,choices=(1,2,3,4),default=1)
     parser.add_argument('--queue',choices=('current','backfill'),default='current')
     parser.add_argument('--discover-only',action='store_true')
     parser.add_argument('--prefilter-only',action='store_true',help='Apply free conservative filters without AI calls')
