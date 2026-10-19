@@ -42,6 +42,21 @@ Daily CourtListener runs also retry failed/expired court-reference refreshes, or
 
 ## Models and cost controls
 
+### Delayed schedule recovery
+
+`pipeline-catch-up.yml` checks every 30 minutes and after independent source,
+classification, reference, and health workflows complete. It dispatches the
+Federal Register, Congress, and brief processor when their latest attempt is
+older than their normal cadence. Active runs suppress duplicate dispatches;
+failed attempts also start the cooldown so an outage cannot cause tight retries.
+The workflow uses the repository Actions token and honors `BRIEF_PIPELINE_ENABLED`.
+This provides additional recovery opportunities, but GitHub schedules remain
+best effort; a complete scheduler outage requires an external dispatcher.
+
+Brief generation uses four independent clients within the same 100-job and
+20-minute limits. Atomic database claims, shared daily AI reservations, the
+30-publication cap, and all evidence and verification gates are unchanged.
+
 Defaults retain `gpt-5-mini` for writing and use a separate, independent verification request. The verifier receives all original passages, not only the extracted facts. `OPENAI_BRIEF_MODEL` and `OPENAI_BRIEF_VERIFIER_MODEL` can be overridden as repository variables.
 
 `BRIEF_PRICING_MODELS` lists the models covered by the configured pricing ceilings. If either selected model is missing, the worker refuses to call the API. Set `BRIEF_INPUT_USD_PER_MILLION` and `BRIEF_OUTPUT_USD_PER_MILLION` to ceilings that cover **both** models, including reasoning output. Default workflow values are 0.25 and 2.00 for `gpt-5-mini`; recheck provider pricing before changing models. These are accounted estimates, not a provider invoice.

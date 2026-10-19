@@ -528,6 +528,25 @@ def test_database_failure_still_fails_worker(monkeypatch):
     assert process_briefs.process_queue(Queue(), 2, float('inf'))['failed'] == 1
 
 
+def test_four_workers_preserve_total_limit_and_independent_clients(monkeypatch):
+    import process_briefs
+    calls = []
+    monkeypatch.setattr('sys.argv', ['process_briefs', '--workers', '4', '--limit', '7'])
+    monkeypatch.setattr(process_briefs, 'load_dotenv', lambda: None)
+    monkeypatch.setattr(process_briefs, 'create_supabase_client', object)
+    monkeypatch.setattr(process_briefs, 'discover', lambda *args: {})
+    monkeypatch.setattr(process_briefs, 'filter_queue', lambda *args, **kwargs: {})
+    def worker(db, limit, deadline, queue):
+        calls.append((db, limit, deadline, queue))
+        return {'failed': 0, 'processed': limit}
+    monkeypatch.setattr(process_briefs, 'process_queue', worker)
+    assert process_briefs.main() == 0
+    assert sorted(call[1] for call in calls) == [1, 2, 2, 2]
+    assert len({id(call[0]) for call in calls}) == 4
+    assert len({call[2] for call in calls}) == 1
+    assert all(call[3] == 'current' for call in calls)
+
+
 def test_blocked_queue_does_not_impersonate_runnable_backlog():
     overview = {'sources': [], 'oldest_current_waiting': '2020-01-01T00:00:00Z',
                 'current_waiting': 5, 'eligible_current_waiting': 0,
