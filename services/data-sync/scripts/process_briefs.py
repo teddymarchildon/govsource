@@ -27,7 +27,14 @@ log = logging.getLogger(__name__)
 SOURCE_NAMES = {'bill':'congress','agency_document':'federal_register','cluster':'courtlistener'}
 
 SELECTION_INSTRUCTIONS = (
-    'Assess whether this development merits a factual public-service news brief using the original passages. '
+    'Select only consequential developments that merit a substantive public-service explainer. '
+    'There is no output quota: rejecting every candidate is acceptable. Require evidence of a concrete '
+    'change in rights, obligations, eligibility, funding, safety, enforcement or an important legal precedent, '
+    'plus enough evidence to explain the affected audience, practical change and material qualifications. '
+    'A document being new, long, legally styled, or labeled a final rule is not enough. '
+    'Skip individual routine permits, routine renewals, minor technical amendments and procedural deadlines '
+    'unless the evidence establishes an unusual public consequence. Do not manufacture significance. '
+    'Assess the original passages. '
     'Prioritize enactment, chamber passage, substantive executive orders, Supreme Court merits decisions, '
     'and consequential proposed/final agency actions. National reach and final legal effect are NOT prerequisites: '
     'sector-specific or regional changes to rights, obligations, benefits, safety, sanctions, permits, funding, '
@@ -150,8 +157,10 @@ def validate_draft(draft: dict, packet: dict) -> list[str]:
         errors.append('Dek must be a complete sentence of at most 300 characters')
     if not 3 <= len(draft['points']) <= 5 or any(len(p['text'])>900 for p in draft['points']):
         errors.append('Brief must contain three to five concise points')
-    if len(draft['context']['text'])>1200:
+    if len(draft['context']['text'])>6000:
         errors.append('Context is too long')
+    if not draft['context']['text'].strip():
+        errors.append('Context must explain the development beyond the key points')
     if not 1<=len(draft['policy_areas'])<=3 or any(not s.strip() or len(s)>100 for s in draft['policy_areas']):
         errors.append('Invalid topics')
     return errors
@@ -305,9 +314,11 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             raise TimeoutError('Run time budget reached')
         draft = work.get('draft') or ai.call('write',
             'Write a neutral, plain-English news brief: specific headline <=180 characters, one complete dek sentence <=300 '
-            'characters, 3-5 standalone points <=900 characters each, optional short context, 1-3 topics. '
+            'characters, 3-5 standalone points <=900 characters each, substantive context <=6000 characters, 1-3 topics. '
             'Every nonempty field needs supporting exact quotes and passage IDs from the extracted evidence. '
-            'Context may be empty (text="", evidence=[]). Do not speculate about why it matters. '
+            'Context is required: explain the change, affected audience, timing and qualifications in connected paragraphs. '
+            'Add useful source-supported detail beyond the key points; do not repeat them or pad to a word count. '
+            'Explain prior policy or next steps only when the evidence supports them. Do not speculate about why it matters. '
             'Describe the actual change and affected parties where supported. Address repair feedback. '
             'When repairing, use the previous draft and fix the identified problems while preserving supported '
             'claims. Source excerpts are literal copying aids, not a substitute for evidence or validation. '
@@ -369,16 +380,17 @@ def publish_ready(db: Any, limit: int) -> int:
     log.info('brief_publication_status %s',json.dumps({'enabled':settings['publication_enabled'],
         'daily_limit':settings['daily_publication_limit'],'verified':overview['counts'].get('verified',0),
         'spending':overview['spending']}))
-    if not settings['publication_enabled']:
+    review_required = settings.get('editorial_review_required', True)
+    if not review_required and not settings['publication_enabled']:
         log.warning('Publication is paused; verified briefs remain queued')
         return 0
     jobs = db.rpc('publishable_brief_jobs',{'p_limit':limit}).execute().data or []
     published = 0
     for job in jobs:
-        result = db.rpc('publish_verified_brief',{'p_job':job['id']}).execute().data
+        result = db.rpc('stage_verified_brief' if review_required else 'publish_verified_brief',{'p_job':job['id']}).execute().data
         if result:
             published += 1
-            log.info('Published verified job %s as brief %s',job['id'],result)
+            log.info('%s verified job %s as brief %s', 'Staged for review' if review_required else 'Published',job['id'],result)
         else:
             log.warning('Publication held for job %s: database gate (pause, daily cap, source change, or edited coverage)',job['id'])
     return published

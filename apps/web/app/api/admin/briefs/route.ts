@@ -82,6 +82,9 @@ function normalizeInput(input: z.infer<typeof BriefInputSchema>) {
   if (publishing && !cleanNullable(input.dek)) {
     throw new Error('Published and scheduled Briefs require a dek.');
   }
+  if (publishing && (!cleanNullable(input.context_markdown) || !cleanNullable(input.author_name) || sources.length === 0)) {
+    throw new Error('Publication requires an explanation beyond the key points, an author, and source links.');
+  }
   if (publishing && !slug) {
     throw new Error('Published and scheduled Briefs require a slug.');
   }

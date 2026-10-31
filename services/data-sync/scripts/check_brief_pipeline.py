@@ -20,13 +20,14 @@ def latest_publication(db, now):
 def problems(overview, now=None):
     now=now or datetime.now(timezone.utc)
     alerts=[]
-    if 'last_published_at' in overview:
+    editorial = overview.get('settings',{}).get('editorial_review_required', False)
+    if 'last_published_at' in overview and not editorial:
         stamp=overview['last_published_at']
         if not stamp:
             alerts.append('No publicly visible briefs have been published')
         elif now-datetime.fromisoformat(stamp.replace('Z','+00:00'))>=timedelta(hours=48):
             alerts.append(f'No briefs published in the last 48 hours; last publication: {stamp}')
-    if overview.get('counts',{}).get('verified',0) and not overview.get('settings',{}).get('publication_enabled',True):
+    if not editorial and overview.get('counts',{}).get('verified',0) and not overview.get('settings',{}).get('publication_enabled',True):
         alerts.append('Publication is paused with verified briefs waiting')
     for source in overview['sources']:
         allowance={'congress':8,'federal_register':6,'courtlistener':36,'courtlistener_reference':192,'processor':6}[source['source']]

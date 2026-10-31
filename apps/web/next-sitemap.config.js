@@ -25,6 +25,9 @@ module.exports = {
     const publicIndexes = [
       '/',
       '/about',
+      '/editorial-policy',
+      '/contact',
+      '/privacy',
       '/agencies',
       '/agency-rules',
       '/briefs',

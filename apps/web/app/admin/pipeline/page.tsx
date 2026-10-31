@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
-type Settings = { publication_enabled: boolean; daily_publication_limit: number; daily_budget_usd: number };
+type Settings = { publication_enabled: boolean; daily_publication_limit: number; daily_budget_usd: number; daily_draft_limit?: number; editorial_review_required?: boolean };
 type Job = { id: number; title: string | null; case_name: string | null; item_type: string; status: string; priority: number; reason: string; last_error: string | null; attempts: number };
 type Overview = {
   settings: Settings;
@@ -35,7 +35,7 @@ export default function PipelinePage() {
   async function save() {
     setSaving(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/admin/brief-pipeline', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings && { publication_enabled: settings.publication_enabled, daily_publication_limit: settings.daily_publication_limit, daily_budget_usd: settings.daily_budget_usd }) });
+      const response = await fetch('/api/admin/brief-pipeline', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings && { publication_enabled: settings.publication_enabled, daily_publication_limit: settings.daily_publication_limit, daily_budget_usd: settings.daily_budget_usd, daily_draft_limit: settings.daily_draft_limit }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       setNotice('Settings saved. Publication changes apply to the next publication attempt.');
@@ -59,17 +59,19 @@ export default function PipelinePage() {
     {!data && !error && <p role="status">Loading pipeline…</p>}
     {data && settings && <>
       <section className="space-y-4 rounded border p-5" aria-labelledby="publication-heading">
-        <h2 id="publication-heading" className="text-xl font-semibold">Automatic publication {data.settings.publication_enabled ? 'is enabled' : 'is paused'}</h2>
-        <p className="text-sm text-muted-foreground">While paused, processing can continue and passing briefs remain unpublished. Enable publication after benchmark evaluation. Spending uses configured model price ceilings; unresolved calls retain their reservation.</p>
+        <h2 id="publication-heading" className="text-xl font-semibold">{data.settings.editorial_review_required ? 'Editorial review required' : `Automatic publication ${data.settings.publication_enabled ? 'is enabled' : 'is paused'}`}</h2>
+        <p className="text-sm text-muted-foreground">Verified drafts go to the Briefs review screen when editorial review is required. Check sources, practical significance, context, and attribution before publishing. Spending uses configured model price ceilings; unresolved calls retain their reservation.</p>
         <div className="flex flex-wrap items-end gap-6">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={settings.publication_enabled} onChange={e => setSettings({ ...settings, publication_enabled: e.target.checked })} />Enable automatic publication</label>
+          <label className="flex items-center gap-2"><input type="checkbox" disabled={settings.editorial_review_required} checked={settings.publication_enabled} onChange={e => setSettings({ ...settings, publication_enabled: e.target.checked })} />Enable automatic publication</label>
           <label className="grid gap-1 text-sm">Daily publication limit<input className="w-32 rounded border p-2" type="number" min="0" max="1000" value={settings.daily_publication_limit} onChange={e => setSettings({ ...settings, daily_publication_limit: Number(e.target.value) })} /></label>
+          {settings.daily_draft_limit !== undefined && <label className="grid gap-1 text-sm">Documents drafted per day<input className="w-32 rounded border p-2" type="number" min="0" max="100" value={settings.daily_draft_limit} onChange={e => setSettings({ ...settings, daily_draft_limit: Number(e.target.value) })} /></label>}
+          <Link href="/admin/briefs" className="text-primary underline">Review Briefs</Link>
           <label className="grid gap-1 text-sm">Daily AI budget (USD)<input className="w-32 rounded border p-2" type="number" min="0" max="1000" step="0.01" value={settings.daily_budget_usd} onChange={e => setSettings({ ...settings, daily_budget_usd: Number(e.target.value) })} /></label>
           <button disabled={saving} className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50" onClick={() => void save()}>{saving ? 'Saving…' : 'Save settings'}</button>
         </div>
       </section>
       <section className="grid gap-3 sm:grid-cols-4" aria-label="Pipeline totals">
-        {[['Published', data.counts.published || 0], ['Verified, awaiting publication', data.counts.verified || 0], ['Withheld', data.counts.withheld || 0], ['Source changes waiting', data.pending_sources]].map(([label, value]) => <div key={label} className="rounded border p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>)}
+        {[['Published', data.counts.published || 0], ['Verified (including review drafts)', data.counts.verified || 0], ['Withheld', data.counts.withheld || 0], ['Source changes waiting', data.pending_sources]].map(([label, value]) => <div key={label} className="rounded border p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>)}
       </section>
       <p className="text-sm">Today: ${Number(data.spending.accounted_usd).toFixed(2)} accounted for ({data.spending.calls} calls), including ${Number(data.spending.reserved_usd).toFixed(2)} in unresolved reservations. Oldest waiting job: {data.oldest_waiting ? date(data.oldest_waiting) : 'None'}.</p>
       <section aria-labelledby="sources-heading"><h2 id="sources-heading" className="mb-3 text-xl font-semibold">Source health</h2><div className="grid gap-3 sm:grid-cols-2">{data.sources.map(source => <div key={source.source} className="rounded border p-4"><h3 className="font-semibold">{source.source.replaceAll('_', ' ')} · {source.status}</h3><p className="mt-1 text-sm">Last success: {date(source.last_success_at)}</p>{source.error && <p className="mt-2 text-sm text-red-700">{source.error}</p>}</div>)}</div></section>

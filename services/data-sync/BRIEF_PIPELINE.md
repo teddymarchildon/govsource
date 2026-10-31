@@ -1,3 +1,57 @@
+## Current editorial policy — October 31, 2026
+
+This section supersedes the automatic-publication and throughput guidance below.
+Apply `20261031120000_selective_editorial_briefs.sql` before deploying the updated
+workers. It defaults to editorial review, pauses automatic publication, and caps
+new daily drafting admissions at five documents across all workers. The existing
+$5/day AI budget is unchanged. Screening still uses that budget; it does not use a
+drafting slot. Extraction, writing and verification share a slot for each job per
+UTC day, including retries. An unfinished job resumed on another day uses a slot
+on that day. This is a maximum, never a production target.
+
+Source ingestion remains broad. Workers discover up to 500 changed sources and
+process up to 30 candidates per run with two workers. Importance is screened from
+full evidence before extraction. Priority plus a bounded ten-point aging bonus
+keeps important fresh developments ahead of old routine notices. Source-type
+priority is a heuristic, not an independent judgment of newsworthiness. Selection
+must identify a concrete practical change and enough evidence for an explainer;
+there is no requirement to produce content on a quiet day.
+
+Context is required and may contain up to 6,000 characters, with all existing
+quotation and independent-verification checks preserved. New prompt versions
+invalidate saved work from older prompts. Passing drafts are staged idempotently
+in `/admin/briefs` with `review` status and no publication date. The automatic
+publication RPC is blocked while editorial review is required, even if its old
+publication switch is enabled. Corrections to already-covered developments are
+withheld for an editor to inspect in pipeline verification history; public copy
+is never automatically overwritten. Previously published articles are unchanged.
+
+Editors must check significance, evidence, legal status, affected audience,
+timing, exceptions and original explanatory value. The publication form requires
+context, author attribution and source links. These mechanical checks do not
+certify editorial quality. Automated checks are not human review. No article-count
+or word-count target establishes AdSense eligibility.
+
+The admin pipeline screen exposes the daily draft limit. Health checks no longer
+require publication every 48 hours or treat paused publication as an error in
+editorial mode; source failures and stalled/overdue processing remain visible.
+The separate campaign-finance pilot is already limited to five total Briefs per
+cycle and requires review; it is not a five-per-day generator.
+
+AdSense ad serving is disabled in the root layout; the account-verification meta
+tag remains. Before enabling ads, audit the intended pages and configure the
+appropriate consent controls. Do not reintroduce a global ad script for empty,
+authentication, or reference-only pages. No indexing or visibility guarantee is
+inferred from a sitemap entry.
+
+Deployment checks: apply the migration, deploy the worker and application changes,
+run a bounded processing pass, confirm new drafts appear only in the admin review
+list, and inspect public HTML on mobile. Publish a focused set of source-checked
+explainers before requesting another AdSense review. Content, production crawl
+access, and provider-backed results still require a live editorial audit.
+
+---
+
 # Continuous brief pipeline
 
 The pipeline uses the existing Congress.gov, Federal Register and Supreme Court / CourtListener records and Storage buckets. It creates structured briefs in the existing `brief` table. GitHub Actions runs bounded workers; Supabase holds durable progress.

@@ -15,7 +15,7 @@ def claim(text='The agency proposes annual reporting.'):
 
 
 def draft():
-    return {'title':claim('Agency proposes annual reporting'), 'dek':claim(), 'points':[claim(),claim('Comments close on October 1, 2026.'),claim('Small operators are exempt.')], 'context':{'text':'','evidence':[]},'policy_areas':['Government']}
+    return {'title':claim('Agency proposes annual reporting'), 'dek':claim(), 'points':[claim(),claim('Comments close on October 1, 2026.'),claim('Small operators are exempt.')], 'context':claim('The proposed rule applies to large operators; small operators are exempt.'),'policy_areas':['Government']}
 
 
 def report(d):
@@ -405,7 +405,7 @@ def test_publication_drain_honors_pause_and_database_gates(enabled):
     class Publisher:
         def rpc(self,name,args):
             calls.append(name)
-            data={'brief_pipeline_overview':{'settings':{'publication_enabled':enabled,'daily_publication_limit':30},
+            data={'brief_pipeline_overview':{'settings':{'publication_enabled':enabled,'daily_publication_limit':30,'editorial_review_required':False},
                 'counts':{'verified':2},'spending':{}},'publishable_brief_jobs':[{'id':1},{'id':2}],
                 'publish_verified_brief':123 if args.get('p_job')==1 else None}[name]
             return SimpleNamespace(execute=lambda:SimpleNamespace(data=data))
@@ -584,3 +584,27 @@ def test_budget_limit_does_not_hide_overdue_work():
         'eligible_current_waiting':389, 'last_current_progress_at':'2026-10-18T16:00:00Z'}
     assert problems(overview,datetime(2026,10,18,20,tzinfo=timezone.utc)) == [
         'Current-news brief backlog contains work older than 24 hours']
+
+
+def test_empty_context_is_withheld():
+    d = draft()
+    d['context'] = {'text':'','evidence':[]}
+    assert any('Context must explain' in error for error in validate_draft(d, {'passages':[PASSAGE]}))
+
+
+def test_review_mode_stages_despite_publication_pause():
+    calls=[]
+    class Publisher:
+        def rpc(self,name,args):
+            calls.append(name)
+            data={'brief_pipeline_overview':{'settings':{'publication_enabled':False,'daily_publication_limit':5,'editorial_review_required':True},
+                'counts':{'verified':1},'spending':{}}, 'publishable_brief_jobs':[{'id':1}], 'stage_verified_brief':123}[name]
+            return SimpleNamespace(execute=lambda:SimpleNamespace(data=data))
+    assert publish_ready(Publisher(),5)==1
+    assert 'publish_verified_brief' not in calls
+
+
+def test_editorial_mode_does_not_require_publication_volume():
+    overview={'sources':[], 'settings':{'editorial_review_required':True,'publication_enabled':False},
+              'counts':{'verified':2}, 'last_published_at':None}
+    assert problems(overview)==[]
