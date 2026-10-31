@@ -1,7 +1,7 @@
 ## Current editorial policy — October 31, 2026
 
 This section supersedes the automatic-publication and throughput guidance below.
-Apply `20261031120000_selective_editorial_briefs.sql` before deploying the updated
+Apply `20261031182351_selective_editorial_briefs.sql` before deploying the updated
 workers. It defaults to editorial review, pauses automatic publication, and caps
 new daily drafting admissions at five documents across all workers. The existing
 $5/day AI budget is unchanged. Screening still uses that budget; it does not use a

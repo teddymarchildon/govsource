@@ -196,7 +196,7 @@ assert.ok(new Date(budgetHealth.budget_resets_at)>new Date());
 assert.equal(budgetHealth.current_waiting,3,'budget deferrals remain visible');
 console.log('PASS: overdue FIFO, fresh editorial priority, and exclusive leases');
 // New editorial policy is tested after the legacy behavior checks above.
-await db.exec(readFileSync(root+'apps/web/supabase/migrations/20261031120000_selective_editorial_briefs.sql','utf8'));
+await db.exec(readFileSync(root+'apps/web/supabase/migrations/20261031182351_selective_editorial_briefs.sql','utf8'));
 assert.equal(await scalar('select editorial_review_required from brief_pipeline_settings'),true);
 assert.equal(await scalar('select daily_draft_limit from brief_pipeline_settings'),5);
 await db.exec("update brief_job set status='withheld' where status in ('pending','retry','processing')");
