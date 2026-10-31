@@ -1,7 +1,9 @@
 'use client';
 
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
+
 import { useState, useRef, useEffect } from 'react';
-import { FileText, Sparkles, BookOpenText, Scale, Loader, CheckCircle2, XCircle, Copy, Check, ArrowUp, Square, CalendarDays, Users, Landmark, ListChecks, RotateCcw, ShieldCheck } from 'lucide-react';
+import { FileText, Sparkles, BookOpenText, Scale, CheckCircle2, XCircle, Copy, Check, ArrowUp, Square, CalendarDays, Users, Landmark, ListChecks, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -464,7 +466,7 @@ export default function AiChat({
               ) : isCompleted ? (
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               ) : (
-                <Loader className="h-4 w-4 animate-spin text-primary/70" />
+                <LoadingIndicator size="small" inline label="Preparing answer…" />
               )}
             </div>
             <div className="min-w-0">
@@ -553,7 +555,7 @@ export default function AiChat({
                   ) : step.status === 'error' ? (
                     <XCircle className="h-3 w-3 text-red-500" />
                   ) : (
-                    <Loader className="h-3 w-3 text-primary/60" />
+                    <LoadingIndicator size="small" inline label="Processing step…" />
                   )}
                   <span>{step.detail ? `${step.label}: ${step.detail}` : step.label}</span>
                 </div>

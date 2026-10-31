@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import LoadingIndicator from './ui/LoadingIndicator';
 import ReactMarkdown from 'react-markdown';
 
 interface Message {
@@ -270,7 +271,8 @@ const CongressmanChat: React.FC<CongressmanChatProps> = ({
             </div>
           ))}
           {isLoading && !messages[messages.length - 1]?.isStreaming && (
-            <div className="bg-gray-100 p-3 rounded-lg max-w-[80%] animate-pulse">
+            <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg max-w-[80%]">
+              <LoadingIndicator size="small" inline label="Thinking…" />
               <p>Thinking...</p>
             </div>
           )}

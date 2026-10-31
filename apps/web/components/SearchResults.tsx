@@ -1,5 +1,7 @@
 'use client';
 
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
+
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 
@@ -69,11 +71,7 @@ export default function SearchResults({ results, isLoading, onClose, searchQuery
     >
       {isLoading ? (
         <div className="p-4 text-center">
-          <div className="animate-pulse flex justify-center">
-            <div className="h-4 w-4 bg-blue-400 rounded-full mr-1"></div>
-            <div className="h-4 w-4 bg-blue-500 rounded-full mr-1 animate-pulse-delay-200"></div>
-            <div className="h-4 w-4 bg-blue-600 rounded-full animate-pulse-delay-400"></div>
-          </div>
+          <LoadingIndicator label="Searching…" />
           <p className="text-sm text-gray-500 mt-2">Searching...</p>
         </div>
       ) : totalResults === 0 ? (

@@ -1,23 +1,20 @@
-'use client';
-
-import React from 'react';
+import styles from './LoadingIndicator.module.css';
 
 interface LoadingIndicatorProps {
   size?: 'small' | 'medium' | 'large';
+  inline?: boolean;
+  label?: string;
 }
 
-export default function LoadingIndicator({ size = 'medium' }: LoadingIndicatorProps) {
-  const sizeClasses = {
-    small: 'w-4 h-4 border-2',
-    medium: 'w-8 h-8 border-3',
-    large: 'w-12 h-12 border-4'
-  };
-
+export default function LoadingIndicator({ size = 'medium', inline = false, label = 'Loading…' }: LoadingIndicatorProps) {
   return (
-    <div className="flex justify-center items-center py-4">
-      <div 
-        className={`${sizeClasses[size]} rounded-full border-t-primary border-r-transparent border-b-primary border-l-transparent animate-spin`}
-      ></div>
-    </div>
+    <span role="status" className={inline ? 'inline-flex shrink-0 items-center align-middle' : 'flex items-center justify-center py-4'}>
+      <span aria-hidden="true" className={`${styles.flow} ${styles[size]}`}>
+        <span className={styles.dot} />
+        <span className={styles.dot} />
+        <span className={styles.dot} />
+      </span>
+      <span className="sr-only">{label}</span>
+    </span>
   );
 }

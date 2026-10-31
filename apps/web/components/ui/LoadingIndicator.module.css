@@ -1,0 +1,33 @@
+.flow {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15em;
+  width: 1em;
+  height: 1em;
+}
+
+.small { font-size: 16px; }
+.medium { font-size: 32px; }
+.large { font-size: 40px; }
+
+.dot {
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  animation: flow 1.5s ease-in-out infinite;
+}
+
+.dot:nth-child(2) { animation-delay: 150ms; }
+.dot:nth-child(3) { animation-delay: 300ms; }
+
+@keyframes flow {
+  0%, 60%, 100% { transform: translateY(0.075em); opacity: 0.3; }
+  30% { transform: translateY(-0.125em); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; }
+}

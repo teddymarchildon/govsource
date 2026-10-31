@@ -104,14 +104,6 @@
     text-wrap: balance;
   }
   
-  /* Search loading animation */
-  .animate-pulse-delay-200 {
-    animation-delay: 200ms;
-  }
-  
-  .animate-pulse-delay-400 {
-    animation-delay: 400ms;
-  }
 }
 
 /* Markdown styling is handled by Tailwind Typography plugin using prose classes */

@@ -1,5 +1,7 @@
 'use client';
 
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
+
 import { useEffect, Suspense } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,7 +24,7 @@ function OnboardingContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        <LoadingIndicator size="large" />
       </div>
     );
   }
@@ -40,7 +42,7 @@ export default function OnboardingPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        <LoadingIndicator size="large" />
       </div>
     }>
       <OnboardingProvider>

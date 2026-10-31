@@ -102,7 +102,7 @@ function LoginPageInner() {
   };
 
   if (isAuthLoading || user) {
-    return <div role="status" className="flex justify-center items-center h-64"><LoadingIndicator size="large" /><span className="sr-only">Completing sign-in…</span></div>;
+    return <div className="flex justify-center items-center h-64"><LoadingIndicator size="large" label="Completing sign-in…" /></div>;
   }
 
   return (
