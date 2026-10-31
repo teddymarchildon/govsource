@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import BriefTeaser from '@/components/briefs/BriefTeaser';
 import BriefArticle from '@/components/briefs/BriefArticle';
+import { getBriefCanonicalUrl, serializeBriefArticleSchema } from '@/utils/briefSeo';
 import { briefInstitution } from '@/utils/briefSelection';
 import { getPublishedBriefBySlug, getPublishedBriefsBySection } from '@/lib/repositories/briefs';
 
@@ -18,7 +19,11 @@ export async function generateMetadata({ params }: BriefPageProps): Promise<Meta
   const { slug } = await params;
   const brief = await getPublishedBriefBySlug(slug);
   if (!brief) return { title: 'Brief not found' };
-  return { title: brief.title, description: brief.dek || brief.points[0]?.text.slice(0, 160) };
+  return {
+    title: brief.title,
+    description: brief.dek || brief.points[0]?.text.slice(0, 160),
+    alternates: { canonical: getBriefCanonicalUrl(brief.slug!) },
+  };
 }
 
 async function MoreBriefs({ brief }: { brief: Brief }) {
@@ -44,6 +49,7 @@ export default async function BriefPage({ params }: BriefPageProps) {
 
   return (
     <BriefArticle brief={brief}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeBriefArticleSchema(brief) }} />
       <Suspense fallback={null}><MoreBriefs brief={brief} /></Suspense>
     </BriefArticle>
   );
