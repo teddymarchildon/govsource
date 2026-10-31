@@ -1,0 +1,409 @@
+[
+  {
+    "id": 631,
+    "version": 1,
+    "title": "What the Ad-Free Means Ad-Free Act would protect—and for how long",
+    "display_title": "What the Ad-Free Means Ad-Free Act would protect—and for how long",
+    "dek": "The streaming proposal would protect an advertised ad-free subscription for at least a year. It has not become law.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "H.R. 10696 would require the FTC to issue rules within one year of enactment prohibiting a streaming provider from adding ads to an advertised ad-free subscription during the protected period.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "Protection would last one year from enrollment or the full contract term, whichever is longer. A subscriber who cancels and re-enrolls would receive a new protected period.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "The proposal covers paid internet video subscriptions, including services sold through third parties. The FTC would enforce violations as unfair or deceptive practices.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### The practical question: can a plan change after you sign up?\n\nThe proposal focuses on a particular change to a purchased service: a provider sells an ad-free option and later inserts advertising. For a monthly subscriber, the proposed protection would still last a year. For someone with a longer contract, it would extend through that contract. Those examples follow from the bill’s longer-of-the-two rule.\n\nThis is a time-limited protection for the option the subscriber selected. The text does not prohibit a provider from offering a separate advertising-supported plan, set subscription prices, or promise that every video service will be ad-free.\n\n### What has to happen first\n\nThe supplied congressional action record shows introduction on October 1, 2026 and referral to the House Energy and Commerce Committee. Introduction does not create a new consumer entitlement. The proposal would need to become law, and it directs the FTC to write implementing regulations within one year of enactment.\n\nThe coverage definition matters for bundles: selling a subscription through an intermediary would not, by itself, exclude the provider. Readers comparing plans should distinguish the proposed protection from the terms and protections that apply today.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.congress.gov/119/bills/hr10696/BILLS-119hr10696ih.htm). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.congress.gov/119/bills/hr10696/BILLS-119hr10696ih.htm",
+        "label": "Bill text: Introduced in House (2026-10-01)"
+      },
+      {
+        "id": "source_2",
+        "url": "https://www.congress.gov/bill/119th-congress/house-bill/10696",
+        "label": "Congress.gov bill status and actions"
+      }
+    ]
+  },
+  {
+    "id": 655,
+    "version": 1,
+    "title": "Senate resolution urges conflict-of-interest limits on government equity deals",
+    "display_title": "Senate resolution urges conflict-of-interest limits on government equity deals",
+    "dek": "S. Res. 929 calls for restrictions on officials and family members. A sense-of-the-Senate resolution would not itself enact those restrictions.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "The resolution urges prohibitions on specified officials and family members profiting from federal purchases of equity in private companies, including ownership gains, fees, commissions, and other transaction compensation.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "It also addresses purchases of equity sold or transferred by the federal government and compensation connected with those transactions.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "The covered group would include the President, Vice President, Cabinet members, members of Congress, officials participating in federal equity transactions, and specified close relatives.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### A policy position, not a new enforceable ban\n\nThe operative language says it is the “sense of the Senate” that these transactions should be prohibited. That distinction matters: the resolution expresses a proposed institutional position, rather than amending a statute, creating a penalty, or establishing an enforcement process. Even adoption would not itself supply the regulatory machinery described by a binding prohibition.\n\nThe resolution was submitted September 30, 2026 and referred to the Homeland Security and Governmental Affairs Committee in the supplied action record. It should not be presented as an existing ban or an adopted Senate position.\n\n### Why purchases and sales both appear\n\nThe proposal addresses potential private benefits at two stages: when taxpayer funds buy a company interest, and when the government later disposes of that interest. Its references to fees and commissions extend the concern beyond simply owning shares.\n\nThe preamble cites particular transactions and describes concerns about family connections. Those statements are the resolution’s rationale, not independent findings of unlawful conduct. This Brief explains the proposed safeguards without treating the preamble as proof that a named person violated the law.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.congress.gov/119/bills/sres929/BILLS-119sres929is.htm). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.congress.gov/119/bills/sres929/BILLS-119sres929is.htm",
+        "label": "Bill text: Introduced in Senate (2026-09-30)"
+      },
+      {
+        "id": "source_2",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-resolution/929",
+        "label": "Congress.gov bill status and actions"
+      }
+    ]
+  },
+  {
+    "id": 664,
+    "version": 1,
+    "title": "Voter-vouching bill would require public counts, not voters’ identities",
+    "display_title": "Voter-vouching bill would require public counts, not voters’ identities",
+    "dek": "H.R. 10637 would add reporting for states that permit vouching in federal-election registration. It would not itself change who can register.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "States permitting a person to attest to another registrant’s identity or residence would report registration and voucher counts after each regularly scheduled federal general election.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "Reports would include the number vouched for by each voucher and rejected attempted registrations, broken down by rejection reason where the state keeps those records.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "The report could not include names, street addresses, voter identification numbers, phone numbers, signatures, or birth dates. The Election Assistance Commission would make reports public for 22 months.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### Reporting on a practice states already allow\n\nThe bill defines a voter voucher as a person authorized under state law to attest to someone else’s identity or residence for registration. Its trigger is a state permitting that practice. It does not direct every state to adopt vouching, prohibit it, or impose a new identification requirement on individual voters.\n\nThe proposed federal obligation would fall on states and the Election Assistance Commission. States would assemble counts covering the period between regularly scheduled general elections; the commission would publish the resulting reports. Where practicable, states could use the existing Election Administration and Voting Survey to submit them.\n\n### What the resulting data could—and could not—show\n\nCounts could describe how often the process is used and how many attempted registrations were rejected. Rejection figures alone would not establish fraud: the bill expressly contemplates different reasons, and only requires a reason breakdown to the extent states maintain it. Prohibiting personal identifiers also means the proposed public report is not a named list of voters or vouchers.\n\nThe supplied action record shows introduction September 28, 2026 and referral to House Administration. These are proposed reporting duties, not requirements already imposed by this bill.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.congress.gov/119/bills/hr10637/BILLS-119hr10637ih.htm). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.congress.gov/119/bills/hr10637/BILLS-119hr10637ih.htm",
+        "label": "Bill text: Introduced in House (2026-09-28)"
+      },
+      {
+        "id": "source_2",
+        "url": "https://www.congress.gov/bill/119th-congress/house-bill/10637",
+        "label": "Congress.gov bill status and actions"
+      }
+    ]
+  },
+  {
+    "id": 968,
+    "version": 1,
+    "title": "Dating services will have to warn users about fraud-banned accounts",
+    "display_title": "Dating services will have to warn users about fraud-banned accounts",
+    "dek": "The Romance Scam Prevention Act creates a notification duty beginning October 20, 2027, with a default 24-hour deadline and specified exceptions.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "Public Law 119-129 was approved October 20, 2026. Its notification provisions take effect one year after enactment.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "A dating service must notify a member who received a message through the service from an account it later bans or suspends because it judges there is a significant risk of fraudulent efforts to obtain money.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "The default deadline is 24 hours after the fraud ban. A provider may extend it to three days based on its judgment; a law-enforcement request tied to an ongoing investigation can delay it further.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_4",
+        "text": "The notice must identify the banned profile and latest message time, describe the possible fraud or false identity, warn against sending money or financial information, and provide prevention information and customer-service contact details.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### The trigger is a fraud ban\n\nThe law connects a service’s account-enforcement decision with a warning to people who received messages from that account. It therefore addresses a gap between removing a suspicious profile and informing its prior contacts. It does not promise to detect every fraudulent account or reimburse a user’s losses.\n\nA warning must be clear and conspicuous and delivered by email, text, or another appropriate method to which the recipient consents. If law enforcement asks for a delay because of an investigation, the provider must notify within three days after receiving notice that the delay is no longer required.\n\n### Enforcement and the limits of the change\n\nThe FTC can enforce the requirements, and state attorneys general or other authorized state consumer-protection officers can bring specified civil actions, subject to coordination rules when federal action is pending. The statute establishes a national standard for these fraud-ban notifications while preserving state contract and tort law.\n\nThe one-year implementation period is important. Approval of the law in October 2026 does not mean that its new notification deadline is already in effect. Nor does a notification establish a criminal conviction: the statutory trigger is the provider’s risk judgment when imposing the fraud ban.\n\nCorrection: the earlier source label used October 21. The public law’s approval line and congressional action record give October 20, 2026.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.congress.gov/119/plaws/publ129/PLAW-119publ129.htm). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.congress.gov/119/plaws/publ129/PLAW-119publ129.htm",
+        "label": "Public Law 119-129: approved October 20, 2026"
+      },
+      {
+        "id": "source_2",
+        "url": "https://www.congress.gov/bill/119th-congress/house-bill/2481",
+        "label": "Congress.gov bill status and actions"
+      }
+    ]
+  },
+  {
+    "id": 1000,
+    "version": 1,
+    "title": "EPA updates how composite wood is tested for formaldehyde compliance",
+    "display_title": "EPA updates how composite wood is tested for formaldehyde compliance",
+    "dek": "The November 27 rule updates referenced technical standards and adds a quality-control testing option for manufacturers and certifiers.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "EPA’s final rule updates the editions of technical standards referenced in its composite-wood regulations and makes corresponding changes to scope and definitions.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "It adds ISO 12460-2:2024 as an optional small-scale chamber method for quality-control testing.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "EPA removes the British Standards version of a method because the identical international ISO version remains available. The rule takes effect November 27, 2026.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### A testing update within an existing emissions program\n\nThe underlying program regulates formaldehyde emissions from hardwood plywood, medium-density fiberboard, particleboard, and products containing those materials. It includes testing and third-party certification. This action changes the referenced methods and editions used within that program; its announced amendments do not set a new numerical emissions limit.\n\nThat distinction matters for manufacturers, importers, laboratories, and certifiers. They need to identify which updated editions apply to their testing and product standards. The additional chamber method offers a choice for quality control; it does not replace the broader compliance program or remove certification duties.\n\n### Why removing a standard does not remove the test\n\nEPA explains that the British Standards and international ISO versions describe the same procedure. Removing the duplicate reference therefore leaves that method available through the ISO version. Describing this simply as “dropping a test” would misstate the change.\n\nEPA anticipates no additional stakeholder costs from the update. That is the agency’s assessment, not a guarantee about every business’s transition expenses. For readers outside the industry, the practical significance is the maintenance of the testing framework used to demonstrate compliance, rather than a product recall or a new consumer labeling claim.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.federalregister.gov/d/2026-21963). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.federalregister.gov/d/2026-21963",
+        "label": "Voluntary Consensus Standards Update; Formaldehyde Emission Standards for Composite Wood Products"
+      }
+    ]
+  },
+  {
+    "id": 1004,
+    "version": 1,
+    "title": "Federal gift disclosure thresholds rise, with two different start dates",
+    "display_title": "Federal gift disclosure thresholds rise, with two different start dates",
+    "dek": "OGE raises the reporting threshold to more than $525. A separate event-attendance exception changes prospectively, not retroactively.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "For public and confidential executive-branch financial disclosure, the aggregate reporting threshold for gifts and travel reimbursements from one source rises from more than $480 to more than $525.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "Individual gifts and reimbursements valued at $210 or less need not be aggregated, up from $192. These reporting changes apply from January 1, 2026.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "The ceiling for nonsponsor gifts of free attendance at widely attended gatherings rises to $525 effective October 28, 2026. Other conditions remain, including an agency-interest determination and expected attendance by more than 100 people.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### Reporting a gift and accepting it are different questions\n\nThe final rule changes both financial-disclosure thresholds and a particular exception allowing free attendance at events. The disclosure threshold determines what must appear in a financial report. It is not a general permission for an employee to accept any gift below $525.\n\nFor reporting, the aggregate threshold and the small-item exclusion work together. Items above the exclusion may need to be combined when they come from the same source; the rule is not simply a per-gift reporting ceiling. OGE ties the adjustment to a statutory formula linked to the General Services Administration’s periodically updated foreign-gift value.\n\n### Why the dates matter\n\nOGE makes the disclosure adjustment applicable from January 1, 2026, reflecting the underlying statutory change. The separate widely attended gathering exception changes only from publication on October 28. The higher event ceiling cannot be treated as retroactively authorizing earlier attendance.\n\nFor an employee or an ethics reviewer, the relevant next question is therefore which rule governs the transaction: financial reporting, the event exception, or another acceptance restriction. The amendment leaves the event exception’s other conditions in place.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.federalregister.gov/d/2026-21997). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.federalregister.gov/d/2026-21997",
+        "label": "Executive Branch Financial Disclosure and Standards of Ethical Conduct Regulations"
+      }
+    ]
+  },
+  {
+    "id": 1029,
+    "version": 1,
+    "title": "EPA proposes Alaska control of carbon-storage well permits",
+    "display_title": "EPA proposes Alaska control of carbon-storage well permits",
+    "dek": "The proposal would shift primary permitting and enforcement to the state for covered Class VI wells. It would not approve individual storage projects.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "EPA proposes approving Alaska’s application for primary enforcement responsibility over Class VI underground injection wells used for long-term carbon dioxide storage.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "The Alaska Oil and Gas Conservation Commission would issue permits and enforce compliance in covered areas. Indian country and areas of exclusive federal jurisdiction are excluded.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "Comments are due December 14, 2026 under docket EPA-HQ-OW-2026-4588. This is a proposal, not a completed transfer of authority.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### What “primacy” changes\n\nPrimacy identifies the regulator with primary responsibility for a permitting program. Here, EPA proposes allowing Alaska’s commission to administer Class VI permits. The decision concerns the state program; it is not a blanket authorization to inject carbon dioxide at any proposed site.\n\nAn operator would still need a permit for each well. EPA’s description of the program includes geological characterization, modeling of the area influenced by injection, evaluation of possible leakage pathways, well-construction requirements, and testing and monitoring during and after injection. Financial assurance must cover the project’s phases, including post-injection care until approved closure.\n\n### What residents and project developers should distinguish\n\nApproval of the state program and approval of a particular well are separate decisions. A draft well permit must be made available for public comment before the permitting authority decides whether to issue it. A state primacy decision therefore does not settle every project’s design, location, safeguards, or financing.\n\nThe proposal also leaves federal oversight and the stated jurisdictional exclusions in place. Readers seeking to comment on the transfer should use the EPA docket identified above; comments about a future individual permit would arise in that permit’s own proceeding.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.federalregister.gov/d/2026-22085). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.federalregister.gov/d/2026-22085",
+        "label": "Alaska Underground Injection Control (UIC) Program; Class VI Primacy"
+      }
+    ]
+  },
+  {
+    "id": 1032,
+    "version": 1,
+    "title": "USDA will allow rental ADUs in guaranteed home loans—but not count potential rent",
+    "display_title": "USDA will allow rental ADUs in guaranteed home loans—but not count potential rent",
+    "dek": "A rule effective December 28 expands eligible rural home properties while keeping the program’s residential-purpose and borrower-income limits.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "USDA’s Single Family Housing Guaranteed Loan Program will permit financing a home property with one or more income-producing accessory dwelling units, effective December 28, 2026.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "The rule also clarifies eligibility for properties accommodating a home-based operation using noncommercial real-estate features. Property principally used to produce income remains excluded.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "In its response to comments, USDA says potential ADU income will not be included in income calculations. Permitting the property does not mean projected rent can help the borrower qualify.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### Property eligibility and loan qualification are separate\n\nA home with a rental apartment or other accessory unit can raise two different questions: whether the property is eligible, and whether the applicant has qualifying income. This rule broadens the first. It does not automatically resolve the second.\n\nUSDA cites the existing rule against using income that a lender cannot verify, that is unstable, or that is unlikely to continue. The agency specifically places potential ADU income in that category and says it will not include it in income calculations. A buyer should therefore not read the new eligibility provision as permission to qualify using hoped-for rental receipts.\n\n### The home must remain primarily residential\n\nThe amendment allows income-producing ADUs while retaining the bar on property principally used for income-producing purposes. It also permits certain home-based operations with noncommercial real-estate features. Together, those provisions distinguish a residence with accessory uses from a primarily commercial property.\n\nUSDA describes ADUs as potentially located within a home, attached to it, above an existing structure, or in a standalone unit. The change applies to this guaranteed-loan program; it does not turn every property with an accessory unit into an eligible purchase or waive the program’s other conditions.\n\nThe rule adopts the March 2026 proposal without modification. Its effective date is December 28, so publication in October should not be presented as immediate eligibility under the amended regulation.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.federalregister.gov/d/2026-22038). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.federalregister.gov/d/2026-22038",
+        "label": "Single Family Housing Guaranteed Loan Program-Income Producing Accessory Dwelling Unit (ADU) Provisions"
+      }
+    ]
+  },
+  {
+    "id": 1060,
+    "version": 1,
+    "title": "FDA’s sleep-apnea risk-device category is not a diagnostic approval",
+    "display_title": "FDA’s sleep-apnea risk-device category is not a diagnostic approval",
+    "dek": "The published rule formalizes a classification issued in 2024 and sets controls for devices that notify users of possible risk.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "FDA places over-the-counter devices that assess sleep-apnea risk in Class II, with general and special controls. They analyze sensor signals using software algorithms.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "The device category provides risk notifications for users not previously diagnosed with sleep apnea. It is not intended to make a standalone diagnosis, replace a sleep study, assist clinicians in diagnosing sleep disorders, or serve as an apnea monitor.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "The rule is effective October 30, 2026, but codifies a classification order issued February 6, 2024 following a De Novo request for Samsung’s Sleep Apnea Feature.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### Publication is not the same as a new device authorization\n\nThe October rule adds the device category and its special controls to the regulations. FDA’s account makes clear that the underlying classification decision occurred in February 2024. Treating the publication date as a brand-new approval of every sleep-tracking feature would confuse those separate events.\n\nThe category is also narrower than a general sleep monitor. Its intended output is a notification of risk in people without a prior sleep-apnea diagnosis. The rule explicitly distinguishes that output from diagnosis and from monitoring an existing condition.\n\n### Why FDA requires controls beyond the algorithm\n\nFDA identifies risks from false negatives, false positives, poor sensor input, and people misinterpreting or relying too heavily on a result. The special controls address those risks through clinical and nonclinical performance testing, software verification and validation, human-factors testing, and labeling, among other requirements.\n\nThe category remains subject to premarket notification under section 510(k); FDA has not exempted it. The classification creates a regulatory pathway with requirements, rather than a blanket endorsement of consumer sleep software. This Brief explains the regulatory distinction and does not interpret an individual’s device result.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.federalregister.gov/d/2026-22182). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.federalregister.gov/d/2026-22182",
+        "label": "Medical Devices; Anesthesiology Devices; Classification of the Over-the-Counter Device To Assess Risk of Sleep Apnea"
+      }
+    ]
+  },
+  {
+    "id": 1062,
+    "version": 1,
+    "title": "Garage-door safety update addresses operation on backup batteries",
+    "display_title": "Garage-door safety update addresses operation on backup batteries",
+    "dek": "CPSC’s rule would update entrapment-protection requirements December 29, unless significant adverse comments lead to withdrawal.",
+    "points": [
+      {
+        "id": "point_1",
+        "text": "The direct final rule aligns the federal automatic residential garage-door operator standard with entrapment-protection changes in UL 325:2025.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_2",
+        "text": "New testing addresses backup-battery operation at the lowest operating voltage. The system must have enough stored energy to complete an open-and-close cycle; otherwise the operator must remain inoperable until power is restored or the battery recharged.",
+        "source_refs": [
+          "source_1"
+        ]
+      },
+      {
+        "id": "point_3",
+        "text": "The scheduled effective date is December 29, 2026. CPSC says timely significant adverse comments received by November 30 would lead it to withdraw the direct final rule before that date.",
+        "source_refs": [
+          "source_1"
+        ]
+      }
+    ],
+    "context_markdown": "### Why backup power changes the safety question\n\nA garage-door opener may still have battery power after household power fails, but insufficient energy to complete its protective movements. CPSC’s explanation connects the new test to that situation: entrapment protection must function when the operator is running on backup power at its lowest operating voltage.\n\nThe test addresses the operator and its safety system, rather than simply whether a battery can move the door once. The updated provisions cover both vertical and horizontally sliding doors with backup systems.\n\n### What else changes—and what does not\n\nThe rule clarifies language on monitoring the presence of secondary entrapment-protection devices and on instructions supplied with a garage-door operator or system. CPSC explains that removing the phrase “and correct operation” from one monitoring provision addresses an impractical testing formulation; it does not remove the requirement to detect the protective device’s presence.\n\nThe amendments concern the safety provisions in subparts A and D. CPSC says the certification and recordkeeping provisions in subparts B and C are unchanged. This is a standards update, not a notice recalling a particular product or directing every homeowner to replace an existing opener.\n\nBecause this is a direct final rule with a withdrawal condition, readers should distinguish its scheduled start date from an unconditional effective date. The docket is CPSC-2015-0025.\n\n### Sources and scope\n\nThis explanation is based on the [official source document](https://www.federalregister.gov/d/2026-22213). It distinguishes the document’s requirements from possible effects; it does not independently establish the agency’s or sponsor’s predictions.",
+    "sources": [
+      {
+        "id": "source_1",
+        "url": "https://www.federalregister.gov/d/2026-22213",
+        "label": "Safety Standard for Automatic Residential Garage Door Operators"
+      }
+    ]
+  }
+]

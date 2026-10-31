@@ -41,7 +41,10 @@ export const getHomepagePublicData = cache(async (): Promise<HomepagePublicData>
     supabase
       .from('bill')
       .select('*, sponsor:sponsored_bills!bill_id(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)')
-      .order('introduced_date', { ascending: false })
+      .is('law_enacted_date', null)
+      .not('introduced_date', 'is', null)
+      .order('introduced_date', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false })
       .limit(12),
     getRecentExecutiveOrders(6),
     supabase

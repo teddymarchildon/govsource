@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-31",
+  "scope": "All 1,044 published or already-due scheduled Briefs in the captured inventory. Editorial triage reviewed title and context; selected rewrites checked against stored primary-source passages. Retention is not a fresh independent fact-check of every claim.",
+  "criteria": [
+    "Explain effects, scope, limits, background, or original data methodology beyond copied source provisions.",
+    "Do not treat proposals as enacted measures, applications as approvals, or agency assertions as independently verified outcomes.",
+    "Archive thin or stale public copy recoverably; keep underlying source documents and prior revisions.",
+    "No minimum article count or word count is used as an AdSense approval threshold."
+  ],
+  "counts": {
+    "retain": 125,
+    "archive": 909,
+    "improve": 10
+  },
+  "rollback": "Archived items remain in brief and can be restored through admin. brief_revision preserves the full pre-change row at version_before. Restore only after substantive review; never bulk republish without checking subsequent edits.",
+  "sources": "Ten rewritten Briefs use the primary-source evidence stored with their generation jobs and linked official documents. Full inventory snapshot retained separately; this repository contains no private editor notes or user identifiers."
+}

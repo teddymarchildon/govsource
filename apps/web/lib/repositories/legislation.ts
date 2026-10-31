@@ -35,7 +35,7 @@ export const getRecentBills = cache(async (limit = 50): Promise<Bill[]> => {
     .from('bill')
     .select('*, sponsor:sponsored_bills(congressman:congressman(*)), actions:bill_action!bill_id(id, date, text, type)')
     .is('law_enacted_date', null)
-    .order('introduced_date', { ascending: false })
+    .order('introduced_date', { ascending: false, nullsFirst: false })
     .order('date', { referencedTable: 'actions', ascending: false })
     .limit(1, { referencedTable: 'actions' })
     .limit(limit);
