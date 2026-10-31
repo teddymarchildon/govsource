@@ -74,7 +74,7 @@ def rank_queue(db, queue='current', deadline=float('inf'), apply=True):
     cursor = 0
     cutoff = (datetime.now(timezone.utc).date() - timedelta(days=30)).isoformat()
     while time.monotonic() < deadline:
-        q = db.table('brief_job').select('id,source_type,source_metadata,priority,status,updated_at,source_revision').in_(
+        q = db.table('brief_job').select('id,source_type,source_metadata,priority,status,updated_at,source_revision,manual_request_id').in_(
             'status', ['pending', 'retry']).gt('id', cursor).order('id').limit(100)
         q = q.lt('development_date', cutoff) if queue == 'backfill' else q.or_(
             f'development_date.is.null,development_date.gte.{cutoff}')
@@ -86,6 +86,8 @@ def rank_queue(db, queue='current', deadline=float('inf'), apply=True):
                 return {**summary, 'incomplete': True}
             cursor = job['id']
             summary['scanned'] += 1
+            if job.get('manual_request_id'):
+                continue
             rank = editorial_rank(job['source_type'], job.get('source_metadata') or {})
             if rank['score'] == job['priority']:
                 continue

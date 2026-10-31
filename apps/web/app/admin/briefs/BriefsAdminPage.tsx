@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import BriefGenerationPanel from './BriefGenerationPanel';
 import ReactMarkdown from 'react-markdown';
 import { getContentHref } from '@/utils/contentReferences';
 import { getBriefAuthorName } from '@/utils/briefAuthor';
@@ -231,7 +232,7 @@ export default function BriefsAdminPage({
     setMessage(null);
   };
 
-  const openBrief = async (brief: AdminBrief) => {
+  const openBrief = async (brief: Pick<AdminBrief, 'id'>) => {
     if (!await canLeave()) return;
     const request = ++detailRequest.current;
     setOpening(brief.id); setMessage(null);
@@ -367,6 +368,8 @@ export default function BriefsAdminPage({
         </div>
         <Button disabled={busy} onClick={startNew}>New Brief</Button>
       </div>
+
+      <BriefGenerationPanel selected={selected} initialUrl={initialSource ? `https://www.govsrc.com${getContentHref({ type: initialSource.type, id: initialSource.id })}` : undefined} onOpen={id => void openBrief({ id })} />
 
       <details className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
         <summary className="cursor-pointer text-lg font-semibold">Draft a contribution overview</summary>

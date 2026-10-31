@@ -17,7 +17,7 @@ def normalized(value):
 
 
 def prefilter_reason(job, has_previous=False):
-    if has_previous or job.get('work') or job.get('draft') or job.get('brief_id'):
+    if job.get('manual_request_id') or has_previous or job.get('work') or job.get('draft') or job.get('brief_id'):
         return None
     row = job.get('source_metadata') or {}
     try:

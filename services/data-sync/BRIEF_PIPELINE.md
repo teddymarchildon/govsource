@@ -299,3 +299,29 @@ Regression tests cover routine-vs-consequential ranking, evidence-backed selecti
 accurate-but-thin rejection, old checkpoint invalidation, concurrent queue claims,
 continued selection after the draft cap, and both database publication paths.
 The rubric improves selection discipline; editors must still assess each draft.
+
+
+## Editor-requested generation
+
+The admin review page accepts GovSource source-document URLs and can regenerate
+an existing Brief as a separate review draft. The authenticated admin API records
+the actor and resolves the original Brief's source server-side. Repeated requests
+reuse active work or its existing review draft. Campaign-finance overviews retain
+their dedicated generator.
+
+`brief_generation_request` is a service-only durable queue. Each normal processing
+run prepares up to five requests before automated discovery. Source evidence and
+revision checks are unchanged. Requested sources, including historical records,
+enter the current worker queue with priority over automated jobs. Manual requests
+bypass routine-topic filtering and age/duplicate selection objections, but must
+still support a reader question, useful explanation, and every verification gate.
+They share the existing daily dollar/drafting limits and may wait for the next day.
+
+Manual jobs have independent fingerprints and cannot be superseded by automated
+discovery. They always stage a new review draft, even if automatic publication is
+later enabled. Existing public copy is never overwritten. The draft records its
+request and original Brief IDs. Editors should archive superseded coverage when
+publishing a replacement. Preparation failures and verification failures remain
+visible in Recent generation requests; editors can retry once the source or
+underlying issue is resolved. A changed source invalidates queued manual evidence
+and requires a fresh request.

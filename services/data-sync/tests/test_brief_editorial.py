@@ -139,3 +139,25 @@ def test_rank_sweep_preserves_work_and_respects_concurrent_claim():
     assert ('source_revision',2) in db.writes[0].filters
     assert ('updated_at','stamp') in db.writes[0].filters
     assert rank_queue(None, deadline=0)['incomplete'] is True
+
+
+def test_editor_requested_routine_source_skips_free_filter():
+    j = bill()
+    assert prefilter_reason(j)
+    j['manual_request_id'] = 1
+    assert prefilter_reason(j) is None
+
+
+def test_editor_requested_source_still_requires_quality():
+    class RequestedAI(FakeAI):
+        def call(self, stage, instructions, payload, *args, **kwargs):
+            if stage == 'selection':
+                assert 'editor explicitly requested' in instructions
+                assert 'historical' in instructions
+            result = super().call(stage, instructions, payload, *args, **kwargs)
+            if stage == 'verify':
+                result['editorial_quality']['adds_explanation'] = False
+            return result
+    j = job()
+    j['manual_request_id'] = 1
+    assert process(DB(), j, 'lease', ai_factory=RequestedAI) == 'withheld'

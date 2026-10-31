@@ -543,6 +543,7 @@ def test_four_workers_preserve_total_limit_and_independent_clients(monkeypatch):
     monkeypatch.setattr('sys.argv', ['process_briefs', '--workers', '4', '--limit', '7'])
     monkeypatch.setattr(process_briefs, 'load_dotenv', lambda: None)
     monkeypatch.setattr(process_briefs, 'create_supabase_client', object)
+    monkeypatch.setattr(process_briefs, 'discover_requests', lambda *args, **kwargs: None)
     monkeypatch.setattr(process_briefs, 'discover', lambda *args, **kwargs: {})
     monkeypatch.setattr(process_briefs, 'rank_queue', lambda *args, **kwargs: {})
     monkeypatch.setattr(process_briefs, 'filter_queue', lambda *args, **kwargs: {})

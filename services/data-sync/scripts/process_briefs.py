@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
 from brief_ai import AI, BudgetExhausted, DraftLimitReached, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_requests import discover_requests
 from brief_editorial import editorial_rank, rank_queue, quality_passes, EDITORIAL_WRITING, EDITORIAL_VERIFICATION
 from brief_style import PLAIN_ENGLISH_STYLE
 from brief_prefilter import prefilter_reason, filter_queue
@@ -258,7 +259,14 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
     def checkpoint():
         validate_json_text(work)
         db.rpc('save_brief_work',{'p_id':job['id'],'p_token':token,'p_work':work}).execute()
-    selection = work.get('selection') or ai.call('selection',SELECTION_INSTRUCTIONS,
+    manual = bool(job.get('manual_request_id'))
+    instructions = SELECTION_INSTRUCTIONS + (
+        ' An editor explicitly requested this source. Do not reject solely for age, routine topic, '
+        'or previous coverage: this is a separate review draft, potentially replacing old coverage. '
+        'Set new_development true for this requested treatment. Still require supported reader value '
+        'and two useful explanatory angles; reject if the evidence cannot support them. Explain historical '
+        'timing honestly and never invent an update to make an older document sound current.' if manual else '')
+    selection = work.get('selection') or ai.call('selection',instructions,
         {'metadata':job['source_metadata'],'passages':packet['passages'],'previous_coverage':previous,
          'as_of_date':datetime.now(timezone.utc).date().isoformat(),
          'triage':editorial_rank(job['source_type'],job['source_metadata'])}, SELECTION)
@@ -501,6 +509,8 @@ def main() -> int:
         if not 1<=args.seed_days<=90:
             parser.error('--seed-days must be 1-90')
         log.info('Seeded %s source changes',db.rpc('seed_brief_source_changes',{'p_days':args.seed_days}).execute().data)
+    if not args.discover_only:
+        discover_requests(db, deadline=min(deadline-180,time.monotonic()+120))
     summary = discover(db,args.discovery_limit,deadline=min(deadline-180,time.monotonic()+300))
     if not args.discover_only:
         log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=True,deadline=deadline-180)))
