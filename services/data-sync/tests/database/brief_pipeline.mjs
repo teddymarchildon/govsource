@@ -226,4 +226,36 @@ await db.query("update brief_job set status='pending',attempts=0,next_attempt_at
 await db.query("update brief_job set created_at=now()-interval '30 days' where id=$1",[fairIds[0]]);
 assert.equal((await db.query("select * from claim_brief_job($1,'current')",[token])).rows[0].id,fairIds[1],'important fresh work outranks old routine work');
 console.log('PASS: editorial review, idempotent staging, permissions, daily draft reservations and importance ranking');
+// Reader-value gating also applies to old verified results and future auto-publication.
+await db.exec("update brief_job set status='withheld' where status in ('pending','retry','processing')");
+await db.exec("insert into bill(id,title) values(301,'Legacy thin result')");
+const qualityMeta=await scalar("select brief_source_bundle('bill',301)");
+const qualityJob=await scalar("select enqueue_brief_job('bill',301,1,'quality301','quality301','bill',$1,$2,95)",[qualityMeta,packet]);
+await db.query("select claim_brief_job($1,'current')",[token]);
+await db.query("select finish_brief_job($1,$2,'verified','Old factual-only result',$3,$4)",[qualityJob,token,{...draft,slug:'quality-301'},{passed:true,deterministic_passed:true}]);
+await db.exec(readFileSync(root+'apps/web/supabase/migrations/20261031192854_reader_value_brief_gate.sql','utf8'));
+assert.equal(await scalar('select status from brief_job where id=$1',[qualityJob]),'retry','legacy verified work is re-screened');
+assert.equal(await scalar('select stage_verified_brief($1)',[reviewJob]),reviewBrief,'existing editor drafts are preserved');
+assert.equal(await scalar('select count(*) from brief_attempt where job_id=$1',[qualityJob]),1,'paid attempt remains available');
+const quality={passed:true,reader_value:true,adds_explanation:true,context_not_metadata:true,paraphrases_sources:true,timing_clear:true,issues:[]};
+for (const bad of [null,{}, {...quality, adds_explanation:false},{...quality,issues:['Only metadata']}]) {
+ assert.equal(await scalar('select brief_editorial_quality_passes($1)',[bad]),false);
+}
+assert.equal(await scalar('select brief_editorial_quality_passes($1)',[quality]),true);
+assert.equal(await scalar("select has_function_privilege('anon','public.brief_editorial_quality_passes(jsonb)','execute')"),false);
+await db.query("select claim_brief_job($1,'current')",[token]);
+await db.query("select finish_brief_job($1,$2,'verified','Thin but accurate',$3,$4)",[qualityJob,token,{...draft,slug:'quality-301'},{passed:true,deterministic_passed:true,editorial_quality:{...quality,adds_explanation:false}}]);
+assert.equal(await scalar('select stage_verified_brief($1)',[qualityJob]),null,'thin drafts never reach editorial review');
+await db.exec('update brief_pipeline_settings set editorial_review_required=false,publication_enabled=true');
+await db.query("select claim_brief_job($1,'current')",[token]);
+await db.query("select finish_brief_job($1,$2,'verified','Thin but accurate',$3,$4)",[qualityJob,token,{...draft,slug:'quality-301'},{passed:true,deterministic_passed:true}]);
+assert.equal(await scalar('select publish_verified_brief($1)',[qualityJob]),null,'auto-publication cannot bypass the quality gate');
+await db.exec('update brief_pipeline_settings set editorial_review_required=true,publication_enabled=false');
+await db.query("select claim_brief_job($1,'current')",[token]);
+await db.query("select finish_brief_job($1,$2,'verified','Useful explanation',$3,$4)",[qualityJob,token,{...draft,slug:'quality-301',context_markdown:'Supported explanation of practical scope and limits.'},{passed:true,deterministic_passed:true,editorial_quality:quality}]);
+const qualityBrief=await scalar('select stage_verified_brief($1)',[qualityJob]);
+assert.ok(qualityBrief);
+assert.equal(await scalar('select author_name from brief where id=$1',[qualityBrief]),'GovSource Briefs');
+assert.equal(await scalar('select status from brief where id=$1',[qualityBrief]),'review');
+console.log('PASS: legacy re-screening, editorial-quality gates, preserved drafts, and no automatic publication');
 await db.close();

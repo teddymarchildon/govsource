@@ -10,6 +10,7 @@ import html2text
 
 from generate_briefs_batch import congress_url
 from sync_common import error_status
+from brief_editorial import editorial_rank
 
 MAX_DOCUMENT_CHARS = 300_000
 CHUNK_CHARS = 18_000
@@ -153,4 +154,6 @@ def build_packet(db: Any, source_type: str, row: dict) -> dict:
         sources.append({'id': source_id, 'label': label[:160], 'url': url})
         for n, part in enumerate(chunks(text), 1):
             passages.append({'id': f'{source_id}_section_{n}', 'source_id': source_id, 'text': part})
-    return {'item_type': item_type, 'development_key': f'{source_type}:{row["id"]}:{development}', 'priority': priority, 'sources': sources, 'passages': passages}
+    rank = editorial_rank(source_type, row)
+    return {'item_type': item_type, 'development_key': f'{source_type}:{row["id"]}:{development}',
+            'priority': rank['score'], 'editorial_rank': rank, 'sources': sources, 'passages': passages}

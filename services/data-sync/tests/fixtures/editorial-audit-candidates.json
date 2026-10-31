@@ -1,0 +1,207 @@
+[
+  {
+    "brief_id": 631,
+    "kind": "bill",
+    "metadata": {
+      "title": "Ad-Free Means Ad-Free Act",
+      "type": "HR",
+      "subtype": null,
+      "abstract": null,
+      "law_enacted_date": null,
+      "actions": [
+        {
+          "text": "Introduced in House"
+        },
+        {
+          "text": "Referred to the House Committee on Energy and Commerce."
+        }
+      ]
+    }
+  },
+  {
+    "brief_id": 655,
+    "kind": "bill",
+    "metadata": {
+      "title": "A resolution expressing the sense of the Senate regarding equity stakes held by the Federal Government in private companies.",
+      "type": "SRES",
+      "subtype": null,
+      "abstract": null,
+      "law_enacted_date": null,
+      "actions": [
+        {
+          "text": "Referred to the Committee on Homeland Security and Governmental Affairs. (text: CR S5265)"
+        },
+        {
+          "text": "Submitted in Senate"
+        }
+      ]
+    }
+  },
+  {
+    "brief_id": 664,
+    "kind": "bill",
+    "metadata": {
+      "title": "Voter Vouching Transparency Act",
+      "type": "HR",
+      "subtype": null,
+      "abstract": null,
+      "law_enacted_date": null,
+      "actions": [
+        {
+          "text": "Introduced in House"
+        },
+        {
+          "text": "Referred to the House Committee on House Administration."
+        }
+      ]
+    }
+  },
+  {
+    "brief_id": 968,
+    "kind": "bill",
+    "metadata": {
+      "title": "Romance Scam Prevention Act",
+      "type": "HR",
+      "subtype": null,
+      "abstract": null,
+      "law_enacted_date": "2026-10-20",
+      "actions": [
+        {
+          "text": "Became Public Law No: 119-129."
+        },
+        {
+          "text": "Became Public Law No: 119-129."
+        },
+        {
+          "text": "Signed by President."
+        },
+        {
+          "text": "Signed by President."
+        },
+        {
+          "text": "Presented to President."
+        },
+        {
+          "text": "Presented to President."
+        },
+        {
+          "text": "Message on Senate action sent to the House."
+        },
+        {
+          "text": "Passed/agreed to in Senate: Passed Senate without amendment by Unanimous Consent. (consideration: CR S4902)"
+        },
+        {
+          "text": "Passed Senate without amendment by Unanimous Consent. (consideration: CR S4902)"
+        },
+        {
+          "text": "Read twice. Placed on Senate Legislative Calendar under General Orders. Calendar No. 438."
+        },
+        {
+          "text": "Received in the Senate."
+        },
+        {
+          "text": "Considered under suspension of the rules. (consideration: CR H2848-2850)"
+        },
+        {
+          "text": "DEBATE - The House proceeded with forty minutes of debate on H.R. 2481."
+        },
+        {
+          "text": "Motion to reconsider laid on the table Agreed to without objection."
+        },
+        {
+          "text": "Mr. Bilirakis moved to suspend the rules and pass the bill."
+        },
+        {
+          "text": "On motion to suspend the rules and pass the bill Agreed to by voice vote. (text: CR H2848-2849)"
+        },
+        {
+          "text": "Passed/agreed to in House: On motion to suspend the rules and pass the bill Agreed to by voice vote. (text: CR H2848-2849)"
+        },
+        {
+          "text": "Placed on the Union Calendar, Calendar No. 119."
+        },
+        {
+          "text": "Reported by the Committee on Energy and Commerce. H. Rept. 119-153."
+        },
+        {
+          "text": "Committee Consideration and Mark-up Session Held"
+        },
+        {
+          "text": "Ordered to be Reported by Voice Vote."
+        },
+        {
+          "text": "Introduced in House"
+        },
+        {
+          "text": "Referred to the House Committee on Energy and Commerce."
+        }
+      ]
+    }
+  },
+  {
+    "brief_id": 1000,
+    "kind": "agency_document",
+    "metadata": {
+      "title": "Voluntary Consensus Standards Update; Formaldehyde Emission Standards for Composite Wood Products",
+      "type": "Rule",
+      "subtype": "",
+      "abstract": "The Environmental Protection Agency (EPA) is publishing a final rule to update the incorporation by reference of several voluntary consensus standards in the Agency's formaldehyde standards for composite wood products regulations under the Toxic Substances Control Act (TSCA) due to the standards having been updated or superseded by the issuing organizations. These new standards primarily update test methods and product standards concerning composite wood products that use formaldehyde. EPA is also conforming these updated standards in the scope and definitional sections in the final rule and incorporating by reference a new small scale quality control chamber test method, similar to current methods already incorporated by reference. EPA is also removing one standard that was previously incorporated by reference to avoid redundancy, given that another identical, internationally recognized version of the standard is already incorporated by reference in this rule.",
+      "law_enacted_date": null
+    }
+  },
+  {
+    "brief_id": 1004,
+    "kind": "agency_document",
+    "metadata": {
+      "title": "Executive Branch Financial Disclosure and Standards of Ethical Conduct Regulations",
+      "type": "Rule",
+      "subtype": "",
+      "abstract": "The U.S. Office of Government Ethics (OGE) is updating its executive branch regulation on financial disclosure to reflect the retroactive statutory increase of the reporting thresholds for gifts and travel reimbursements. OGE is also updating the executive branchwide standards of ethical conduct regulation to raise the widely attended gatherings nonsponsor gifts exception dollar ceiling tied to these thresholds. This latter change is not retroactive.",
+      "law_enacted_date": null
+    }
+  },
+  {
+    "brief_id": 1029,
+    "kind": "agency_document",
+    "metadata": {
+      "title": "Alaska Underground Injection Control (UIC) Program; Class VI Primacy",
+      "type": "Proposed Rule",
+      "subtype": "",
+      "abstract": "The U.S. Environmental Protection Agency (EPA or the Agency) has received a complete Underground Injection Control (UIC) application from the State of Alaska, requesting primary enforcement responsibility (primacy) for Class VI injection wells under Safe Drinking Water Act (SDWA) section 1422. The EPA's approval of the State's UIC program primacy application would allow the Alaska Oil and Gas Conservation Commission (AOGCC) to issue and enforce compliance with UIC Class VI permits for injection wells used for geologic carbon sequestration. In this action, the EPA proposes to approve Alaska's application to implement the UIC program for Class VI injection wells located within the State, except those located within Indian country and those located within areas of exclusive Federal jurisdiction.",
+      "law_enacted_date": null
+    }
+  },
+  {
+    "brief_id": 1032,
+    "kind": "agency_document",
+    "metadata": {
+      "title": "Single Family Housing Guaranteed Loan Program-Income Producing Accessory Dwelling Unit (ADU) Provisions",
+      "type": "Rule",
+      "subtype": "",
+      "abstract": "The Rural Housing Service (RHS or the Agency), a Rural Development (RD) agency of the United States Department of Agriculture (USDA), is amending the Single Family Housing Guaranteed Loan Program (SFHGLP) regulation to permit the financing of single family homes with income producing Accessory Dwelling Units (ADUs) and clarify the eligibility of properties with features designed to accommodate home- based operations using non-commercial real estate features.",
+      "law_enacted_date": null
+    }
+  },
+  {
+    "brief_id": 1060,
+    "kind": "agency_document",
+    "metadata": {
+      "title": "Medical Devices; Anesthesiology Devices; Classification of the Over-the-Counter Device To Assess Risk of Sleep Apnea",
+      "type": "Rule",
+      "subtype": "",
+      "abstract": "The Food and Drug Administration (FDA) is classifying the over-the-counter device to assess risk of sleep apnea into class II (special controls). The special controls that apply to the device type are identified in this order and will be part of the codified language for classification of the over-the-counter device to assess risk of sleep apnea. We are taking this action because we have determined that classifying the device into class II will provide a reasonable assurance of the safety and effectiveness of the device. We believe this action will also enhance patients' access to beneficial innovative devices, in part by reducing regulatory burdens.",
+      "law_enacted_date": null
+    }
+  },
+  {
+    "brief_id": 1062,
+    "kind": "agency_document",
+    "metadata": {
+      "title": "Safety Standard for Automatic Residential Garage Door Operators",
+      "type": "Rule",
+      "subtype": "",
+      "abstract": "In October 2025, updates to the entrapment protection provisions in the UL 325 standard were accepted under the Consumer Product Safety Improvement Act of 1990 (Improvement Act) for inclusion in the Commission's mandatory safety regulation for automatic residential garage door operators. In this direct final rule, the Consumer Product Safety Commission (Commission) is amending the Commission's automatic residential garage door operators mandatory regulation to align with the changes in UL 325.",
+      "law_enacted_date": null
+    }
+  }
+]

@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from brief_evidence import validate_packet, EvidenceReviewRequired
 
-VERSION = 'routine-v1'
+VERSION = 'routine-v2'
 
 
 def normalized(value):
@@ -32,11 +32,13 @@ def prefilter_reason(job, has_previous=False):
         actions, texts = row.get('actions') or [], row.get('texts') or []
         # Check the whole action/version history, not just the latest referral.
         routine = r'(introduced in (?:house|senate)\.?|referred to (?:the )?.+|read twice and referred to (?:the )?.+)'
-        if (actions and texts
+        ceremonial = re.search(r'\bpost office\b', normalized(row.get('title'))) and re.search(
+            r'\b(designate|designates|designating|name|named|naming)\b', normalized(row.get('title')))
+        if (ceremonial and actions and texts
                 and all(re.fullmatch(routine, normalized(a.get('text'))) for a in actions)
                 and not any(re.search(r'\b(amend|passed|agreed|reported|discharg|veto|hearing|markup)', normalized(a.get('text'))) for a in actions)
                 and all(normalized(t.get('type')) in ('introduced in house','introduced in senate') for t in texts)):
-            reason = 'Bill has introduction/referral actions only and only introduced text'
+            reason = 'Post-office naming bill has introduction/referral actions only'
     elif kind == 'agency_document' and row.get('type') == 'Notice':
         title = normalized(row.get('title'))
         body = normalized(' '.join(p['text'] for p in job['evidence']['passages']))

@@ -15,7 +15,8 @@ from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
-from brief_ai import AI, BudgetExhausted, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_ai import AI, BudgetExhausted, DraftLimitReached, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_editorial import editorial_rank, rank_queue, quality_passes, EDITORIAL_WRITING, EDITORIAL_VERIFICATION
 from brief_style import PLAIN_ENGLISH_STYLE
 from brief_prefilter import prefilter_reason, filter_queue
 from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint, validate_packet
@@ -41,7 +42,15 @@ SELECTION_INSTRUCTIONS = (
     'or meaningful opportunities for public participation can be important. A notice can announce a substantive '
     'decision, license, proposal, withdrawal, or deadline; judge its contents, not its document label. '
     'Skip purely ceremonial actions, housekeeping with no practical change, routine meeting announcements, '
-    'and bill introductions without a substantive advancement. Do not infer duplicate coverage merely because '
+    'and ordinary bill introductions. An introduced bill may qualify only when its actual provisions support '
+    'a consequential reader question and useful explanation; never describe it as an operative change. '
+    'Return a reader_question, a source-supported reader_value claim, and at least two distinct '
+    'source-supported explanation_plan claims for selected items. Each claim needs an exact quote of at '
+    'least 12 characters and a passage_id. These should establish the practical change, affected audience, '
+    'and meaningful limits or distinctions, not just repeat the title or filing metadata. For rejected items '
+    'use an empty reader_question, empty reader_value text/evidence and empty explanation_plan. '
+    'Judge timeliness against as_of_date. A past meeting notice without outcomes is not current coverage. '
+    'Do not infer duplicate coverage merely because '
     'a document previously appeared on an agency website. Compare the supplied previous coverage: '
     'new_development is false only when it already covers this same development without a meaningful change '
     'or correction. Importance and novelty are separate decisions. Explain the concrete impact and decision.'
@@ -170,6 +179,7 @@ def verification_passes(report: dict, draft: dict) -> bool:
     expected = {k for k,v in draft_claims(draft).items() if v['text'].strip()}
     claims = report.get('claims') or []
     return (report.get('passed') is True and report.get('status_correct') is True
+            and quality_passes(report.get('editorial_quality'))
             and report.get('material_omissions') == [] and report.get('issues') == []
             and len(claims)==len(expected) and {c.get('field') for c in claims}==expected
             and all(c.get('supported') is True for c in claims))
@@ -187,12 +197,15 @@ def assemble(job: dict, draft: dict) -> dict:
             'policy_areas':draft['policy_areas'],'sources':packet['sources']}
 
 
-def discover(db: Any, limit: int) -> dict:
+def discover(db: Any, limit: int, deadline=float('inf')) -> dict:
     # Fetch only outstanding changes through a server-side filter; pagination never
     # repeatedly walks already processed rows.
     changes = db.rpc('pending_brief_source_changes',{'p_limit':limit}).execute().data or []
     counts = {'enqueued':0,'deferred':0}
     for change in changes:
+        if time.monotonic() >= deadline:
+            counts['incomplete'] = True
+            break
         kind, item_id = change['item_type'],change['item_id']
         try:
             row = db.rpc('brief_source_bundle',{'p_type':kind,'p_id':item_id}).execute().data
@@ -231,7 +244,7 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
         complete(db,job,token,'withheld',str(exc))
         return 'withheld'
     packet = job['evidence']
-    previous = db.table('brief').select('title,dek,published_at,generation_metadata').eq('primary_item_id',job['item_id']).in_('primary_item_type',[job['item_type'],job['source_type']]).order('published_at',desc=True).limit(5).execute().data or []
+    previous = db.table('brief').select('title,dek,points,context_markdown,status,editor_notes,published_at,generation_metadata').eq('primary_item_id',job['item_id']).in_('primary_item_type',[job['item_type'],job['source_type']]).order('published_at',desc=True).limit(5).execute().data or []
     reason = prefilter_reason(job,has_previous=bool(previous))
     if reason:
         complete(db,job,token,'skipped',reason)
@@ -239,19 +252,32 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
     ai = ai_factory(db,job['id'])
     ai.deadline = deadline
     work = job.get('work') or {}
-    if work.get('prompt_version',PROMPT_VERSION) != PROMPT_VERSION:
+    if work.get('prompt_version') != PROMPT_VERSION:
         work={}
     work['prompt_version']=PROMPT_VERSION
     def checkpoint():
         validate_json_text(work)
         db.rpc('save_brief_work',{'p_id':job['id'],'p_token':token,'p_work':work}).execute()
     selection = work.get('selection') or ai.call('selection',SELECTION_INSTRUCTIONS,
-        {'metadata':job['source_metadata'],'passages':packet['passages'],'previous_coverage':previous}, SELECTION)
+        {'metadata':job['source_metadata'],'passages':packet['passages'],'previous_coverage':previous,
+         'as_of_date':datetime.now(timezone.utc).date().isoformat(),
+         'triage':editorial_rank(job['source_type'],job['source_metadata'])}, SELECTION)
     work['selection']=selection
     checkpoint()
     if selection.get('important') is not True or selection.get('new_development') is not True:
         complete(db,job,token,'skipped',selection['reason'])
         return 'skipped'
+    plan = selection.get('explanation_plan') or []
+    selection_errors = []
+    if not selection.get('reader_question', '').strip() or len(plan) < 2:
+        selection_errors.append('Selection needs a reader question and two supported explanatory angles')
+    for claim in [selection.get('reader_value', {}), *plan]:
+        if not claim.get('text', '').strip():
+            selection_errors.append('Selection has no concrete reader value')
+        selection_errors.extend(citation_errors(claim,packet['passages']))
+    if selection_errors:
+        complete(db,job,token,'withheld','Editorial selection lacks supported value: '+ '; '.join(selection_errors),ai=ai)
+        return 'withheld'
     extracted = work.get('extracted',[])
     for passage in packet['passages'][len(extracted):]:
         repair = work.get('extraction_repair') or {}
@@ -322,8 +348,9 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             'Describe the actual change and affected parties where supported. Address repair feedback. '
             'When repairing, use the previous draft and fix the identified problems while preserving supported '
             'claims. Source excerpts are literal copying aids, not a substitute for evidence or validation. '
-            + PLAIN_ENGLISH_STYLE,
+            + EDITORIAL_WRITING + PLAIN_ENGLISH_STYLE,
             {'metadata':job['source_metadata'],'evidence':extracted,'feedback':feedback,
+             'editorial_plan':selection,'as_of_date':datetime.now(timezone.utc).date().isoformat(),
              'previous_draft':work.get('previous_draft'),
              'literal_source_hints':literal_source_hints(draft_claims(work['previous_draft']),packet['passages'])
                  if work.get('previous_draft') else {}},DRAFT)
@@ -355,11 +382,14 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             'identified by the metadata and reject a brief about an unrelated topic. '
             'Return exactly one claims entry for each nonempty field '
             '(title, dek, point_1 ... point_N, context). Any unsupported claim or material omission fails publication. '
-            'Do not accept a quote merely because it exists; verify that it entails the entire claim.',
-            {'metadata':job['source_metadata'],'passages':packet['passages'],'claims':draft_claims(draft)},VERIFICATION,verify=True)
+            'Do not accept a quote merely because it exists; verify that it entails the entire claim. '
+            + EDITORIAL_VERIFICATION,
+            {'metadata':job['source_metadata'],'passages':packet['passages'],'claims':draft_claims(draft),
+             'editorial_plan':selection,'as_of_date':datetime.now(timezone.utc).date().isoformat()},VERIFICATION,verify=True)
         report['passed'] = verification_passes(report,draft)
         report['deterministic_passed'] = True
         report['claim_evidence'] = draft_claims(draft)
+        report['editorial_selection'] = selection
         last_draft,last_report = draft,report
         if report['passed']:
             assembled = assemble(job,draft)
@@ -367,6 +397,8 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
             complete(db,job,token,'verified',selection['reason'],draft=assembled,report=report,ai=ai)
             return 'verified'
         feedback = report.get('issues',[])+report.get('material_omissions',[])+[c['reason'] for c in report['claims'] if not c['supported']]
+        if not quality_passes(report.get('editorial_quality')):
+            feedback += (report.get('editorial_quality') or {}).get('issues', []) or ['Draft fails the editorial-quality rubric; add supported explanation, not filing metadata or repeated points.']
         work.pop('draft',None)
         work.update({'repair':repair+1,'feedback':feedback,'previous_draft':draft})
         checkpoint()
@@ -419,6 +451,11 @@ def process_queue(db, limit, deadline, queue='current'):
         except TimeoutError:
             db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token,'p_budget':False}).execute()
             break
+        except DraftLimitReached as exc:
+            db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token}).execute()
+            summary['draft_limit_deferred'] = summary.get('draft_limit_deferred',0)+1
+            log.info('%s; continuing selection of other candidates',exc)
+            continue
         except BudgetExhausted as exc:
             db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token}).execute()
             log.info('%s',exc)
@@ -440,6 +477,7 @@ def main() -> int:
     parser.add_argument('--discover-only',action='store_true')
     parser.add_argument('--prefilter-only',action='store_true',help='Apply free conservative filters without AI calls')
     parser.add_argument('--prefilter-dry-run',action='store_true',help='Preview free filters without changing jobs')
+    parser.add_argument('--rank-dry-run',action='store_true',help='Preview free editorial queue ranking without model calls or writes')
     parser.add_argument('--seed-days',type=int,help='Queue existing unbriefed records updated in the prior 1-90 days')
     parser.add_argument('--publish',action='store_true',help='Publish verified jobs only when DB publication switch is enabled')
     parser.add_argument('--publish-only',action='store_true',help='Drain verified results without discovery or model calls')
@@ -450,6 +488,9 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO)
     db = create_supabase_client()
     deadline = time.monotonic()+args.max_minutes*60
+    if args.rank_dry_run:
+        log.info('brief_ranking_summary %s',json.dumps(rank_queue(db,args.queue,deadline=deadline,apply=False)))
+        return 0
     if args.prefilter_only or args.prefilter_dry_run:
         log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=not args.prefilter_dry_run,deadline=deadline)))
         return 0
@@ -460,9 +501,10 @@ def main() -> int:
         if not 1<=args.seed_days<=90:
             parser.error('--seed-days must be 1-90')
         log.info('Seeded %s source changes',db.rpc('seed_brief_source_changes',{'p_days':args.seed_days}).execute().data)
-    summary = discover(db,args.discovery_limit)
+    summary = discover(db,args.discovery_limit,deadline=min(deadline-180,time.monotonic()+300))
     if not args.discover_only:
         log.info('brief_prefilter_summary %s',json.dumps(filter_queue(db,args.queue,apply=True,deadline=deadline-180)))
+        log.info('brief_ranking_summary %s',json.dumps(rank_queue(db,args.queue,deadline=deadline-180)))
     summary['failed'] = 0
     if not args.discover_only:
         # Each worker owns its HTTP client; database claims and budget reservations

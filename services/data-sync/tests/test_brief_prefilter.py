@@ -19,7 +19,7 @@ def renewal(body='This is an extension, without change, of a currently approved 
 def bill(actions=None):
     j=notice('A bill','The bill establishes a national grant program with annual reporting requirements.')
     j.update(source_type='bill',item_type='bill')
-    j['source_metadata']={'actions':[{'text':a} for a in (actions or ['Introduced in Senate.','Read twice and referred to the Committee on Finance.'])],
+    j['source_metadata']={'title':'To designate a post office as the Jane Doe Post Office','actions':[{'text':a} for a in (actions or ['Introduced in Senate.','Read twice and referred to the Committee on Finance.'])],
         'texts':[{'type':'Introduced in Senate'}]}
     return j
 
@@ -107,7 +107,7 @@ def test_filtered_item_never_initializes_ai_and_records_reason():
     def forbidden(*args): raise AssertionError('Filtered content must not spend AI budget')
     assert process(DB(),renewal(),'lease',ai_factory=forbidden)=='skipped'
     assert calls[-1][0]=='finish_brief_job'
-    assert calls[-1][1]['p_reason'].startswith('Prefilter routine-v1:')
+    assert calls[-1][1]['p_reason'].startswith('Prefilter routine-v2:')
     assert calls[-1][1]['p_draft'] is None
 
 

@@ -231,7 +231,7 @@ sweep of the selected queue before generation. A budget-deferred or substantive
 item does not prevent later routine items from being filtered. The daily AI cap
 and publication limit are unchanged.
 
-The initial rules skip only introduction/referral-only bills with complete action
+The rules skip only introduction/referral-only post-office naming bills with complete action
 and text metadata, explicit unchanged paperwork renewals, closed scientific
 grant-review meetings, and internal Senior Executive Service performance-review
 board memberships. Mixed/new/revised collections, uncertain notices, rules,
@@ -241,7 +241,7 @@ validated first. Optional missing bill summaries/cosponsors do not block an
 introduction-only decision.
 
 Skipped jobs retain their evidence, fingerprint, and a versioned `Prefilter
-routine-v1` reason. The queue sweep compares status, source revision and update
+routine-v2` reason. The queue sweep compares status, source revision and update
 time before writing, so it cannot take a job from a concurrent worker. Source
 changes still use normal revision discovery. No filtered job can publish.
 
@@ -259,3 +259,43 @@ Filtering is intentionally conservative and does not guarantee an empty queue:
 substantive work still requires the normal budget and verification. Health checks
 continue reporting real overdue work rather than treating every old notice as
 low-value or resetting its age.
+
+
+## Reader-value selection and generation (v5)
+
+Before paid screening, `brief_editorial.py` refreshes pending/retry queue priorities
+using document stage and concrete reader-facing subjects. Routine paperwork,
+registration, ceremonial, and instrument-procedure signals lower priority. The
+score is a transparent triage aid, never a finding of importance or permission to
+publish. Full-text AI selection can still reject a highly ranked item or accept
+an unusual lower-ranked notice. Important introductions are no longer rejected
+just because they have not passed a chamber; they must be described as proposals.
+
+Selection must identify a reader question, cite the practical reader value, and
+supply at least two supported explanatory angles. Unsupported selection claims
+are withheld before extraction. The writer receives that plan and the current
+UTC date, separates publication from effective dates, and explains supported
+practical distinctions in original prose rather than copying quotations.
+
+Verification now checks factual support AND five editorial criteria: reader
+value, added explanation, context beyond metadata, paraphrasing, and clear timing.
+All must pass. A factual but thin draft gets specific repair feedback, at most
+two repairs, then is withheld. The full rubric and selection plan are saved in the
+attempt report. A database gate independently prevents old or failing reports
+from reaching review or automatic publication. Existing review drafts are kept;
+un-staged legacy verified results return to selection with paid attempts intact.
+
+The daily five-draft limit and dollar cap remain enforced atomically. Reaching
+the draft limit defers that candidate until the next budget day but continues
+screening other candidates within the run limit and dollar budget. The limit is a
+ceiling, not a target; zero drafts is a valid outcome. Publication still requires
+an editor. Discovery is bounded to five minutes per run so source fetching cannot
+consume the entire worker window.
+
+Preview ranking without writes or AI calls:
+`python scripts/process_briefs.py --rank-dry-run --queue current`
+
+Regression tests cover routine-vs-consequential ranking, evidence-backed selection,
+accurate-but-thin rejection, old checkpoint invalidation, concurrent queue claims,
+continued selection after the draft cap, and both database publication paths.
+The rubric improves selection discipline; editors must still assess each draft.

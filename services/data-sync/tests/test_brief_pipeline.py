@@ -4,6 +4,8 @@ import pytest
 from brief_evidence import chunks, build_packet, EvidenceUnavailable, fingerprint
 from process_briefs import citation_errors, validate_draft, verification_passes, draft_claims, process, publish_ready
 from check_brief_pipeline import problems
+from brief_ai import PROMPT_VERSION
+from brief_editorial import QUALITY_CHECKS
 
 TEXT='The proposed rule would require annual reporting for large operators. Comments close on October 1, 2026. Small operators are exempt.'
 BLOCKED='Request Access\nYour request has been flagged as potentially automated. Please complete the CAPTCHA. ' * 3
@@ -20,6 +22,7 @@ def draft():
 
 def report(d):
     return {'passed':True,'status_correct':True,'material_omissions':[],'issues':[],
+            'editorial_quality':dict(passed=True,issues=[],**{k:True for k in QUALITY_CHECKS}),
             'claims':[{'field':k,'supported':True,'reason':'Supported'} for k,v in draft_claims(d).items() if v['text']]}
 
 
@@ -245,12 +248,18 @@ class DB:
     def execute(self): return SimpleNamespace(data=[])
 
 
+def selection():
+    return {'important':True,'new_development':True,'reason':'Consequential rule',
+            'reader_question':'Which operators face a reporting requirement?',
+            'reader_value':claim(),'explanation_plan':[claim(),claim('Small operators are exempt.')]}
+
+
 class FakeAI:
     writer='writer';verifier='verifier'
     def __init__(self,db,job): self.stages=[]
     def call(self,stage,*args,**kwargs):
         self.stages.append(stage)
-        if stage=='selection': return {'important':True,'new_development':True,'reason':'Consequential rule'}
+        if stage=='selection': return selection()
         if stage=='extract': return {'facts':[claim()],'qualifications':['Small operators are exempt.']}
         if stage=='write': return draft()
         if stage=='verify': return report(draft())
@@ -283,7 +292,7 @@ def test_failed_independent_verification_repairs_twice_then_withholds():
 
 
 def test_resume_reuses_completed_extractions():
-    j=job();j['work']={'selection':{'important':True,'new_development':True,'reason':'Important'},'extracted':[{'passage_id':'s1','facts':[claim()],'qualifications':[]}]}
+    j=job();j['work']={'prompt_version':PROMPT_VERSION,'selection':selection(),'extracted':[{'passage_id':'s1','facts':[claim()],'qualifications':[]}]}
     ai=FakeAI(None,None)
     process(DB(),j,'lease',ai_factory=lambda *a:ai)
     assert 'selection' not in ai.stages and 'extract' not in ai.stages
@@ -534,7 +543,8 @@ def test_four_workers_preserve_total_limit_and_independent_clients(monkeypatch):
     monkeypatch.setattr('sys.argv', ['process_briefs', '--workers', '4', '--limit', '7'])
     monkeypatch.setattr(process_briefs, 'load_dotenv', lambda: None)
     monkeypatch.setattr(process_briefs, 'create_supabase_client', object)
-    monkeypatch.setattr(process_briefs, 'discover', lambda *args: {})
+    monkeypatch.setattr(process_briefs, 'discover', lambda *args, **kwargs: {})
+    monkeypatch.setattr(process_briefs, 'rank_queue', lambda *args, **kwargs: {})
     monkeypatch.setattr(process_briefs, 'filter_queue', lambda *args, **kwargs: {})
     def worker(db, limit, deadline, queue):
         calls.append((db, limit, deadline, queue))
