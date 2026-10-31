@@ -277,6 +277,7 @@ export default function BriefsAdminPage({
         <div>
           <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
           <h1 className="mt-2 text-3xl font-semibold text-gray-900">Briefs</h1>
+          <p className="mt-2 max-w-3xl text-sm text-gray-600">Before publishing, check the original sources, practical significance, affected audience, timing, and exceptions. Add useful context beyond the key points, source links, and an accurate author attribution.</p>
           <p className="mt-2 text-sm text-gray-600">Create, review, schedule, and publish source-linked Briefs.</p>
         </div>
         <Button onClick={startNew}>New Brief</Button>

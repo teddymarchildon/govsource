@@ -2,7 +2,7 @@ import { ParentNavigationLink } from '@/components/Breadcrumbs';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
-import { ArrowUpRight, ChevronDown } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import type { Brief } from '@/types/brief';
 import { getContentHref, getContentTypeLabel } from '@/utils/contentReferences';
 import { getBriefReadingMinutes } from '@/utils/briefReading';
@@ -16,7 +16,6 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
   const published = brief.published_at ? new Date(brief.published_at) : null;
   const hasDate = published && !Number.isNaN(published.getTime());
   const context = brief.context_markdown?.trim();
-  const longContext = Boolean(context && context.split(/\s+/).length > 120);
 
   return (
     <article className="mx-auto max-w-5xl py-5 md:py-6">
@@ -60,13 +59,8 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
           </section>
 
           {context ? <section className="mt-3 border-t border-border pt-4" aria-label="Context">
-            {longContext ? <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-sm py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
-                <span><span className="block font-serif text-xl font-semibold">Context</span><span className="mt-1 block text-sm text-muted-foreground">Read the background and additional detail</span></span>
-                <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className={markdownClass}><ReactMarkdown>{context}</ReactMarkdown></div>
-            </details> : <><h2 className="font-serif text-xl font-semibold">Context</h2><div className={markdownClass}><ReactMarkdown>{context}</ReactMarkdown></div></>}
+            <h2 className="font-serif text-xl font-semibold">Context</h2>
+            <div className={markdownClass}><ReactMarkdown>{context}</ReactMarkdown></div>
           </section> : null}
         </div>
 

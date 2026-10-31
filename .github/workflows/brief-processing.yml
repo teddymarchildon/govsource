@@ -55,17 +55,17 @@ jobs:
           cache: pip
           cache-dependency-path: services/data-sync/requirements.runtime.txt
       - run: pip install -r requirements.runtime.txt
-      - name: Publish already verified results
+      - name: Send verified results to editorial review
         if: ${{ !inputs.mode || inputs.mode == 'process' }}
         run: python scripts/process_briefs.py --publish-only --limit 30
-      - name: Process durable jobs and publish only verified results
+      - name: Scan candidates and draft selected explainers
         run: |
           case "$BRIEF_MODE" in
             prefilter-preview) python scripts/process_briefs.py --prefilter-dry-run --queue "$BRIEF_QUEUE" ;;
             prefilter-only) python scripts/process_briefs.py --prefilter-only --queue "$BRIEF_QUEUE" ;;
-            process) python scripts/run_pipeline_source.py processor -- --limit 100 --max-minutes 20 --workers 4 --queue "$BRIEF_QUEUE" ;;
+            process) python scripts/run_pipeline_source.py processor -- --limit 30 --discovery-limit 500 --max-minutes 20 --workers 2 --queue "$BRIEF_QUEUE" ;;
             *) exit 2 ;;
           esac
-      - name: Publish verified results even after an individual job fails
+      - name: Send verified results to review even after an individual job fails
         if: ${{ always() && !cancelled() && (!inputs.mode || inputs.mode == 'process') }}
         run: python scripts/process_briefs.py --publish-only --limit 30

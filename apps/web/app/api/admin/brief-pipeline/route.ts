@@ -5,6 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 
 const Settings = z.object({
   publication_enabled: z.boolean(),
+  daily_draft_limit: z.number().int().min(0).max(100).optional(),
   daily_publication_limit: z.number().int().min(0).max(1000),
   daily_budget_usd: z.number().finite().min(0).max(1000),
 }).strict();

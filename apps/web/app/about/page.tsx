@@ -19,6 +19,7 @@ export default function AboutPage() {
         <p className="mt-5 font-serif text-xl leading-relaxed md:text-2xl">Understand what the federal government is doing—and explore the records behind it.</p>
       </header>
       <div className="space-y-6 pt-8 text-base leading-8 text-muted-foreground">
+        <p>GovSource is an independent project published by Teddy Marchildon, not a government website. Contact <a href="mailto:teddy@govsrc.com" className="text-primary underline">teddy@govsrc.com</a>. Read our <Link href="/editorial-policy" className="text-primary underline">sourcing, AI, and corrections policy</Link>.</p>
         <p>GovSource makes U.S. federal government activity easier to find, follow, and understand. We bring together bills, laws, executive orders, agency documents, and Supreme Court decisions, alongside explanations that help readers understand what happened and why it matters.</p>
         <p>Government information is public, but it is spread across many websites and often written in technical language. GovSource helps connect that information so you can explore an issue, understand the institutions involved, and go deeper into the underlying records.</p>
         <section aria-labelledby="what-you-can-do" className="space-y-6 pt-4">
