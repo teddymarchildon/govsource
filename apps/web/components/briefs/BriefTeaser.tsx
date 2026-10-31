@@ -16,7 +16,7 @@ export function BriefMeta({ brief }: { brief: Brief }) {
 
 export default function BriefTeaser({ brief, variant = 'standard', heading = 'h3', placement = 'feed' }: {
   brief: Brief;
-  variant?: 'lead' | 'standard' | 'headline';
+  variant?: 'lead' | 'standard' | 'headline' | 'feature';
   heading?: 'h1' | 'h2' | 'h3';
   placement?: string;
 }) {
@@ -30,8 +30,9 @@ export default function BriefTeaser({ brief, variant = 'standard', heading = 'h3
           'text-[28px] leading-[1.12] tracking-[-0.025em] md:text-[36px] xl:text-[40px]': variant === 'lead',
           'text-[21px] leading-[1.2] tracking-[-0.015em] md:text-[23px]': variant === 'standard',
           'text-[19px] leading-[1.25] tracking-[-0.01em]': variant === 'headline',
+          'text-[28px] leading-[1.12] tracking-[-0.025em] md:text-[30px]': variant === 'feature',
         })}>{headline}</Heading>
-        {brief.dek && variant !== 'headline' ? <p className={cn("mt-2 text-sm leading-[1.55] text-muted-foreground", variant === 'lead' ? 'line-clamp-2' : 'hidden md:line-clamp-2')}>{brief.dek}</p> : null}
+        {brief.dek && variant !== 'headline' ? <p className={cn("mt-2 text-sm leading-[1.55] text-muted-foreground", variant === 'feature' ? 'mt-3 text-base' : variant === 'lead' ? 'line-clamp-2' : 'hidden md:line-clamp-2')}>{brief.dek}</p> : null}
         {variant === 'lead' ? <span className="mt-3 inline-flex min-h-6 items-center gap-1.5 text-sm font-semibold text-primary">Read Brief <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span> : null}
       </Link>
     </article>

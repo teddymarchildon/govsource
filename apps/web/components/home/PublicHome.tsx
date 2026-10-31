@@ -19,7 +19,7 @@ import type { AgencyDocument, Bill } from '@/types/types';
 import type { PersonalizedHomepageItem, PopularHomepageItem } from '@/types/homepage';
 import type { Topic } from '@/types/topic';
 import BriefTeaser from '@/components/briefs/BriefTeaser';
-import BriefFrontPage from '@/components/briefs/BriefFrontPage';
+import HomeFrontPage from './HomeFrontPage';
 import { briefInstitution, selectFrontPageBriefs } from '@/utils/briefSelection';
 
 type PopularItemType = 'bill' | 'law' | 'agency_document' | 'executive_order' | 'cluster';
@@ -138,12 +138,12 @@ export default function PublicHome({
     <div className="-mx-4 -mb-4 overflow-hidden md:-mx-6 md:-mb-6">
       <section className="border-b border-border bg-background py-5 md:py-6">
         <div className="container mx-auto px-4">
-          <div className="mb-5 flex items-center justify-between gap-4 border-b border-border pb-3">
-            <p className="text-xs font-bold uppercase tracking-[0.16em]">Top stories</p>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-foreground pb-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--trust))]">GovSource / The front page</p>
             <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 text-[hsl(var(--trust))]" /> Grounded in official records</span>
           </div>
           {briefsLoading ? <div className="grid gap-6 md:grid-cols-3" aria-label="Loading Briefs">{[0, 1, 2].map((index) => <div key={index} className="h-56 animate-pulse bg-muted" />)}</div> : briefs.length ? (
-            <BriefFrontPage briefs={briefs} home placement="home" />
+            <HomeFrontPage briefs={briefs} />
           ) : (
             <div>
               <h1 className="font-serif text-3xl">The official record, made readable.</h1>
@@ -161,8 +161,8 @@ export default function PublicHome({
         <section className="border-b border-border bg-card/40 py-7 md:py-9">
           <div className="container mx-auto px-4">
             <SectionHeading eyebrow="More to know" title="More Briefs" action={<Link href="/briefs" className="text-sm font-semibold text-primary hover:underline">View all Briefs</Link>} />
-            <div className="mt-5 grid gap-x-6 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-              {moreBriefs.map((brief) => <BriefTeaser key={brief.id} brief={brief} heading="h3" placement="home:more" />)}
+            <div className="grid gap-x-7 md:grid-cols-2 xl:grid-cols-3">
+              {moreBriefs.map((brief) => <div key={brief.id} className="border-b border-border py-5"><BriefTeaser brief={brief} heading="h3" placement="home:more" /></div>)}
             </div>
           </div>
         </section>

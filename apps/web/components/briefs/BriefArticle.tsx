@@ -6,6 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import type { Brief } from '@/types/brief';
 import { getContentHref, getContentTypeLabel } from '@/utils/contentReferences';
 import { getBriefReadingMinutes } from '@/utils/briefReading';
+import { getBriefAuthorName } from '@/utils/briefAuthor';
 import { BriefReadingAnalytics } from './BriefAnalytics';
 
 const markdownClass = 'prose prose-sm mt-3 max-w-none text-base leading-[1.65] prose-headings:font-serif prose-headings:text-xl prose-p:my-3 prose-a:text-primary';
@@ -27,7 +28,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
           <span className="font-semibold text-primary">{getContentTypeLabel(brief.primary_item_type)}</span>
           {hasDate ? <><span aria-hidden="true">·</span><time dateTime={brief.published_at!}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(published)}</time></> : null}
           <span aria-hidden="true">·</span><span>{getBriefReadingMinutes(brief)} min read</span>
-          {brief.author_name ? <span>· By {brief.author_name}</span> : null}
+          {brief.author_name ? <span>· By {getBriefAuthorName(brief.author_name)}</span> : null}
           {brief.version > 1 && brief.updated_at ? <span>· Updated <time dateTime={brief.updated_at}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(brief.updated_at))}</time></span> : null}
         </div>
         <h1 className="mt-3 break-words font-serif text-[28px] font-semibold leading-[1.15] tracking-[-0.025em] md:text-[38px]">{brief.title}</h1>
@@ -66,6 +67,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
 
         <aside aria-labelledby="brief-sources" className="min-w-0 border-t border-border pt-3 lg:self-start">
           <h2 id="brief-sources" className="text-xs font-bold uppercase tracking-[0.12em]">Sources &amp; records</h2>
+          <Link href="/editorial-policy#how-we-use-ai" className="mt-3 block text-xs text-primary hover:underline">How we produce our Briefs</Link>
           <Link href={primaryHref} className="mt-3 flex items-start justify-between gap-2 py-1 text-sm font-semibold leading-5 text-primary hover:underline">View the {getContentTypeLabel(brief.primary_item_type).toLowerCase()}<ArrowUpRight aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" /></Link>
           {brief.sources.length > 0 ? <ol className="mt-3 space-y-2 border-t border-border pt-3">{brief.sources.map((source, index) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="block break-words py-1 text-sm leading-5 text-primary hover:underline">[{index + 1}] {source.label}</a></li>)}</ol> : null}
           {brief.related_items?.length ? <div className="mt-3 border-t border-border pt-3"><h3 className="mb-2 text-xs font-semibold text-muted-foreground">Related records</h3>{brief.related_items.map((item) => <Link key={`${item.type}-${item.id}`} href={getContentHref(item)} className="block py-1 text-sm text-primary hover:underline">{getContentTypeLabel(item.type)} #{item.id}</Link>)}</div> : null}

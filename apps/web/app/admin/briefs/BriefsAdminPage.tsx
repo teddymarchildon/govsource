@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { getContentHref } from '@/utils/contentReferences';
+import { getBriefAuthorName } from '@/utils/briefAuthor';
 import { publicationIssues, sourceHost } from '@/lib/briefReview';
 import { Button } from '@/components/ui/button';
 import CongressmanSearchSelect from '@/components/CongressmanSearchSelect';
@@ -116,7 +117,7 @@ function buildForm(brief: AdminBrief): FormState {
     contribution_cycle: brief.contribution_cycle ? String(brief.contribution_cycle) : '',
     policy_areas: brief.policy_areas.join(', '),
     source_urls: brief.sources.map((source) => source.url).join('\n'),
-    author_name: brief.author_name || '',
+    author_name: getBriefAuthorName(brief.author_name) || '',
     editor_notes: brief.editor_notes || '',
     status: brief.status,
     published_at: toLocalDateTime(brief.published_at),
