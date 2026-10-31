@@ -13,5 +13,12 @@
     "improve": 10
   },
   "rollback": "Archived items remain in brief and can be restored through admin. brief_revision preserves the full pre-change row at version_before. Restore only after substantive review; never bulk republish without checking subsequent edits.",
-  "sources": "Ten rewritten Briefs use the primary-source evidence stored with their generation jobs and linked official documents. Full inventory snapshot retained separately; this repository contains no private editor notes or user identifiers."
+  "sources": "Ten rewritten Briefs use the primary-source evidence stored with their generation jobs and linked official documents. Full inventory snapshot retained separately; this repository contains no private editor notes or user identifiers.",
+  "additional_repairs": [
+    {
+      "id": 12,
+      "version_before": 3,
+      "change": "Corrected four point citation IDs to match the existing source_1. Counts remain 125 retained and 10 rewritten."
+    }
+  ]
 }
