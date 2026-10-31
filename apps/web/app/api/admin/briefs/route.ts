@@ -1,3 +1,4 @@
+import { publicationIssues } from '@/lib/briefReview';
 import { verifyContributionFigures, assertContributionContent } from '@/lib/contributionVerification';
 import { buildContributionBrief } from '@/lib/contributionBrief';
 import { getMemberContributions } from '@/lib/repositories/contributions';
@@ -76,6 +77,12 @@ function normalizeInput(input: z.infer<typeof BriefInputSchema>) {
     : input.published_at || null;
   const slug = cleanNullable(input.slug) || (publishing ? slugify(input.title) : null);
 
+  if (publishing) {
+    const issues = publicationIssues({ ...input, title: input.title, dek: input.dek || '',
+      context_markdown: input.context_markdown || '', author_name: input.author_name || '',
+      primary_item_id: String(input.primary_item_id), points, sources });
+    if (issues.length) throw new Error(issues.join(' '));
+  }
   if (publishing && points.length < 3) {
     throw new Error('Published and scheduled Briefs require between 3 and 5 points.');
   }
