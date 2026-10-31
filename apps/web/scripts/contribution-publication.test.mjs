@@ -16,6 +16,7 @@ function setup(fail = false) {
   const db = { from() { const q = { select() { return q; }, eq() { return q; }, insert() { writes++; return q; }, update() { writes++; return q; }, async single() { return { data: { id: 1 } }; }, async maybeSingle() { return { data: { id: 1 } }; } }; return q; } };
   const route = load('../app/api/admin/briefs/route.ts', {
     '@/lib/briefPoints': load('../lib/briefPoints.ts'),
+    '@/lib/briefReview': load('../lib/briefReview.ts'),
     '@/lib/contributionVerification': { ...checks, verifyContributionFigures: async () => { checked++; if (fail) throw new Error('FEC reconciliation failed'); return {}; } },
     '@/lib/contributionBrief': { buildContributionBrief: () => expected },
     '@/lib/repositories/contributions': { getMemberContributions: async () => ({}) },
@@ -25,13 +26,13 @@ function setup(fail = false) {
   });
   return { route, writes: () => writes, checked: () => checked };
 }
-const body = { ...expected, title: 'Test', dek: 'Verified summary', primary_item_type: 'campaign_finance', primary_item_id: 1, contribution_cycle: 2026, status: 'published', policy_areas: [], is_featured: false };
+const body = { ...expected, title: 'Test', author_name: 'Test editor', dek: 'Verified summary', primary_item_type: 'campaign_finance', primary_item_id: 1, contribution_cycle: 2026, status: 'published', policy_areas: [], is_featured: false };
 const request = b => new Request('https://example.com/api/admin/briefs', { method: 'POST', body: JSON.stringify(b) });
 for (const method of ['POST', 'PATCH']) {
   test(`${method} enforces live reconciliation and blocks changed content before writing`, async () => {
     const extra = method === 'PATCH' ? { id: 1, version: 1 } : {};
     for (const [fail, changed] of [[true, false], [false, true]]) {
-      const f = setup(fail); const input = { ...body, ...extra, ...(changed ? { sources: [] } : {}) };
+      const f = setup(fail); const input = { ...body, ...extra, ...(changed ? { points: expected.points.map(point => ({ ...point, text: 'Changed financial claim' })) } : {}) };
       assert.equal((await f.route[method](request(input))).status, 400); assert.equal(f.writes(), 0); assert.equal(f.checked(), 1);
     }
     const f = setup(); assert.equal((await f.route[method](request({ ...body, ...extra }))).status, method === 'POST' ? 201 : 200); assert.equal(f.writes(), 1);
@@ -39,4 +40,9 @@ for (const method of ['POST', 'PATCH']) {
 }
 test('scheduled contribution copy cannot bypass publication-time verification', async () => {
   const f = setup(); assert.equal((await f.route.POST(request({ ...body, status: 'scheduled', published_at: '2099-01-01T00:00:00Z' }))).status, 400); assert.equal(f.writes(), 0);
+});
+
+test('missing citations fail before reconciliation or writes', async () => {
+ const f=setup(); const response=await f.route.POST(request({...body,sources:[]}));
+ assert.equal(response.status,400); assert.equal(f.writes(),0); assert.equal(f.checked(),0);
 });
