@@ -48,14 +48,14 @@ export default function BriefGenerationPanel({ selected, initialUrl, onOpen }: {
   }
   return <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="generate-brief-title">
     <h2 id="generate-brief-title" className="text-lg font-semibold">Generate from a document</h2>
-    <p className="mt-1 text-sm text-gray-600">Paste a GovSource document link, including older records. Requests run in the background on the next pipeline run, usually within about 30 minutes. Daily draft and spending limits still apply; requests may wait until the next day. Quality checks must pass before a separate review draft appears.</p>
+    <p className="mt-1 text-sm text-gray-600">Paste a GovSource document link to request a review draft. Older records work too. Requests usually start within 30 minutes, or after the next budget reset if daily limits are reached.</p>
     <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); void queue({ url }); }}>
       <label className="min-w-0 flex-1 text-sm font-medium">GovSource document link<Input className="mt-1" value={url} onChange={event => setUrl(event.target.value)} placeholder="https://www.govsrc.com/agency-rules/123" required /></label>
       <Button disabled={busy || !url.trim()} type="submit">{busy ? 'Requesting…' : 'Request draft'}</Button>
     </form>
     {selected && selected.primary_item_type !== 'campaign_finance' ? <div className="mt-4 border-t pt-4">
       <p className="mb-2 text-sm">Selected brief: <strong>{selected.title}</strong></p>
-      <Button variant="outline" disabled={busy} onClick={() => void queue({ briefId: selected.id })}>Regenerate as a separate review draft</Button>
+      <Button variant="outline" disabled={busy} onClick={() => void queue({ briefId: selected.id })}>Request a fresh draft</Button>
       <p className="mt-2 text-xs text-gray-600">Uses the stored source document. Current content and unsaved edits are not changed. If you publish the new draft, archive the older version when appropriate.</p>
     </div> : null}
     {message ? <p role="status" className="mt-3 text-sm text-green-800">{message}</p> : null}

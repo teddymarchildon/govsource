@@ -1,3 +1,4 @@
+import AdminNavigation from './AdminNavigation';
 import { redirect } from 'next/navigation';
 import { getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
 
@@ -16,5 +17,5 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     redirect('/');
   }
 
-  return <>{children}</>;
+  return <><AdminNavigation />{children}</>;
 }

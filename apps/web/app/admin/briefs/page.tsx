@@ -1,4 +1,5 @@
 import BriefsAdminPage from './BriefsAdminPage';
+import type { BriefStatus } from '@/types/brief';
 import type { ContentType } from '@/types/content';
 import { isContentType } from '@/utils/contentReferences';
 
@@ -20,5 +21,7 @@ export default async function AdminBriefsPage({ searchParams }: PageProps) {
     ? { type: type as ContentType, id, title: title || '' }
     : null;
 
-  return <BriefsAdminPage initialSource={initialSource} />;
+  const status = first(params.status);
+  const initialStatus = status && ['all', 'review', 'draft', 'published', 'scheduled', 'archived'].includes(status) ? status as BriefStatus | 'all' : 'review';
+  return <BriefsAdminPage initialSource={initialSource} initialStatus={initialStatus} initialWorkspace={first(params.view) === 'generate' ? 'generate' : 'review'} />;
 }

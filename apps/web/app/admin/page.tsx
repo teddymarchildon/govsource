@@ -1,223 +1,35 @@
-'use server'
-
 import Link from 'next/link';
-import AdminRecentActivity, { AdminActivityItem } from './AdminRecentActivity';
-import { createClient } from '@/utils/supabase/server';
+import { redirect } from 'next/navigation';
+import { createAdminClient } from '@/utils/supabase/admin';
+import { getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
 
-const DEFAULT_LIMIT = 25;
-
-async function fetchRecentBills(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data, error } = await supabase
-    .from('bill')
-    .select(
-      'id, title, type, number, congress, updated_at, created_at, law_enacted_date, law_title, law_number, law_type, law_unique_id'
-    )
-    .is('law_enacted_date', null)
-    .order('updated_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(DEFAULT_LIMIT);
-
-  if (error) {
-    console.error('[admin] Failed to fetch recent bills', error);
-    return [] as AdminActivityItem[];
-  }
-
-  return (
-    data?.map((bill) => {
-      const labels: string[] = [];
-      if (bill.type && bill.number) {
-        labels.push(`${bill.type.toUpperCase()} ${bill.number}`);
-      } else if (bill.type) {
-        labels.push(bill.type.toUpperCase());
-      } else if (bill.number) {
-        labels.push(String(bill.number));
-      }
-      if (bill.congress) {
-        labels.push(`Congress ${bill.congress}`);
-      }
-
-      return {
-        id: String(bill.id),
-        category: 'Bill' as const,
-        title: bill.title || `Bill ${bill.type?.toUpperCase() ?? ''} ${bill.number ?? ''}`.trim(),
-        updatedAt: bill.updated_at || bill.created_at,
-        createdAt: bill.created_at,
-        metadata: labels.join(' • '),
-        href: `/bills/${bill.id}`,
-      };
-    }) ?? []
-  );
-}
-
-async function fetchRecentLaws(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data, error } = await supabase
-    .from('bill')
-    .select(
-      'id, title, type, number, congress, updated_at, created_at, law_enacted_date, law_title, law_number, law_type'
-    )
-    .not('law_enacted_date', 'is', null)
-    .order('updated_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(DEFAULT_LIMIT);
-
-  if (error) {
-    console.error('[admin] Failed to fetch recent laws', error);
-    return [] as AdminActivityItem[];
-  }
-
-  return (
-    data?.map((law) => {
-      const labels: string[] = [];
-      if (law.law_number) {
-        labels.push(String(law.law_number));
-      }
-      if (law.type) {
-        labels.push(law.type.toUpperCase());
-      }
-      if (law.congress) {
-        labels.push(`Congress ${law.congress}`);
-      }
-
-      return {
-        id: String(law.id),
-        category: 'Law' as const,
-        title: law.law_title || law.title || `Law ${law.law_number ?? ''}`.trim(),
-        updatedAt: law.updated_at || law.created_at,
-        createdAt: law.created_at,
-        metadata: labels.join(' • '),
-        href: `/laws/${law.id}`,
-      };
-    }) ?? []
-  );
-}
-
-async function fetchRecentExecutiveOrders(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data, error } = await supabase
-    .from('agency_document')
-    .select(
-      'id, title, updated_at, created_at, remote_document_number, signing_date, president, subtype'
-    )
-    .eq('subtype', 'Executive Order')
-    .order('updated_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(DEFAULT_LIMIT);
-
-  if (error) {
-    console.error('[admin] Failed to fetch recent executive orders', error);
-    return [] as AdminActivityItem[];
-  }
-
-  return (
-    data?.map((order) => {
-      const labels: string[] = [];
-      if (order.remote_document_number) {
-        labels.push(`#${order.remote_document_number}`);
-      }
-      if (order.president) {
-        labels.push(order.president);
-      }
-      if (order.signing_date) {
-        labels.push(`Signed ${order.signing_date}`);
-      }
-
-      return {
-        id: String(order.id),
-        category: 'Executive Order' as const,
-        title: order.title || `Executive Order ${order.remote_document_number ?? ''}`.trim(),
-        updatedAt: order.updated_at || order.created_at,
-        createdAt: order.created_at,
-        metadata: labels.join(' • '),
-        href: `/executive-orders/${order.id}`,
-      };
-    }) ?? []
-  );
-}
-
-async function fetchRecentClusters(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data, error } = await supabase
-    .from('cluster')
-    .select('id, case_name, case_name_short, updated_at, created_at, slug, date_filed')
-    .order('updated_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(DEFAULT_LIMIT);
-
-  if (error) {
-    console.error('[admin] Failed to fetch recent clusters', error);
-    return [] as AdminActivityItem[];
-  }
-
-  return (
-    data?.map((cluster) => {
-      const labels: string[] = [];
-      if (cluster.slug) {
-        labels.push(cluster.slug);
-      }
-      if (cluster.date_filed) {
-        labels.push(`Filed ${cluster.date_filed}`);
-      }
-
-      return {
-        id: String(cluster.id),
-        category: 'Supreme Court Case' as const,
-        title: cluster.case_name || cluster.case_name_short || `Case ${cluster.slug ?? cluster.id}`,
-        updatedAt: cluster.updated_at || cluster.created_at,
-        createdAt: cluster.created_at,
-        metadata: labels.join(' • '),
-        href: `/supreme-court-cases/${cluster.id}`,
-      };
-    }) ?? []
-  );
-}
-
-async function fetchAdminActivity() {
-  const supabase = await createClient();
-
-  const [bills, laws, executiveOrders, clusters] = await Promise.all([
-    fetchRecentBills(supabase),
-    fetchRecentLaws(supabase),
-    fetchRecentExecutiveOrders(supabase),
-    fetchRecentClusters(supabase),
-  ]);
-
-  return [...bills, ...laws, ...executiveOrders, ...clusters]
-    .filter((item) => item.updatedAt || item.createdAt)
-    .sort((a, b) => {
-      const aDate = new Date(a.updatedAt ?? a.createdAt).getTime();
-      const bDate = new Date(b.updatedAt ?? b.createdAt).getTime();
-      return bDate - aDate;
-    });
-}
+export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  const items = await fetchAdminActivity();
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Admin Activity</h1>
-          <p className="text-gray-600 mt-2">
-            Review the most recently updated bills, enacted laws, executive orders, and Supreme Court cases.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/admin/front-pages" className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">Customize front pages</Link>
-          <Link href="/admin/pipeline" className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">Brief Pipeline</Link>
-          <Link
-            href="/admin/popular"
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            Configure Popular Now
-          </Link>
-          <Link
-            href="/admin/briefs"
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            Review & publish Briefs
-          </Link>
-        </div>
+  const { user, isAdmin } = await getCurrentUserAndAdminStatus();
+  if (!user || !isAdmin) redirect('/');
+  const db = createAdminClient();
+  const [review, drafts, live, settings] = await Promise.all([
+    db.from('brief').select('id', { count: 'exact', head: true }).eq('status', 'review'),
+    db.from('brief').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+    db.from('brief').select('id', { count: 'exact', head: true }).eq('status', 'published').not('slug', 'is', null).lte('published_at', new Date().toISOString()),
+    db.from('brief_pipeline_settings').select('daily_draft_limit,daily_budget_usd,editorial_review_required,publication_enabled').eq('id', true).single(),
+  ]);
+  const unavailable = review.error || drafts.error || live.error || settings.error;
+  return <div className="container mx-auto max-w-6xl space-y-8 px-4 py-8">
+    <header><p className="text-xs font-bold uppercase tracking-widest text-primary">GovSource admin</p><h1 className="mt-2 font-serif text-4xl font-semibold">Your editorial desk</h1><p className="mt-3 max-w-2xl text-muted-foreground">Review useful explanations, publish with confidence, and choose what readers see first.</p></header>
+    {unavailable ? <p role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">Some counts are unavailable. You can still open the tools below. Refresh this page to try again.</p> : null}
+    <section className="grid gap-6 rounded-xl border border-primary/20 bg-white p-6 md:grid-cols-[1.4fr_1fr] md:p-8" aria-labelledby="review-heading">
+      <div><p className="text-sm font-semibold text-primary">Start here</p><h2 id="review-heading" className="mt-2 font-serif text-3xl font-semibold">Review & publish</h2><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Read each draft, check its sources and practical value, then edit, publish, or archive it.</p><Link href="/admin/briefs" className="mt-5 inline-flex rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">Open review queue →</Link></div>
+      <div className="grid grid-cols-3 items-center gap-3 border-t pt-5 md:border-l md:border-t-0 md:pl-6 md:pt-0">
+        {[['Ready for review', review.error ? null : review.count, '/admin/briefs'], ['Drafts', drafts.error ? null : drafts.count, '/admin/briefs?status=draft'], ['Published', live.error ? null : live.count, '/admin/briefs?status=published']].map(([label, count, href]) => <Link href={String(href)} key={String(label)} className="rounded-md p-2 hover:bg-secondary"><span className="block font-serif text-3xl font-semibold">{count ?? '—'}</span><span className="mt-2 block text-xs text-muted-foreground">{label}</span></Link>)}
       </div>
-      <AdminRecentActivity items={items} />
+    </section>
+    <div className="grid gap-5 md:grid-cols-2">
+      <Link href="/admin/briefs?view=generate" className="rounded-xl border bg-white p-6 transition hover:border-primary"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Find the next story</p><h2 className="mt-3 font-serif text-2xl font-semibold">Generate a draft →</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Request coverage from a document link, track requests, or draft a campaign-finance overview. To regenerate a brief, open it in the review workspace.</p></Link>
+      <Link href="/admin/front-pages" className="rounded-xl border bg-white p-6 transition hover:border-primary"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Shape the front page</p><h2 className="mt-3 font-serif text-2xl font-semibold">Choose lead stories →</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Select the lead and supporting briefs on the homepage and section pages. Leave a slot empty for automatic selection.</p></Link>
     </div>
-  );
+    <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5" aria-labelledby="automation-heading"><div><h2 id="automation-heading" className="font-semibold">Background pipeline</h2><p className="mt-2 text-sm text-muted-foreground">{settings.data ? `${settings.data.editorial_review_required ? 'Manual review before publication' : settings.data.publication_enabled ? 'Automatic publication enabled' : 'Automatic publication paused'} · Up to ${settings.data.daily_draft_limit} drafts per day · $${Number(settings.data.daily_budget_usd).toFixed(2)} daily AI budget` : 'Check source freshness, generation progress, and daily limits.'}</p></div><Link href="/admin/pipeline" className="text-sm font-semibold text-primary underline underline-offset-4">Check pipeline & limits</Link></section>
+    <p className="text-xs text-muted-foreground">Looking for source material? Browse <Link className="text-primary underline" href="/congress">Congress</Link>, <Link className="text-primary underline" href="/agencies">agencies</Link>, or <Link className="text-primary underline" href="/courts">courts</Link>, then copy a document link to request coverage.</p>
+  </div>;
 }

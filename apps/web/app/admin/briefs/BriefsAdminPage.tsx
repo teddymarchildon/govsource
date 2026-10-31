@@ -133,13 +133,16 @@ function formatDate(value: string | null | undefined) {
 }
 
 export default function BriefsAdminPage({
-  initialSource,
+  initialSource, initialStatus = 'review', initialWorkspace = 'review',
 }: {
   initialSource: { type: ContentType; id: string; title: string } | null;
+  initialStatus?: 'all' | BriefStatus;
+  initialWorkspace?: 'review' | 'generate';
 }) {
   const initialForm = useMemo<FormState>(() => initialSource
     ? { ...EMPTY_FORM, title: initialSource.title, primary_item_type: initialSource.type, primary_item_id: initialSource.id }
     : EMPTY_FORM, [initialSource]);
+  const [workspace, setWorkspace] = useState<'review' | 'generate'>(initialWorkspace);
   const [briefs, setBriefs] = useState<AdminBrief[]>([]);
   const [selected, setSelected] = useState<AdminBrief | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
@@ -150,7 +153,7 @@ export default function BriefsAdminPage({
   const [contributionMember, setContributionMember] = useState<string>('');
   const [contributionCycle, setContributionCycle] = useState(String(Math.ceil(new Date().getFullYear() / 2) * 2));
   const [generating, setGenerating] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | BriefStatus>('review');
+  const [statusFilter, setStatusFilter] = useState<'all' | BriefStatus>(initialStatus);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const editorPanel = useRef<HTMLElement>(null);
@@ -225,7 +228,7 @@ export default function BriefsAdminPage({
   const startNew = async () => {
     if (!await canLeave()) return;
     baseline.current = JSON.stringify(EMPTY_FORM);
-    setView('edit'); setReviewed(false);
+    setWorkspace('review'); setView('edit'); setReviewed(false);
     setSelected(null);
     setForm(EMPTY_FORM);
     setEditing(true);
@@ -244,7 +247,7 @@ export default function BriefsAdminPage({
       const next = buildForm(payload.brief);
       baseline.current = JSON.stringify(next);
       setSelected(payload.brief); setForm(next); setEditing(true);
-      setView('review'); setReviewed(false);
+      setWorkspace('review'); setView('review'); setReviewed(false);
     } catch (error) {
       if (request === detailRequest.current) setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to load Brief' });
     } finally { if (request === detailRequest.current) setOpening(null); }
@@ -343,7 +346,7 @@ export default function BriefsAdminPage({
       setSelected(payload.brief);
       const next = buildForm(payload.brief);
       baseline.current = JSON.stringify(next);
-      setForm(next); setView('review'); setReviewed(false);
+      setForm(next); setWorkspace('review'); setView('review'); setReviewed(false);
       setEditing(true);
       setMessage({ type: 'success', text: payload.refreshed ? 'Draft refreshed and reconciled with the FEC. Review it before publishing.' : payload.existing ? 'Opened the existing overview for this member and period.' : 'Overview drafted from contribution summaries. Review it before publishing.' });
       await loadBriefs();
@@ -361,14 +364,18 @@ export default function BriefsAdminPage({
       </dialog>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
-          <h1 className="mt-2 text-3xl font-semibold text-gray-900">Review & publish</h1>
-          <p className="mt-2 max-w-3xl text-sm text-gray-600">Before publishing, check the original sources, practical significance, affected audience, timing, and exceptions. Add useful context beyond the key points, source links, and an accurate author attribution.</p>
-          <p className="mt-2 text-sm text-gray-600">Create, review, schedule, and publish source-linked Briefs.</p>
+          <h1 className="mt-2 text-3xl font-semibold text-gray-900">Briefs</h1>
+          <p className="mt-2 max-w-3xl text-sm text-gray-600">Review source-linked drafts and publish the ones that help readers understand what matters.</p>
         </div>
-        <Button disabled={busy} onClick={startNew}>New Brief</Button>
+
       </div>
 
+      <div className="mt-6 flex gap-2 border-b pb-3" aria-label="Brief workspace">
+        <Button variant={workspace === 'review' ? 'default' : 'outline'} aria-pressed={workspace === 'review'} onClick={() => setWorkspace('review')}>Review briefs</Button>
+        <Button variant={workspace === 'generate' ? 'default' : 'outline'} aria-pressed={workspace === 'generate'} onClick={() => setWorkspace('generate')}>Generate drafts</Button>
+      </div>
+
+      {workspace === 'generate' ? <>
       <BriefGenerationPanel selected={selected} initialUrl={initialSource ? `https://www.govsrc.com${getContentHref({ type: initialSource.type, id: initialSource.id })}` : undefined} onOpen={id => void openBrief({ id })} />
 
       <details className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
@@ -382,13 +389,16 @@ export default function BriefsAdminPage({
         </div>
       </details>
 
+      <details className="mt-4 rounded-lg border p-4"><summary className="cursor-pointer text-sm font-semibold">Write a brief manually</summary><p className="mt-2 text-sm text-muted-foreground">Start with a blank brief when you already have the reporting and source material.</p><Button className="mt-3" variant="outline" disabled={busy} onClick={startNew}>Open blank editor</Button></details>
+      </> : null}
+
       {message ? (
         <div role={message.type === 'error' ? 'alert' : 'status'} className={`mt-6 rounded-md border px-4 py-3 text-sm ${message.type === 'success' ? 'border-green-300 bg-green-50 text-green-800' : 'border-red-300 bg-red-50 text-red-800'}`}>
           {message.text}
         </div>
       ) : null}
 
-      <div className="mt-8 grid gap-8 xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div hidden={workspace !== 'review'} className={workspace === 'review' ? "mt-6 grid gap-8 xl:grid-cols-[340px_minmax(0,1fr)]" : "hidden"}>
         <section>
           <div className="mb-4 flex gap-3">
             <Input value={search} aria-label="Search Briefs" onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search Briefs" />
@@ -420,6 +430,7 @@ export default function BriefsAdminPage({
               <h2 className="text-xl font-semibold">{selected ? `Review Brief` : 'New Brief'}</h2>
               {selected?.status === 'published' && selected.slug ? <Link className="text-sm font-medium text-blue-600 hover:underline" href={`/briefs/${selected.slug}`}>View live</Link> : null}
             </div>
+            {selected && selected.primary_item_type !== 'campaign_finance' ? <button className="mt-3 text-sm font-medium text-primary underline underline-offset-4" onClick={() => { setWorkspace('generate'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Generate a new version for review →</button> : null}
             <div className="mt-5 flex gap-2" aria-label="Review mode">
               <Button variant={view === 'review' ? 'default' : 'outline'} onClick={() => setView('review')}>Read & check sources</Button>
               <Button variant={view === 'edit' ? 'default' : 'outline'} onClick={() => setView('edit')}>Edit content</Button>

@@ -102,9 +102,8 @@ export default function FrontPagesAdmin() {
     finally { setSaving(false); }
   }
 
-  return <main className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
-    <Link href="/admin" className="text-sm text-primary underline" onClick={event => { if (anyDirty && !window.confirm('Leave without saving your selections?')) event.preventDefault(); }}>Back to admin</Link>
-    <header><h1 className="font-serif text-3xl font-semibold">Customize front pages</h1><p className="mt-2 max-w-3xl text-muted-foreground">Choose the lead and supporting Briefs for each tab. Empty slots fill automatically with recent stories. Selections stay in place until you change them or the Brief is unpublished.</p></header>
+  return <div className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
+    <header><h1 className="font-serif text-3xl font-semibold">Front pages</h1><p className="mt-2 max-w-3xl text-muted-foreground">Choose the lead and supporting Briefs for each tab. Empty slots fill automatically with recent stories. Selections stay in place until you change them or the Brief is unpublished.</p></header>
     <nav aria-label="Choose a front page" className="flex flex-wrap gap-2">{FRONT_PAGES.map(key => <Button key={key} disabled={saving} variant={key === section ? 'default' : 'outline'} aria-pressed={key === section} onClick={() => { setSection(key); setNotice(''); }}>{FRONT_PAGE_LABELS[key]}{JSON.stringify(settings.find(row => row.section === key)) !== JSON.stringify(saved.find(row => row.section === key)) ? ' *' : ''}</Button>)}</nav>
     {error && <div role="alert" className="rounded border border-red-300 p-4 text-red-700">{error}<Button className="ml-3" variant="outline" disabled={saving} onClick={() => { if (!anyDirty || window.confirm('Reload and discard all unsaved selections?')) setReload(value => value + 1); }}>Reload selections</Button></div>}
     {notice && <p role="status" className="rounded border p-4">{notice}</p>}
@@ -130,5 +129,5 @@ export default function FrontPagesAdmin() {
         <div className="flex items-center justify-between"><Button variant="outline" disabled={loading || page === 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span className="text-sm">Page {page} of {totalPages}</span><Button variant="outline" disabled={loading || page >= totalPages} onClick={() => setPage(value => value + 1)}>Next</Button></div>
       </section>
     </>}
-  </main>;
+  </div>;
 }
