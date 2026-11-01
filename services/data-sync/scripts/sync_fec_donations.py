@@ -67,6 +67,7 @@ class FECClient:
         self.limiter = RateLimiter(minimum_interval)
 
     def get(self, path, params):
+        failure = 'unknown response'
         for attempt in range(4):
             if self.requests >= self.max_requests:
                 if attempt:
@@ -78,6 +79,7 @@ class FECClient:
             try:
                 response = self.session.get(BASE_URL + path, params={**params, 'api_key': self.key}, timeout=(10, 60))
                 status = response.status_code
+                failure = f'HTTP {status}'
                 if status == 200:
                     try:
                         body = response.json()
@@ -97,14 +99,15 @@ class FECClient:
                     if status == 429:
                         raise RequestBudgetReached('FEC quota cooldown; retry this import later')
                     raise FECError(f'FEC service unavailable (HTTP {status}); retry later')
-            except requests.RequestException:
+            except requests.RequestException as exc:
+                failure = type(exc).__name__
                 delay = 2 ** (attempt + 1)
             finally:
                 if response is not None:
                     response.close()
             if attempt < 3:
                 time.sleep(delay)
-        raise FECError('FEC request failed after four attempts')
+        raise FECError(f'FEC request failed after four attempts ({failure}); saved pages will resume on the next run')
 
     def receipts(self, cycle, line, cursor, scope):
         params = {

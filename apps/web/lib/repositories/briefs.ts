@@ -192,7 +192,7 @@ export async function withFrontPageSelections(section: FrontPage, recent: Brief[
 export const getPublishedContributionBrief = cache(async (memberId: string, cycle: number): Promise<Brief | null> => {
   const { data, error } = await liveBriefWithRelationsQuery()
     .eq('primary_item_type', 'campaign_finance').eq('primary_item_id', memberId)
-    .eq('contribution_cycle', cycle).maybeSingle();
+    .eq('contribution_cycle', cycle).order('published_at', { ascending: false }).order('id', { ascending: false }).limit(1).maybeSingle();
   if (error) throw error;
   return data ? normalizeBrief(data as BriefRow, data.related_items ?? []) : null;
 });

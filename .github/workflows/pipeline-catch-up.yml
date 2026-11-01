@@ -10,6 +10,7 @@ on:
       - Classify recent records into topics
       - Check brief pipeline health
       - Weekly reference data sync
+      - Sync FEC individual contributions
     types: [completed]
     branches: [main]
   workflow_dispatch:

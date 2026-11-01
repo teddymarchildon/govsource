@@ -150,7 +150,7 @@ contain query-string credentials.
 
 ## Weekly activation
 
-`data-sync-weekly.yml` retains 06:43 UTC Sunday. FEC runs independently with the
+`data-sync-weekly.yml` runs FEC at 06:43 UTC daily; reference data stays Sunday-only. FEC runs independently with the
 `govsource-fec` lock and a four-hour timeout; the reference job keeps its existing
 CourtListener lock. FEC does not depend on member ingestion because its own
 candidate IDs cover challengers and the member link is optional.
@@ -164,7 +164,7 @@ an explicit `--cycle` run.
 The schema probe reported roughly 178,000 source rows for 2026 before exclusions.
 A nationwide first import can take hours under the default API quota. Request
 exhaustion marks the job partial/nonzero; rerun manually to resume rather than
-waiting until the next Sunday. `last_full_success_at` remains null until a
+waiting for the next daily attempt. `last_full_success_at` remains null until a
 nationwide import completes; a successful pilot does not claim full coverage.
 
 ## Queries

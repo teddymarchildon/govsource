@@ -4,6 +4,8 @@ on:
   schedule:
     # 06:43 UTC each Sunday. Court reference work shares the CourtListener lock.
     - cron: "43 6 * * 0"
+    # Resume FEC staging daily; reference data still runs only on Sunday.
+    - cron: "43 6 * * 1-6"
   workflow_dispatch:
     inputs:
       fec_only:
@@ -21,7 +23,7 @@ permissions:
 jobs:
   sync-reference-data:
     name: Sync reference data
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.fec_only }}
+    if: ${{ (github.event_name == 'schedule' && github.event.schedule == '43 6 * * 0') || (github.event_name == 'workflow_dispatch' && !inputs.fec_only) }}
     concurrency:
       group: govsource-courtlistener
       cancel-in-progress: false

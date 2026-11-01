@@ -78,7 +78,7 @@ python scripts/sync_fec_individuals.py --write
 python scripts/sync_fec_individuals.py --committee C00546358 --restart --write
 ```
 
-The independent `fec-individuals.yml` workflow runs Sundays at 10:43 UTC, with a
+The independent `fec-individuals.yml` workflow runs daily at 10:43 UTC, with a
 four-hour timeout and a 2,200-attempt budget at four seconds between attempts.
 It shares the `govsource-fec` concurrency lock with the party/PAC job to avoid
 concurrent quota use. It is activated when the workflow is pushed to the default
@@ -116,9 +116,10 @@ pagination, missing values and error handling.
 Contribution briefs reconcile imported category totals in cents to current FEC
 committee financial summaries before drafting and again at publication. Partial,
 ambiguous, stale (>8 days), mismatched, or unavailable-source coverage is blocked.
-The same checks run daily and after imports, including when the five-brief pilot
-is full; failures fail the GitHub Actions run and list member IDs and differences
-in its job summary. GitHub notification delivery follows repository/account settings.
+The checks run before each selected development is drafted. Duplicate snapshots,
+small changes, and members with pending editorial work are skipped. Reconciliation
+failures list member IDs in the Actions summary without blocking other members.
+GitHub notification delivery follows repository/account settings.
 Published editorial snapshots are never automatically rewritten.
 
 The admin publisher requires the current verified template points, sources and
