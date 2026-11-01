@@ -30,3 +30,10 @@ def test_uses_latest_attempt_not_list_order():
 
 def test_exact_cadence_is_due():
     assert due([run('2026-10-19T11:30:00Z')], 30, NOW)
+
+
+def test_fec_recovery_is_daily_and_does_not_repeat_reference_sync():
+    from catch_up_pipelines import CADENCES, INPUTS
+    assert CADENCES['data-sync-weekly.yml'] == 1440
+    assert CADENCES['fec-individuals.yml'] == 1440
+    assert INPUTS['data-sync-weekly.yml'] == {'fec_only': 'true'}

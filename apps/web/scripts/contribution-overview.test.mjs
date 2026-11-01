@@ -69,7 +69,7 @@ test('filters escape wildcard search, normalize exact employer values and preser
 function handler({ auth = { user: { id: 'admin' }, isAdmin: true }, found = null, overview = { committees, individuals }, concurrent = false, verificationFails = false, refreshConflict = false } = {}) {
   let inserted = null, reads = 0, updating = false;
   const db = { from(table) {
-    return { select() { return this; }, eq() { return this; },
+    return { select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; },
       update(value) { inserted = value; updating = true; return this; },
       async maybeSingle() { if (updating) return { data: refreshConflict ? null : { ...inserted, id: 4 } }; return { data: table === 'congressman' ? member : (++reads > 1 && concurrent ? { id: 4, title: 'Existing review' } : found), error: null }; },
       insert(value) { inserted = value; return this; },
@@ -133,7 +133,7 @@ test('finance references preserve the reporting cycle and belong to Congress', (
 test('monthly summaries load beyond a database page, combine campaigns and retain undated corrections', async () => {
   const rows = Array.from({ length: 501 }, (_, i) => ({ receiving_committee_id: `C${i}`, month: i === 500 ? null : '2026-01-01', total_amount: i === 500 ? '-1.25' : '0.01', contribution_count: 1 }));
   const db = { from() { let from = 0, to = 499; return {
-    select() { return this; }, eq() { return this; }, in() { return this; }, order() { return this; },
+    select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; }, in() { return this; }, order() { return this; },
     range(start, end) { from = start; to = end; return this; },
     then(resolve) { return Promise.resolve({ data: rows.slice(from, to + 1), error: null }).then(resolve); },
   }; } };

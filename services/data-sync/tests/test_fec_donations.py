@@ -212,3 +212,11 @@ def test_old_committee_staging_restarts_for_report_line_scope():
     assert DatabaseStore(db, 2026, 'all').checkpoint == fresh
     assert db.rpc.call_args_list[-1].args[1]['p_restart'] is True
     assert db.rpc.call_args_list[-1].args[1]['p_scope'] == 'all'
+
+
+def test_exhausted_request_reports_safe_cause_and_resume(monkeypatch):
+    monkeypatch.setattr('sync_fec_donations.time.sleep', lambda _: None)
+    client = FECClient('secret-key', 10, 0, Session([Response(status=503) for _ in range(4)]))
+    with pytest.raises(FECError, match='HTTP 503.*saved pages'):
+        client.get('/schedules/schedule_a/', {})
+    assert client.requests == 4

@@ -126,33 +126,47 @@ Run `npm run test:contributions`, `npm run test:briefs`, and `npx tsc --noEmit` 
 `apps/web`; run `npm run test:database` in `services/data-sync` for schema,
 reporting-view, uniqueness, and access checks.
 
-### Automated contribution draft pilot
+### Continuous campaign-finance drafting
 
-`Draft contribution brief pilot` runs after successful `Weekly reference data sync`
-or `Sync FEC individual contributions` workflows on main, and can be dispatched
-manually. It uses the existing Actions Supabase secrets and the same repository
-summaries and template as the admin UI; no model API key is needed.
+Apply `20261101121359_continuous_contribution_briefs.sql` before deploying these
+workers. `Draft campaign finance briefs` runs daily and after successful FEC
+imports. The former five-per-cycle pilot cap is removed. Draft admissions share
+the existing daily editorial limit with other Brief source types, atomically;
+this is an allowance, not a production target. No additional model spending.
 
-The pilot creates at most **five contribution briefs total per current cycle**,
-counting existing briefs in every status. It skips existing member/cycle briefs
-without editing them. A database uniqueness constraint handles duplicate races;
-Actions concurrency serializes pilot runs. Concurrent manual creation for other
-members can exceed the pilot target, but the automated job itself remains capped.
+Both FEC imports now attempt daily and resume saved pages after failures or quota
+pauses. Weekly reference data remains weekly. Catch-up also dispatches overdue
+FEC attempts daily, with `fec_only=true` for committee recovery and shared API
+concurrency. Import failures remain failures; partial snapshots never replace
+complete public datasets.
 
-Both the nationwide committee import and every eligible individual campaign for
-a selected member must have refreshed since Sunday 00:00 UTC. Insufficiently
-covered members are skipped in stable member-ID order. Consequently the first
-committee-triggered run may wait for the later individual import. The existing
-Sunday imports start at 06:43 UTC (committees) and 10:43 UTC (individuals); generation
-starts after successful completion, not at a fixed time. Failed imports do not
-trigger generation. Run summaries list draft IDs and skip counts.
+Drafting requires complete attributable coverage refreshed within eight days and
+exact reconciliation with the FEC financial summaries. A first overview needs at
+least 100 receipts and $100,000 across the separately reported categories. A
+follow-up needs a change of at least $100,000 AND 10% in either category compared
+with the latest prior brief's evidence. These are explicit editorial triage
+thresholds, not proof of political significance or new donations. Corrections can
+qualify in either direction. Editors must inspect amendments and scope changes.
 
-Drafts have `status=review`, no publication timestamp and no verified publication
-job. They remain outside the automatic publisher and require editorial review in
-`/admin/briefs`. Once the cap is reached, later imports do not create more drafts
-or refresh existing ones. Increase the explicit pilot cap in code only after review.
-Run locally with `npm run briefs:contributions` using server-side `SUPABASE_URL`
-and `SUPABASE_SERVICE_ROLE_KEY`; this command writes unpublished drafts.
+Evidence fingerprints ignore retrieval timestamps and prevent repeated coverage
+of the same snapshot, including archived articles. Pending editorial work blocks
+another automatic draft for that member/cycle. New developments get separate
+review drafts; existing publications and edited drafts are never overwritten.
+A failure for one member does not block other members. Least recently covered
+members go first and each run has a 15-minute processing budget.
+
+Each draft records its reader question, audience, selection reason and prior
+brief ID. Explanatory context distinguishes receipts from available cash,
+employer labels from employer giving, transactions from unique donors, and
+retrieval dates from filing coverage. Sources and signed amounts remain visible;
+political influence is not inferred. This deterministic template does not claim
+an independent AI editorial review. Editors must assess original reader value,
+at least two supported explanatory angles, clear timing and qualifications.
+All drafts require review; publication still rebuilds and checks figures against
+live FEC evidence and cannot be scheduled.
+
+Run `npm run briefs:contributions` with server-side `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY`. Run `npm run test:contributions` for verification.
 
 ## Front-page editorial selections
 

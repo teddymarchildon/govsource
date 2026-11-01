@@ -17,7 +17,7 @@ async function main() {
     process.exitCode = 1;
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Contribution draft pilot\n\nStatus: ${result.blocked.length ? 'failed' : result.waiting.length ? 'waiting — publication blocked' : 'complete'}\n\n${result.reason}\n\n${result.waiting.map(row => `- Waiting, member ${row.memberId}: ${row.reason}`).join('\n')}\n\n${result.blocked.map(row => `- Member ${row.memberId}: ${row.reason}`).join('\n')}\n\nCycle: ${result.cycle}\n\nCreated: ${result.created.length}; existing: ${result.existing}; insufficient fresh coverage: ${result.ineligible}.\n\nDraft IDs: ${result.created.join(', ') || 'none'}.\n\n[Review drafts](https://www.govsrc.com/admin/briefs)\n`);
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Campaign-finance developments\n\nStatus: ${result.blocked.length ? 'failed' : result.waiting.length ? 'waiting — publication blocked' : 'complete'}\n\n${result.reason}\n\n${result.waiting.map(row => `- Waiting, member ${row.memberId}: ${row.reason}`).join('\n')}\n\n${result.blocked.map(row => `- Member ${row.memberId}: ${row.reason}`).join('\n')}\n\nCycle: ${result.cycle}\n\nCreated: ${result.created.length}; existing: ${result.existing}; unchanged/not selected: ${result.unchanged}; insufficient fresh coverage: ${result.ineligible}.\n\nDraft IDs: ${result.created.join(', ') || 'none'}.\n\n[Review drafts](https://www.govsrc.com/admin/briefs)\n`);
   }
 }
 main().catch(error => { console.error('Contribution draft job failed:', error.message); process.exitCode = 1; });

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getCurrentUserAndAdminStatus } from '@/utils/adminAuth';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { getContributionOverview } from '@/lib/repositories/contributionOverview';
-import { buildContributionBrief } from '@/lib/contributionBrief';
+import { buildContributionBrief, contributionFingerprint } from '@/lib/contributionBrief';
 
 const Input = z.object({ refresh: z.boolean().default(false), memberId: z.number().int().positive(), cycle: z.number().int().min(1980).max(2200).refine(n => n % 2 === 0) });
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const { memberId, cycle, refresh } = parsed.data;
   const db = createAdminClient();
   const existing = () => db.from('brief').select('*').eq('primary_item_type', 'campaign_finance')
-    .eq('primary_item_id', memberId).eq('contribution_cycle', cycle).maybeSingle();
+    .eq('primary_item_id', memberId).eq('contribution_cycle', cycle).order('id', { ascending: false }).limit(1).maybeSingle();
   try {
     const found = await existing();
     if (found.error) throw found.error;
@@ -31,7 +31,11 @@ export async function POST(request: Request) {
     try { draft = buildContributionBrief(member.data, committees, individuals, await verifyContributionFigures(committees, individuals)); }
     catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Coverage is insufficient.' }, { status: 422 }); }
     if (found.data) {
-      const saved = await db.from('brief').update({ ...draft, updated_by: user.id }).eq('id', found.data.id).eq('version', found.data.version).select('*').maybeSingle();
+      const fingerprint = found.data.generation_metadata?.fingerprint ? contributionFingerprint(committees, individuals) : undefined;
+      const saved = await db.from('brief').update({ ...draft,
+        ...(fingerprint ? { slug: `${draft.slug}-${fingerprint.slice(0, 16)}`,
+          generation_metadata: { ...found.data.generation_metadata, ...draft.generation_metadata, fingerprint } } : {}),
+        updated_by: user.id }).eq('id', found.data.id).eq('version', found.data.version).select('*').maybeSingle();
       if (saved.error) throw saved.error;
       if (!saved.data) return NextResponse.json({ error: 'The draft changed during review. Reload it before refreshing.' }, { status: 409 });
       return NextResponse.json({ brief: saved.data, refreshed: true });

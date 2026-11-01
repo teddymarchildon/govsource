@@ -10,7 +10,10 @@ CADENCES = {
     'sync-federal-register.yml': 60,
     'sync-congress.yml': 120,
     'brief-processing.yml': 30,
+    'data-sync-weekly.yml': 1440,
+    'fec-individuals.yml': 1440,
 }
+INPUTS = {'data-sync-weekly.yml': {'fec_only': 'true'}}
 ACTIVE = {'queued', 'in_progress', 'waiting', 'pending', 'requested'}
 
 
@@ -43,7 +46,7 @@ def main():
             active.extend(api(f'/{workflow}/runs?branch=main&status={status}&per_page=1')['workflow_runs'])
         runs = api(f'/{workflow}/runs?branch=main&per_page=30')['workflow_runs']
         if due(active + runs, minutes, now):
-            api(f'/{workflow}/dispatches', {'ref': 'main'})
+            api(f'/{workflow}/dispatches', {'ref': 'main', 'inputs': INPUTS.get(workflow, {})})
             print(f'Dispatched overdue workflow: {workflow}')
         else:
             print(f'Active or recently attempted: {workflow}')

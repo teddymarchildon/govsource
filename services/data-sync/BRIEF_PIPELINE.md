@@ -35,8 +35,10 @@ or word-count target establishes AdSense eligibility.
 The admin pipeline screen exposes the daily draft limit. Health checks no longer
 require publication every 48 hours or treat paused publication as an error in
 editorial mode; source failures and stalled/overdue processing remain visible.
-The separate campaign-finance pilot is already limited to five total Briefs per
-cycle and requires review; it is not a five-per-day generator.
+Campaign-finance developments use the same daily draft allowance and require
+review. The former five-total-per-cycle pilot is removed. Material-change
+selection, evidence fingerprints, full coverage and FEC reconciliation prevent
+refresh-only articles and duplicates. See the web README for the thresholds.
 
 AdSense ad serving is disabled in the root layout; the account-verification meta
 tag remains. Before enabling ads, audit the intended pages and configure the
