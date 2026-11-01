@@ -8,6 +8,10 @@ from generate_briefs_batch import response_text
 import json
 import logging
 import time
+import re
+from threading import Event
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +52,57 @@ class DraftLimitReached(BudgetExhausted):
     """Keep screening candidates even when no new drafts may start today."""
 
 
+class ProviderPaused(RuntimeError):
+    """A provider rejection stops all workers in this run, without losing work."""
+
+
+class ProviderPause:
+    def __init__(self):
+        self.stopped = Event()
+        self.retry_after_seconds = 1800
+
+    def check(self):
+        if self.stopped.is_set():
+            raise ProviderPaused('Provider returned HTTP 429; remaining work paused until a later run')
+
+
+def rejection_diagnostics(response, stage, model):
+    # Only machine-readable identifiers and selected headers are safe to log.
+    # Never log the error message/body, which can echo input or credentials.
+    def identifier(value):
+        return value if isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,160}', value) else None
+    try:
+        body = response.json()
+    except ValueError:
+        body = {}
+    error = body.get('error', {}) if isinstance(body, dict) else {}
+    error = error if isinstance(error, dict) else {}
+    code, kind = identifier(error.get('code')), identifier(error.get('type'))
+    quota_codes = {'insufficient_quota', 'credit_balance_exhausted',
+                   'organization_spend_limit_exceeded', 'project_spend_limit_exceeded',
+                   'organization_usage_limit_exceeded', 'billing_hard_limit_reached'}
+    category = ('quota' if code in quota_codes or kind == 'insufficient_quota' else
+                'rate_limit' if code in {'rate_limit_exceeded', 'slow_down'} or kind == 'rate_limit_error' else 'unknown_429')
+    retry_after = None
+    raw = response.headers.get('retry-after')
+    if raw:
+        try:
+            retry_after = float(raw)
+        except (TypeError, ValueError):
+            try:
+                retry_after = (parsedate_to_datetime(raw)-datetime.now(timezone.utc)).total_seconds()
+            except (TypeError, ValueError, OverflowError):
+                pass
+        if retry_after is not None and (not math.isfinite(retry_after) or retry_after < 0):
+            retry_after = None
+    return {'http_status': 429, 'stage': stage, 'model': model, 'category': category,
+            'error_code': code, 'error_type': kind,
+            'request_id': identifier(response.headers.get('x-request-id')),
+            'retry_after_seconds': retry_after,
+            'action': 'Check API credits and account/project limits' if category == 'quota' else
+                      'Pause this run; retry later, respecting Retry-After'}
+
+
 class IncompleteResponse(ValueError):
     """Provider diagnostics without prompts, evidence, or credentials."""
 
@@ -85,6 +140,7 @@ class AI:
             raise ValueError('Model price ceilings must be finite and positive')
         self.key = os.environ['OPENAI_API_KEY']
         self.deadline = None
+        self.provider_pause = ProviderPause()
 
     def call(self, stage: str, instructions: str, payload: Any, schema: dict, *, verify=False) -> dict:
         # A token-limit retry is a new, separately reserved request. Other failures
@@ -115,6 +171,7 @@ class AI:
         raise AssertionError('Unreachable')
 
     def _call(self, stage, instructions, payload, schema, verify, output_bound):
+        self.provider_pause.check()
         model = self.verifier if verify else self.writer
         content = json.dumps(payload, ensure_ascii=False)
         instructions = BASE + instructions
@@ -129,9 +186,34 @@ class AI:
             if 'budget exhausted' in str(exc).lower():
                 raise BudgetExhausted('Daily AI budget exhausted; deferred') from exc
             raise
+        if self.provider_pause.stopped.is_set():
+            # A peer may have paused while this reservation was in flight.
+            try:
+                self.db.table('brief_api_call').update({'actual_usd': 0, 'status': 'completed',
+                    'usage': {'response_diagnostics': {'status': 'not_sent', 'reason': 'provider_paused'}}}
+                ).eq('id', reservation).execute()
+            except Exception:
+                log.error('Could not release unsent request reservation %s; reservation retained', reservation)
+            finally:
+                self.provider_pause.check()
         response = requests.post('https://api.openai.com/v1/responses', headers={'Authorization':f'Bearer {self.key}'},
             json={'model':model,'store':False,'instructions':instructions,'input':content,'max_output_tokens':output_bound,
                   'text':{'format':{'type':'json_schema','name':f'brief_{stage}','strict':True,'schema':schema}}},timeout=(15,self.request_timeout))
+        if getattr(response, 'status_code', None) == 429:
+            # Signal peers before parsing or accounting: even a database failure
+            # must not let the rest of the queue continue spending.
+            self.provider_pause.stopped.set()
+            diagnostics = rejection_diagnostics(response, stage, model)
+            self.provider_pause.retry_after_seconds = max(1800, diagnostics['retry_after_seconds'] or 0)
+            log.error('brief_provider_paused %s', json.dumps(diagnostics))
+            try:
+                # Explicit HTTP rejection did not generate a response. Preserve
+                # the audit row but release its reservation from accounted spend.
+                self.db.table('brief_api_call').update({'actual_usd': 0, 'status': 'completed',
+                    'usage': {'response_diagnostics': diagnostics}}).eq('id', reservation).execute()
+            except Exception:
+                log.error('Could not release rejected request reservation %s; reservation retained', reservation)
+            raise ProviderPaused(json.dumps(diagnostics))
         response.raise_for_status()
         body = response.json()
         usage = body.get('usage') or {}

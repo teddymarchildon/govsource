@@ -325,3 +325,26 @@ publishing a replacement. Preparation failures and verification failures remain
 visible in Recent generation requests; editors can retry once the source or
 underlying issue is resolved. A changed source invalidates queued manual evidence
 and requires a fresh request.
+
+## Provider throttling and quota failures
+
+An HTTP 429 stops all processor workers for the remainder of that run. Requests
+already in flight can finish, but workers check the shared pause before reserving
+another call or claiming another job. Active jobs return to retry with saved work
+intact and their claim attempt restored, eligible after at least 30 minutes (or a
+longer provider Retry-After). The run remains unsuccessful so monitoring does not
+mistake a provider outage for successful processing. The pause is run-scoped:
+later scheduled runs can probe again; it does not disable the workflow globally.
+
+`brief_provider_paused` logs include stage, model, HTTP status, error code/type,
+category (`rate_limit`, `quota`, or `unknown_429`), request ID and parsed Retry-After
+seconds. Raw error messages, response bodies, prompts and credentials are omitted.
+Quota includes credit balance, organization/project spend, and usage-limit errors;
+these require account attention rather than rapid retries. Unknown/malformed 429s
+still pause safely. See the [OpenAI error-code reference](https://developers.openai.com/api/docs/guides/error-codes).
+
+Explicitly rejected 429 requests settle their existing ledger reservation at zero
+actual dollars, retaining the audit record and diagnostics. This does not rewrite
+historical reservations or change the daily draft-count policy. Timeouts and other
+uncertain failures retain reservations. If settlement fails, the run still pauses
+and logs that the reservation was retained for reconciliation.

@@ -146,3 +146,84 @@ def test_json_validation_preserves_literal_escape_and_unicode():
     value = {'quote': r'An example of \u0000, with café and 日本語.'}
     brief_ai.validate_json_text(value)
     assert value['quote'] == r'An example of \u0000, with café and 日本語.'
+
+
+@pytest.mark.parametrize('code,kind,category', [
+    ('rate_limit_exceeded', 'tokens', 'rate_limit'),
+    ('slow_down', 'rate_limit_error', 'rate_limit'),
+    ('insufficient_quota', 'insufficient_quota', 'quota'),
+    ('credit_balance_exhausted', 'insufficient_quota', 'quota'),
+    ('project_spend_limit_exceeded', 'insufficient_quota', 'quota'),
+    (None, None, 'unknown_429'),
+])
+def test_429_stops_peer_before_reserving_and_releases_budget(setup, monkeypatch, caplog, code, kind, category):
+    db, ai = setup
+    calls = []
+    def post(*args, **kwargs):
+        calls.append(1)
+        return SimpleNamespace(status_code=429, headers={'x-request-id': 'req-123', 'retry-after': '120'},
+            json=lambda: {'error': {'code': code, 'type': kind, 'message': 'test-secret sensitive input'}})
+    monkeypatch.setattr(brief_ai.requests, 'post', post)
+    with pytest.raises(brief_ai.ProviderPaused):
+        ai.call('selection', 'private prompt', {}, {})
+    peer = AI(db, 2)
+    peer.provider_pause = ai.provider_pause
+    with pytest.raises(brief_ai.ProviderPaused):
+        peer.call('write', 'private prompt', {}, {})
+    assert len(calls) == len(db.reservations) == 1
+    assert db.updates[0]['actual_usd'] == 0
+    diagnostic = db.updates[0]['usage']['response_diagnostics']
+    assert diagnostic['category'] == category
+    assert diagnostic['request_id'] == 'req-123'
+    assert diagnostic['retry_after_seconds'] == 120
+    assert 'test-secret' not in caplog.text and 'private prompt' not in caplog.text
+
+
+def test_non_json_429_still_stops_when_accounting_fails(setup, monkeypatch, caplog):
+    db, ai = setup
+    def invalid_json(): raise ValueError('private body')
+    def failed_update(_): raise ConnectionError('private database error')
+    db.update = failed_update
+    monkeypatch.setattr(brief_ai.requests, 'post', lambda *a, **k:
+        SimpleNamespace(status_code=429, headers={}, json=invalid_json))
+    with pytest.raises(brief_ai.ProviderPaused, match='unknown_429'):
+        ai.call('selection', '', {}, {})
+    assert ai.provider_pause.stopped.is_set()
+    assert 'private' not in caplog.text
+    assert 'reservation retained' in caplog.text
+
+
+def test_500_keeps_reservation_and_original_error(setup, monkeypatch):
+    db, ai = setup
+    def fail(): raise brief_ai.requests.HTTPError('500 server error')
+    monkeypatch.setattr(brief_ai.requests, 'post', lambda *a, **k:
+        SimpleNamespace(status_code=500, raise_for_status=fail))
+    with pytest.raises(brief_ai.requests.HTTPError): ai.call('selection', '', {}, {})
+    assert len(db.reservations) == 1 and not db.updates
+
+
+def test_peer_pause_during_reservation_prevents_http_request(setup, monkeypatch):
+    db, ai = setup
+    reserve = db.rpc
+    def rpc(*args):
+        ai.provider_pause.stopped.set()
+        return reserve(*args)
+    db.rpc = rpc
+    monkeypatch.setattr(brief_ai.requests, 'post', lambda *a, **k: pytest.fail('Request sent after pause'))
+    with pytest.raises(brief_ai.ProviderPaused): ai.call('selection', '', {}, {})
+    assert db.updates[0]['actual_usd'] == 0
+    assert db.updates[0]['usage']['response_diagnostics']['status'] == 'not_sent'
+
+
+@pytest.mark.parametrize('raw', ['garbage', 'NaN', 'Infinity', '-1'])
+def test_invalid_retry_after_is_safe(raw):
+    response = SimpleNamespace(headers={'retry-after': raw}, json=lambda: [])
+    assert brief_ai.rejection_diagnostics(response, 'selection', 'model')['retry_after_seconds'] is None
+
+
+def test_retry_after_http_date():
+    from datetime import datetime, timedelta, timezone
+    from email.utils import format_datetime
+    response = SimpleNamespace(headers={'retry-after': format_datetime(datetime.now(timezone.utc)+timedelta(hours=1))}, json=lambda: {})
+    delay = brief_ai.rejection_diagnostics(response, 'selection', 'model')['retry_after_seconds']
+    assert 3590 < delay <= 3600

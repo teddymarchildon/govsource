@@ -15,7 +15,7 @@ from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
-from brief_ai import AI, BudgetExhausted, DraftLimitReached, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_ai import AI, BudgetExhausted, DraftLimitReached, ProviderPause, ProviderPaused, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
 from brief_requests import discover_requests
 from brief_editorial import editorial_rank, rank_queue, quality_passes, EDITORIAL_WRITING, EDITORIAL_VERIFICATION
 from brief_style import PLAIN_ENGLISH_STYLE
@@ -237,7 +237,7 @@ def complete(db: Any, job: dict, token: str, status: str, reason: str, *, draft=
         'p_verifier':ai.verifier if ai else '', 'p_prompt':PROMPT_VERSION}).execute()
 
 
-def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> str:
+def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, provider_pause=None) -> str:
     # Queued jobs can predate source validation and contain cached bad evidence.
     try:
         validate_packet(job['evidence'])
@@ -252,6 +252,9 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None) -> 
         return 'skipped'
     ai = ai_factory(db,job['id'])
     ai.deadline = deadline
+    if provider_pause is not None:
+        ai.provider_pause = provider_pause
+        provider_pause.check()
     work = job.get('work') or {}
     if work.get('prompt_version') != PROMPT_VERSION:
         work={}
@@ -436,10 +439,11 @@ def publish_ready(db: Any, limit: int) -> int:
     return published
 
 
-def process_queue(db, limit, deadline, queue='current'):
+def process_queue(db, limit, deadline, queue='current', provider_pause=None):
+    provider_pause = provider_pause or ProviderPause()
     summary = {'failed':0, 'processed':0, 'claimed':0}
     for _ in range(limit):
-        if time.monotonic()>deadline-180:
+        if provider_pause.stopped.is_set() or time.monotonic()>deadline-180:
             break
         token = str(uuid4())
         rows = db.rpc('claim_brief_job',{'p_token':token,'p_queue':queue}).execute().data or []
@@ -448,9 +452,26 @@ def process_queue(db, limit, deadline, queue='current'):
         job = rows[0]
         summary['claimed'] += 1
         try:
-            status = process(db,job,token,deadline=deadline-180)
+            provider_pause.check()
+            status = process(db,job,token,deadline=deadline-180,provider_pause=provider_pause)
             summary[status]=summary.get(status,0)+1
             summary['processed'] += 1
+        except ProviderPaused as exc:
+            provider_pause.stopped.set()
+            # Return this lease without spending a job retry or discarding its
+            # saved selection/extraction. Only the owning worker may release it.
+            now = datetime.now(timezone.utc)
+            result = db.table('brief_job').update({'status': 'retry',
+                'attempts': max(0, job.get('attempts', 1)-1),
+                'lease_token': None, 'lease_until': None,
+                'next_attempt_at': (now+timedelta(seconds=min(provider_pause.retry_after_seconds, 315360000))).isoformat(),
+                'last_error': str(exc)[:1000], 'updated_at': now.isoformat()
+            }).eq('id',job['id']).eq('lease_token',token).eq('status','processing').gt('lease_until',now.isoformat()).execute()
+            if not result.data:
+                raise RuntimeError('Job lease lost while pausing provider work')
+            summary['provider_paused'] = summary.get('provider_paused',0)+1
+            log.warning('Job %s deferred; provider paused: %s', job['id'], exc)
+            break
         except ResponseWithheld as exc:
             complete(db,job,token,'withheld',str(exc)[:1000])
             summary['withheld']=summary.get('withheld',0)+1
@@ -519,9 +540,10 @@ def main() -> int:
     if not args.discover_only:
         # Each worker owns its HTTP client; database claims and budget reservations
         # remain atomic across workers. The combined job limit is unchanged.
+        provider_pause = ProviderPause()
         def worker(index):
             limit = args.limit//args.workers + int(index < args.limit%args.workers)
-            return process_queue(create_supabase_client(),limit,deadline,args.queue)
+            return process_queue(create_supabase_client(),limit,deadline,args.queue,provider_pause=provider_pause)
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             for result in pool.map(worker,range(args.workers)):
                 for key,value in result.items():
@@ -530,7 +552,7 @@ def main() -> int:
         summary['published']=publish_ready(db,args.limit)
     summary['queue']=args.queue
     log.info('brief_pipeline_summary %s',json.dumps(summary))
-    return 1 if summary['failed'] else 0
+    return 1 if summary['failed'] or summary.get('provider_paused') else 0
 
 
 if __name__=='__main__':

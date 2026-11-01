@@ -547,7 +547,9 @@ def test_four_workers_preserve_total_limit_and_independent_clients(monkeypatch):
     monkeypatch.setattr(process_briefs, 'discover', lambda *args, **kwargs: {})
     monkeypatch.setattr(process_briefs, 'rank_queue', lambda *args, **kwargs: {})
     monkeypatch.setattr(process_briefs, 'filter_queue', lambda *args, **kwargs: {})
-    def worker(db, limit, deadline, queue):
+    pauses = []
+    def worker(db, limit, deadline, queue, provider_pause=None):
+        pauses.append(provider_pause)
         calls.append((db, limit, deadline, queue))
         return {'failed': 0, 'processed': limit}
     monkeypatch.setattr(process_briefs, 'process_queue', worker)
@@ -556,6 +558,7 @@ def test_four_workers_preserve_total_limit_and_independent_clients(monkeypatch):
     assert len({id(call[0]) for call in calls}) == 4
     assert len({call[2] for call in calls}) == 1
     assert all(call[3] == 'current' for call in calls)
+    assert len({id(pause) for pause in pauses}) == 1
 
 
 def test_blocked_queue_does_not_impersonate_runnable_backlog():
