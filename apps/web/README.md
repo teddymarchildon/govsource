@@ -128,7 +128,7 @@ reporting-view, uniqueness, and access checks.
 
 ### Continuous campaign-finance drafting
 
-Apply `20261101121359_continuous_contribution_briefs.sql` before deploying these
+Apply `20261101122118_continuous_contribution_briefs.sql` before deploying these
 workers. `Draft campaign finance briefs` runs daily and after successful FEC
 imports. The former five-per-cycle pilot cap is removed. Draft admissions share
 the existing daily editorial limit with other Brief source types, atomically;

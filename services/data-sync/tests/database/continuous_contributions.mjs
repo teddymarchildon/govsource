@@ -8,7 +8,7 @@ create table brief_pipeline_settings(id boolean primary key, daily_draft_limit i
 insert into brief_pipeline_settings values(true,2,5);
 create table brief_api_call(id uuid default gen_random_uuid(),job_id bigint,model text,stage text,reserved_usd numeric,actual_usd numeric,budget_day date default current_date);
 `);
-for(const file of ['20260820192741_replace_articles_with_briefs.sql','20260906235854_fec_committee_contributions.sql','20260920195644_fec_individual_contributions.sql','20261011005959_contribution_overviews.sql','20261101121359_continuous_contribution_briefs.sql'])
+for(const file of ['20260820192741_replace_articles_with_briefs.sql','20260906235854_fec_committee_contributions.sql','20260920195644_fec_individual_contributions.sql','20261011005959_contribution_overviews.sql','20261101122118_continuous_contribution_briefs.sql'])
  await db.exec(readFileSync(new URL(`../../../../apps/web/supabase/migrations/${file}`,import.meta.url),'utf8'));
 const scalar=async sql=>Object.values((await db.query(sql)).rows[0])[0];
 const draft=(member,key)=>({title:'Funding explained',slug:`funding-${member}-${key}`,dek:'What voters can infer',primary_item_type:'campaign_finance',primary_item_id:member,contribution_cycle:2026,points:[{text:'A'},{text:'B'},{text:'C'}],sources:[{id:'fec',url:'https://www.fec.gov'}],context_markdown:'Explainer',generation_metadata:{trigger:'contribution-continuous',fingerprint:key.repeat(64),verification:{checkedAt:new Date().toISOString()},selection:{selected:true}}});
