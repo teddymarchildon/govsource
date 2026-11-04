@@ -17,6 +17,15 @@ def latest_publication(db, now):
     return rows[0]['published_at'] if rows else None
 
 
+def allowance_message(data):
+    # The existing deferral RPC is shared by both the draft cap and dollar cap.
+    # Its historical name/error cannot establish that the dollar budget was spent.
+    return (f"{data.get('budget_deferred_current', 0)} current briefs are deferred by the daily drafting or spending allowance "
+        f"until {data.get('budget_resets_at')}; daily draft limit: {data['settings'].get('daily_draft_limit', 'unknown')}; "
+        f"accounted ${data['spending'].get('accounted_usd', 0)} of ${data['settings']['daily_budget_usd']}. "
+        "A draft-limit deferral does not mean the dollar budget is exhausted. Overdue work remains in health checks.")
+
+
 def problems(overview, now=None):
     now=now or datetime.now(timezone.utc)
     alerts=[]
@@ -63,15 +72,15 @@ if __name__=='__main__':
     alerts=problems(data,now)
     budget_deferred=data.get('budget_deferred_current',0)
     if budget_deferred:
-        print(f"::warning::{budget_deferred} current briefs are waiting for the daily AI budget reset at {data.get('budget_resets_at')}; "
-            f"accounted ${data['spending'].get('accounted_usd',0)} of ${data['settings']['daily_budget_usd']}. Overdue work remains in health checks.")
+        print('::warning::' + allowance_message(data))
     if os.getenv('GITHUB_STEP_SUMMARY'):
         with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
             summary.write(
                 '# Brief pipeline health\n\n'
                 + ('Attention required' if alerts else 'Healthy') + '\n\n'
                 + '\n'.join('- '+alert for alert in alerts) + '\n\n'
-                + f"Current waiting: {data.get('current_waiting',0)}. Budget-deferred: {budget_deferred}.\n\n"
+                + f"Current waiting: {data.get('current_waiting',0)}. Daily-allowance deferred: {budget_deferred}.\n\n"
+                + f"Daily draft limit: {data['settings'].get('daily_draft_limit', 'unknown')}.\n\n"
                 + f"AI budget: ${data['spending'].get('accounted_usd',0)} / ${data['settings']['daily_budget_usd']}; "
                 + f"resets at {data.get('budget_resets_at')}.\n")
     for alert in alerts:

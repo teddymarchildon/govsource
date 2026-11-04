@@ -600,6 +600,16 @@ def test_budget_limit_does_not_hide_overdue_work():
         'Current-news brief backlog contains work older than 24 hours']
 
 
+def test_draft_allowance_warning_does_not_claim_the_dollar_budget_was_spent():
+    from check_brief_pipeline import allowance_message
+    message = allowance_message({'budget_deferred_current': 89, 'budget_resets_at': '2026-11-05T00:00:00Z',
+        'settings': {'daily_draft_limit': 5, 'daily_budget_usd': 5}, 'spending': {'accounted_usd': 0.859162}})
+    assert 'daily draft limit: 5' in message
+    assert 'accounted $0.859162 of $5' in message
+    assert 'does not mean the dollar budget is exhausted' in message
+    assert 'Overdue work remains in health checks' in message
+
+
 def test_empty_context_is_withheld():
     d = draft()
     d['context'] = {'text':'','evidence':[]}

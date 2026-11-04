@@ -65,8 +65,12 @@ class FECClient:
         # Retries are explicit so every HTTP attempt consumes the budget.
         self.session = session or build_http_session(retries=0)
         self.limiter = RateLimiter(minimum_interval)
+        self.receipt_page_size = 100
 
     def get(self, path, params):
+        params = dict(params)
+        if path == '/schedules/schedule_a/' and 'per_page' in params:
+            params['per_page'] = min(params['per_page'], self.receipt_page_size)
         failure = 'unknown response'
         for attempt in range(4):
             if self.requests >= self.max_requests:
@@ -93,7 +97,12 @@ class FECClient:
                 if status not in (429, 500, 502, 503, 504):
                     raise FECError(f'FEC request failed (HTTP {status})')
                 delay = response.headers.get('Retry-After', '')
-                delay = float(delay) if delay.isdigit() else 2 ** (attempt + 1)
+                delay = float(delay) if delay.isdigit() else min(60, 10 * 2 ** attempt)
+                if status == 504 and path == '/schedules/schedule_a/' and 'per_page' in params:
+                    # Keep the exact cursor and filters: only reduce response size.
+                    # Remember it for subsequent pages so a large campaign can progress.
+                    self.receipt_page_size = max(10, params['per_page'] // 2)
+                    params['per_page'] = self.receipt_page_size
                 # Long quota resets should yield the run, not hold a worker/lease.
                 if delay > 60:
                     if status == 429:
@@ -101,7 +110,7 @@ class FECClient:
                     raise FECError(f'FEC service unavailable (HTTP {status}); retry later')
             except requests.RequestException as exc:
                 failure = type(exc).__name__
-                delay = 2 ** (attempt + 1)
+                delay = min(60, 10 * 2 ** attempt)
             finally:
                 if response is not None:
                     response.close()
