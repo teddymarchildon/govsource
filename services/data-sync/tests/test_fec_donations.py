@@ -220,3 +220,33 @@ def test_exhausted_request_reports_safe_cause_and_resume(monkeypatch):
     with pytest.raises(FECError, match='HTTP 503.*saved pages'):
         client.get('/schedules/schedule_a/', {})
     assert client.requests == 4
+
+
+def test_gateway_timeout_shrinks_pages_without_changing_cursor_or_filters(monkeypatch):
+    sleeps, calls = [], []
+    monkeypatch.setattr('sync_fec_donations.time.sleep', sleeps.append)
+    body = {'results': [], 'pagination': {}}
+    class RecordingSession(Session):
+        def get(self, *args, **kwargs):
+            calls.append(dict(kwargs['params']))
+            return super().get(*args, **kwargs)
+    session = RecordingSession([Response(status=504), Response(status=504), Response(body), Response(body)])
+    client = FECClient('secret', 10, 0, session)
+    params = {'per_page': 100, 'last_index': '1234567890123456789', 'committee_id': 'C00543983', 'line_number': 'F3-11AI'}
+    assert client.get('/schedules/schedule_a/', params) == body
+    assert client.get('/schedules/schedule_a/', params) == body
+    assert [call['per_page'] for call in calls] == [100, 50, 25, 25]
+    assert sleeps == [10, 20]
+    assert params['per_page'] == 100
+    assert all({k: call[k] for k in params if k != 'per_page'} == {k: v for k, v in params.items() if k != 'per_page'} for call in calls)
+    assert client.requests == 4
+
+
+def test_retries_respect_upstream_retry_after(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr('sync_fec_donations.time.sleep', sleeps.append)
+    response = Response(status=429)
+    response.headers = {'Retry-After': '45'}
+    client = FECClient('secret', 10, 0, Session([response, Response({'results': [], 'pagination': {}})]))
+    client.get('/candidates/', {})
+    assert sleeps == [45]
