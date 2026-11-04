@@ -34,6 +34,7 @@ def test_memo_receipts_are_excluded(changes):
 @pytest.mark.parametrize('changes', [
     {'line_number': '11B'}, {'committee_id': 'C00546358'},
     {'contributor_employer': {}}, {'contribution_receipt_amount': 'NaN'}, {'memo_code': 'unexpected'},
+    {'recipient_committee_type': 'P'}, {'recipient_committee_designation': 'J'},
 ])
 def test_invalid_or_out_of_scope_individual_receipts_fail(changes):
     with pytest.raises(FECError):
@@ -55,6 +56,9 @@ def test_individual_api_filters():
     assert path == '/schedules/schedule_a/'
     assert params['line_number'] == 'F3-11AI' and 'is_individual' not in params
     assert params['last_index'] == '9999999999999999999'
+    assert params['committee_id'] == 'C00442921'
+    assert 'recipient_committee_type' not in params and 'recipient_committee_designation' not in params
+    assert params['sort_hide_null'] == 'true'
 
 
 def page(rows, index='100'):

@@ -24,12 +24,13 @@ LOG = logging.getLogger(__name__)
 
 class IndividualClient(FECClient):
     def individual_receipts(self, cycle, committee, cursor):
-        return self.get('/schedules/schedule_a/', {
+        return self.receipt_page({
             'committee_id': committee, 'two_year_transaction_period': cycle,
             'line_number': 'F3-11AI',
-            'recipient_committee_type': ['H', 'S'], 'recipient_committee_designation': ['P', 'A'],
-            'per_page': 100, 'sort': 'contribution_receipt_date', 'sort_nulls_last': 'true', **cursor,
-        })
+            # Exact eligible campaign; avoid redundant FEC metadata joins.
+            # normalize_receipt still checks type/designation before staging.
+            'per_page': 100,
+        }, cursor)
 
 
 class IndividualStore:
