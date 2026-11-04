@@ -1,0 +1,26 @@
+{
+  "committee_id": "C00543983",
+  "candidate_id": "S4LA00107",
+  "cycle": 2026,
+  "checked_on": "2026-11-04",
+  "filing": 2023276,
+  "coverage_start": "2026-07-01",
+  "coverage_end": "2026-09-30",
+  "source_csv": "https://docquery.fec.gov/csv/276/2023276.csv",
+  "source_pdf": "https://docquery.fec.gov/pdf/850/202610159908891850/202610159908891850.pdf",
+  "source_csv_sha256": "ea9d5d97727620ecc710881e9f2bc382515579f678e73d5553c641fddec341f0",
+  "format_version": "8.5",
+  "included_receipt_count": 378,
+  "included_receipt_net": "-373393.99",
+  "memo_receipt_count": 1,
+  "excluded_memo_net": "1700.00",
+  "imported_receipts_net": "2500362.18",
+  "fec_summary_net": "2126968.19",
+  "reconciled_net": "2126968.19",
+  "finding": "The original Q3 filing contains negative itemized contributions, predominantly chargebacks. The imported processed Schedule A data has no Q3 receipts. The original non-memo entries explain the entire discrepancy. Do not fabricate processed sub_ids or change imported totals; preserve the publication hold until authoritative receipt coverage is restored.",
+  "processed_api_check": {
+    "date_filter": "min_date=2026-07-01",
+    "results": 0,
+    "checked_on": "2026-11-04"
+  }
+}

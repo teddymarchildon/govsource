@@ -123,13 +123,30 @@ class FECClient:
             'two_year_transaction_period': cycle, 'line_number': 'F3-' + line,
             'recipient_committee_type': ['H', 'S'],
             'recipient_committee_designation': ['P', 'A'],
-            'per_page': 100, 'sort': 'contribution_receipt_date',
-            'sort_nulls_last': 'true', **cursor,
+            'per_page': 100,
         }
         if scope != 'all':
             params['committee_id'] = scope
-        # Requests serializes Python True as "True", accepted by the FEC API.
-        return self.get('/schedules/schedule_a/', params)
+        return self.receipt_page(params, cursor)
+
+    def receipt_page(self, params, cursor):
+        # FEC's coalesced date/null paginator can bypass its date index (#6646).
+        # Scan dated rows first, then undated rows explicitly. Never omit undated
+        # corrections, or infer completion from a short/approximate-count page.
+        nulls = cursor.get('sort_null_only') is True
+        params = {**params, **cursor, 'sort': 'contribution_receipt_date'}
+        if nulls:
+            params.pop('last_contribution_receipt_date', None)
+            params['sort_null_only'] = 'true'
+        else:
+            params.pop('sort_null_only', None)
+            params['sort_hide_null'] = 'true'
+            if cursor.get('last_contribution_receipt_date'):
+                # Inclusive: the seek cursor still handles ties on this date.
+                # Earlier dates have already been saved by this ascending scan.
+                params['min_date'] = cursor['last_contribution_receipt_date']
+        body = self.get('/schedules/schedule_a/', params)
+        return {**body, '_receipt_partition': 'undated' if nulls else 'dated'}
 
     def candidates(self, ids):
         result, page = {}, 1
@@ -158,11 +175,16 @@ class FECClient:
 
 def next_cursor(body, previous):
     if not body['results']:
+        if body.get('_receipt_partition') == 'dated':
+            return {'sort_null_only': True}
         return None
     cursor = body['pagination'].get('last_indexes')
     if not isinstance(cursor, dict) or not cursor.get('last_index') or not set(cursor).issubset(CURSOR_KEYS):
         raise FECError('FEC receipt pagination omitted a valid cursor')
     cursor = {k: v for k, v in cursor.items() if v is not None}
+    if body.get('_receipt_partition') == 'undated':
+        cursor.pop('last_contribution_receipt_date', None)
+        cursor['sort_null_only'] = True
     if cursor == previous:
         raise FECError('FEC receipt pagination repeated its cursor')
     # Do not use approximate counts or a short page as a completion signal.
