@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import BriefCard from './BriefCard';
 import { getPublishedBriefs, withFrontPageSelections } from '@/lib/repositories/briefs';
-import BriefFrontPage from './BriefFrontPage';
+import HomeFrontPage from '@/components/home/HomeFrontPage';
 import { selectFrontPageBriefs } from '@/utils/briefSelection';
 
 export default async function BriefFeed({ campaignFinance = false }: { campaignFinance?: boolean }) {
@@ -23,7 +23,7 @@ export default async function BriefFeed({ campaignFinance = false }: { campaignF
 
       {briefs.length ? (
         <>
-        {campaignFinance ? <section aria-label="Campaign Finance top stories" className="mt-6 border-b border-border pb-6"><BriefFrontPage briefs={briefs} placement="section:campaign-finance" /></section> : null}
+        {campaignFinance ? <section aria-label="Campaign Finance top stories" className="mt-6 border-b border-border pb-6"><HomeFrontPage briefs={briefs} placement="section:campaign-finance" leadHeading="h2" moreHref="/congress-members" moreLabel="Explore contribution records" /></section> : null}
         <div className="mt-5 grid gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
           {remaining.map((brief) => <BriefCard key={brief.id} brief={brief} />)}
         </div>

@@ -6,18 +6,26 @@ import { selectFrontPageBriefs } from '@/utils/briefSelection';
 import { getBriefAuthorName } from '@/utils/briefAuthor';
 
 /** The homepage edition uses the same editorial slots as institution pages. */
-export default function HomeFrontPage({ briefs }: { briefs: Brief[] }) {
+export default function HomeFrontPage({ briefs, placement = 'home', leadHeading = 'h1', moreHref = '/briefs', moreLabel = 'All Briefs' }: {
+  briefs: Brief[];
+  placement?: string;
+  leadHeading?: 'h1' | 'h2';
+  moreHref?: string;
+  moreLabel?: string;
+}) {
   const { lead, supporting, latest } = selectFrontPageBriefs(briefs);
+  const LeadHeading = leadHeading;
+  const moreId = `${placement.replace(/[^a-zA-Z0-9-]/g, '-')}-edition-more`;
   if (!lead) return null;
 
   return (
     <div className={supporting.length > 0 ? 'grid gap-7 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]' : 'grid gap-7'}>
       <div className="min-w-0 border border-foreground/35 bg-card/50 p-5 md:p-7">
-        <article data-brief-preview={lead.id} data-brief-placement="home:lead" className={lead.points.length > 0 ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]' : 'max-w-2xl'}>
+        <article data-brief-preview={lead.id} data-brief-placement={`${placement}:lead`} className={lead.points.length > 0 ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]' : 'max-w-2xl'}>
           <div className="min-w-0">
             <BriefMeta brief={lead} />
             <Link href={`/briefs/${lead.slug}`} className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
-              <h1 className="mt-3 break-words font-serif text-[32px] font-semibold leading-[1.08] tracking-[-0.03em] group-hover:text-primary md:text-[38px]">{lead.display_title?.trim() || lead.title}</h1>
+              <LeadHeading className="mt-3 break-words font-serif text-[32px] font-semibold leading-[1.08] tracking-[-0.03em] group-hover:text-primary md:text-[38px]">{lead.display_title?.trim() || lead.title}</LeadHeading>
               {lead.dek ? <p className="mt-4 text-base leading-relaxed text-muted-foreground">{lead.dek}</p> : null}
               <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">Read the Brief <ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
             </Link>
@@ -45,10 +53,10 @@ export default function HomeFrontPage({ briefs }: { briefs: Brief[] }) {
           ) : null}
         </article>
         {latest.length > 0 ? (
-          <section aria-labelledby="edition-more" className="mt-7 border-t border-foreground/70 pt-4">
-            <h2 id="edition-more" className="mb-1 text-sm font-bold">More to understand</h2>
+          <section aria-labelledby={moreId} className="mt-7 border-t border-foreground/70 pt-4">
+            <h2 id={moreId} className="mb-1 text-sm font-bold">More to understand</h2>
             <div className="grid sm:grid-cols-2 sm:gap-x-6">
-              {latest.map((brief) => <div key={brief.id} className="border-b border-border py-5 last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0"><BriefTeaser brief={brief} variant="headline" placement="home:latest" /></div>)}
+              {latest.map((brief) => <div key={brief.id} className="border-b border-border py-5 last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0"><BriefTeaser brief={brief} variant="headline" placement={`${placement}:latest`} /></div>)}
             </div>
           </section>
         ) : null}
@@ -59,12 +67,12 @@ export default function HomeFrontPage({ briefs }: { briefs: Brief[] }) {
           <div className="divide-y divide-border">
             {supporting.map((brief) => (
               <div key={brief.id} className="py-6">
-                <BriefTeaser brief={brief} variant="feature" heading="h3" placement="home:supporting" />
+                <BriefTeaser brief={brief} variant="feature" heading="h3" placement={`${placement}:supporting`} />
                 {brief.points[0] ? <p className="mt-4 line-clamp-3 border-l-2 border-[hsl(var(--trust))]/40 pl-3 text-sm leading-relaxed text-muted-foreground">{brief.points[0].text}</p> : null}
               </div>
             ))}
           </div>
-          <Link href="/briefs" className="flex items-center justify-between border-t border-foreground py-4 text-sm font-semibold text-primary hover:underline">All Briefs <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
+          <Link href={moreHref} className="flex items-center justify-between border-t border-foreground py-4 text-sm font-semibold text-primary hover:underline">{moreLabel} <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
         </aside>
       ) : null}
     </div>

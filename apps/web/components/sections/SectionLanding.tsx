@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-import BriefFrontPage from '@/components/briefs/BriefFrontPage';
+import HomeFrontPage from '@/components/home/HomeFrontPage';
 import BriefTeaser from '@/components/briefs/BriefTeaser';
 import { selectFrontPageBriefs } from '@/utils/briefSelection';
 import { Badge } from '@/components/ui/badge';
@@ -47,7 +47,8 @@ export default function SectionLanding({
               {browseLinks.map((link) => <Link key={link.href} href={link.href} className="inline-flex min-h-8 items-center text-xs font-semibold text-primary hover:underline">{link.label} <span aria-hidden="true" className="ml-1">↗</span></Link>)}
             </nav>
           </div>
-          <p className="sr-only">{eyebrow}. {description}</p>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
         </div>
       </header>
 
@@ -55,7 +56,7 @@ export default function SectionLanding({
         <div className="container mx-auto px-4">
           {lead ? (
             <>
-              <BriefFrontPage briefs={briefs} placement={`section:${title}`} />
+              <HomeFrontPage briefs={briefs} placement={`section:${title}`} leadHeading="h2" moreHref="#official-record" moreLabel={latestTitle} />
               {remaining.length > 0 ? <div className="mt-6 grid gap-6 border-t border-border pt-5 md:grid-cols-2 lg:grid-cols-3">
                 {remaining.map((brief) => <BriefTeaser key={brief.id} brief={brief} placement={`section:${title}:more`} />)}
               </div> : null}
@@ -69,7 +70,7 @@ export default function SectionLanding({
         </div>
       </section>
 
-      <section className="border-b border-border bg-card/40 py-7 md:py-9">
+      <section id="official-record" className="scroll-mt-24 border-b border-border bg-card/40 py-7 md:py-9">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-foreground pb-4">
             <div>
