@@ -37,6 +37,10 @@ class RequestBudgetReached(FECError):
     pass
 
 
+class FECQueryTimeout(FECError):
+    pass
+
+
 def identifier(value, pattern):
     if not isinstance(value, str) or not re.fullmatch(pattern, value):
         raise FECError('Invalid or missing FEC identifier')
@@ -116,7 +120,8 @@ class FECClient:
                     response.close()
             if attempt < 3:
                 time.sleep(delay)
-        raise FECError(f'FEC request failed after four attempts ({failure}); saved pages will resume on the next run')
+        error_type = FECQueryTimeout if failure == 'HTTP 504' else FECError
+        raise error_type(f'FEC request failed after four attempts ({failure}); saved pages will resume on the next run')
 
     def receipts(self, cycle, line, cursor, scope):
         params = {
@@ -127,7 +132,64 @@ class FECClient:
         }
         if scope != 'all':
             params['committee_id'] = scope
+        elif cursor.get('sort_null_only') is True:
+            return self.undated_receipts(cycle, params, cursor)
         return self.receipt_page(params, cursor)
+
+    def undated_receipts(self, cycle, params, cursor):
+        """Scan undated receipts in bounded, durable committee batches.
+
+        Enumerate every committee in the cycle, including committees whose
+        current type/designation changed. Keep receipt-side eligibility filters.
+        Existing undated cursors restart this partition safely: staging dedupes
+        by source ID, and previously completed dated pages remain untouched.
+        """
+        ids = cursor.get('undated_committees')
+        page = cursor.get('undated_page', 1)
+        if not ids:
+            catalog = self.get('/committees/', {
+                'cycle': cycle, 'page': page, 'per_page': 100, 'sort': 'committee_id',
+            })
+            pages = catalog['pagination'].get('pages')
+            if type(pages) is not int or pages < 0 or (not catalog['results'] and page <= pages):
+                raise FECError('Committee catalog pagination incomplete')
+            ids = [committee_id(row.get('committee_id')) for row in catalog['results']]
+            if len(set(ids)) != len(ids) or ids != sorted(ids):
+                raise FECError('Committee catalog order is invalid')
+            continuation = ({'sort_null_only': True, 'undated_page': page,
+                'undated_last_page': page >= pages, 'undated_committees': ids} if ids else None)
+            # Persist the catalog before issuing receipt requests, including
+            # when the request allowance is reached between these operations.
+            return {'results': [], 'pagination': {}, '_undated_next': continuation}
+
+        batch_size = cursor.get('undated_batch_size', 10)
+        batch = ids[:batch_size]
+        receipt_cursor = {'sort_null_only': True}
+        if cursor.get('last_index'):
+            receipt_cursor['last_index'] = cursor['last_index']
+        try:
+            body = self.receipt_page({**params, 'committee_id': batch}, receipt_cursor)
+        except FECQueryTimeout:
+            if batch_size <= 1:
+                raise
+            LOG.warning('Splitting timed-out undated committee batch from %s to %s', batch_size, max(1, batch_size // 2))
+            return {'results': [], 'pagination': {}, '_undated_next': {
+                **cursor, 'undated_batch_size': max(1, batch_size // 2),
+                # Restart the smaller batches; staged source IDs are idempotent.
+                'last_index': None}}
+        if any(row.get('committee_id') not in batch or row.get('contribution_receipt_date') for row in body['results']):
+            raise FECError('Undated receipt batch returned records outside its scope')
+        next_receipt = next_cursor(body, receipt_cursor)
+        if next_receipt is not None:
+            continuation = {**cursor, **next_receipt}
+        elif len(ids) > batch_size:
+            continuation = {**cursor, 'undated_committees': ids[batch_size:]}
+            continuation.pop('last_index', None)
+        elif cursor['undated_last_page']:
+            continuation = None
+        else:
+            continuation = {'sort_null_only': True, 'undated_page': page + 1}
+        return {**body, '_undated_next': continuation}
 
     def receipt_page(self, params, cursor):
         # FEC's coalesced date/null paginator can bypass its date index (#6646).
@@ -174,6 +236,8 @@ class FECClient:
 
 
 def next_cursor(body, previous):
+    if '_undated_next' in body:
+        return body['_undated_next']
     if not body['results']:
         if body.get('_receipt_partition') == 'dated':
             return {'sort_null_only': True}

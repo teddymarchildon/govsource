@@ -262,22 +262,22 @@ def test_receipt_scan_bounds_saved_dates_and_visits_undated_partition():
         {'results': [], 'pagination': {}},
     ])
     old = {'last_index': '1', 'last_contribution_receipt_date': '2025-09-15'}
-    body = client.receipts(2026, '11C', old, 'all')
+    body = client.receipts(2026, '11C', old, 'C00543983')
     params = client.get.call_args.args[1]
     assert params['min_date'] == params['last_contribution_receipt_date'] == '2025-09-15'
     assert params['sort_hide_null'] == 'true' and 'sort_nulls_last' not in params
     assert params['last_index'] == '1' and params['line_number'] == 'F3-11C'
     cursor = next_cursor(body, old)
     assert cursor['last_index'] == '2'  # Same-date ties remain reachable.
-    cursor = next_cursor(client.receipts(2026, '11C', cursor, 'all'), cursor)
+    cursor = next_cursor(client.receipts(2026, '11C', cursor, 'C00543983'), cursor)
     assert cursor == {'sort_null_only': True}
-    body = client.receipts(2026, '11C', cursor, 'all')
+    body = client.receipts(2026, '11C', cursor, 'C00543983')
     params = client.get.call_args.args[1]
     assert params['sort_null_only'] == 'true'
     assert 'min_date' not in params and 'sort_hide_null' not in params
     cursor = next_cursor(body, cursor)
     assert cursor == {'last_index': '3', 'sort_null_only': True}
-    assert next_cursor(client.receipts(2026, '11C', cursor, 'all'), cursor) is None
+    assert next_cursor(client.receipts(2026, '11C', cursor, 'C00543983'), cursor) is None
 
 
 def test_fresh_scan_does_not_exclude_older_receipt_dates():
