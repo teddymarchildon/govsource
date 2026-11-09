@@ -198,6 +198,47 @@ def test_missing_alternate_format_preserves_available_content(monkeypatch):
     )
 
 
+def test_oversized_pdf_preserves_text_and_official_url(monkeypatch):
+    uploads = []
+
+    def upload(_db, _bucket, path, *_args):
+        uploads.append(path)
+        if path.endswith('.pdf'):
+            raise StorageApiError('The object exceeded the maximum allowed size', 'Payload too large', 413)
+        return path
+
+    monkeypatch.setattr(federal, 'upload_bytes', upload)
+    detail = {'document_number': '2026-22743', 'pdf_url': 'official-pdf',
+              'body_html_url': 'html', 'full_text_xml_url': 'xml'}
+    paths = federal.upload_document_files(
+        object(), SimpleNamespace(download=lambda _: (b'content', '')), detail)
+    assert paths == {'html_file_path': 'html/2026-22743.html', 'xml_file_path': 'xml/2026-22743.xml'}
+    assert len(uploads) == 3
+    assert federal.document_row(detail)['pdf_url'] == 'official-pdf'
+    assert not federal.stored_content_complete({**federal.document_row(detail), **paths})
+
+
+def test_oversized_pdf_without_usable_alternate_still_fails(monkeypatch):
+    def upload(*_args):
+        raise StorageApiError('Too large', 'Payload too large', 413)
+
+    monkeypatch.setattr(federal, 'upload_bytes', upload)
+    with pytest.raises(sync_common.UpstreamAPIError, match='No usable content'):
+        federal.upload_document_files(object(), SimpleNamespace(download=lambda _: (b'pdf', '')),
+                                      {'document_number': 'large', 'pdf_url': 'pdf'})
+
+
+@pytest.mark.parametrize('status', [403, 500])
+def test_pdf_storage_errors_other_than_size_still_fail(monkeypatch, status):
+    def upload(*_args):
+        raise StorageApiError('Failure', 'Failure', status)
+
+    monkeypatch.setattr(federal, 'upload_bytes', upload)
+    with pytest.raises(StorageApiError):
+        federal.upload_document_files(object(), SimpleNamespace(download=lambda _: (b'pdf', '')),
+                                      {'document_number': 'failed', 'pdf_url': 'pdf', 'body_html_url': 'html'})
+
+
 @pytest.mark.parametrize("status", [404, 403, 503])
 def test_no_available_content_or_non_missing_errors_fail(monkeypatch, status):
     def download(url):

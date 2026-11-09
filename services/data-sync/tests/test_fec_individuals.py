@@ -1,9 +1,31 @@
 from unittest.mock import Mock
 
 import pytest
+import httpx
 
 from sync_fec_donations import FECError, RequestBudgetReached, normalize_receipt
 from sync_fec_individuals import IndividualClient, IndividualDryRunStore, sync_individuals, read_queue
+
+
+def test_queue_read_timeout_retries_same_page(monkeypatch):
+    monkeypatch.setattr('sync_fec_individuals.time.sleep', lambda _: None)
+    db = Mock()
+    query = db.table.return_value.select.return_value.eq.return_value.order.return_value
+    query.range.return_value.execute.side_effect = [httpx.ReadTimeout('timeout'),
+        Mock(data=[{'committee_id': 'C00442921', 'candidate_id': 'H8IN07184', 'last_success_at': None}])]
+    assert len(read_queue(db, 2026)) == 1
+    assert query.range.call_args_list[0] == query.range.call_args_list[1]
+
+
+@pytest.mark.parametrize('error,attempts', [(httpx.ReadTimeout('timeout'), 3), (ValueError('invalid'), 1)])
+def test_queue_read_retries_are_bounded(monkeypatch, error, attempts):
+    monkeypatch.setattr('sync_fec_individuals.time.sleep', lambda _: None)
+    db = Mock()
+    execute = db.table.return_value.select.return_value.eq.return_value.order.return_value.range.return_value.execute
+    execute.side_effect = error
+    with pytest.raises(type(error)):
+        read_queue(db, 2026)
+    assert execute.call_count == attempts
 
 
 def receipt(**changes):

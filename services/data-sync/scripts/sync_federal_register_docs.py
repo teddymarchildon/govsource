@@ -153,13 +153,25 @@ def upload_document_files(
             )
             continue
         path = f"{folder}/{number}.{extension}"
-        paths[path_key] = upload_bytes(
-            supabase,
-            "agency-docs",
-            path,
-            content,
-            content_type or default_type,
-        )
+        try:
+            paths[path_key] = upload_bytes(
+                supabase,
+                "agency-docs",
+                path,
+                content,
+                content_type or default_type,
+            )
+        except Exception as exc:
+            if source_key != "pdf_url" or error_status(exc) != 413:
+                raise
+            # Keep the official PDF URL, but still archive the text formats.
+            # Never claim a storage path for an object that was rejected.
+            missing.append(source_key)
+            logger.warning(
+                "Document %s: PDF exceeds storage limit (%d bytes); "
+                "retaining source URL and trying HTML/XML",
+                number, len(content),
+            )
     if (
         missing
         and not paths

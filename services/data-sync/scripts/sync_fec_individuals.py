@@ -12,11 +12,12 @@ from datetime import datetime, timezone
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from uuid import uuid4
 
 from dotenv import load_dotenv
-from sync_common import create_supabase_client, require_env
+from sync_common import create_supabase_client, require_env, retryable_transfer_error
 from sync_fec_donations import FECClient, FECError, RequestBudgetReached, committee_id, next_cursor, normalize_receipt
 
 LOG = logging.getLogger(__name__)
@@ -100,7 +101,17 @@ def read_queue(db, cycle, committee=None):
         query = db.table('fec_individual_import_queue').select('committee_id,candidate_id,last_success_at').eq('cycle', cycle)
         if committee:
             query = query.eq('committee_id', committee)
-        page = query.order('committee_id').range(offset, offset + 499).execute().data
+        # This is a read-only request: retry the same page without duplicating
+        # rows. Do not blindly retry lease or publication writes after a timeout.
+        for attempt in range(3):
+            try:
+                page = query.order('committee_id').range(offset, offset + 499).execute().data
+                break
+            except Exception as exc:
+                if attempt == 2 or not retryable_transfer_error(exc):
+                    raise
+                LOG.warning('Retrying individual import queue page at offset %s (attempt %s/3)', offset, attempt + 2)
+                time.sleep(2 ** (attempt + 1))
         rows.extend(page)
         if len(page) < 500:
             break
@@ -131,9 +142,11 @@ def main(argv=None):
     for name in ('urllib3', 'httpx', 'httpcore'):
         logging.getLogger(name).setLevel(logging.WARNING)
     client, store, completed = None, None, 0
+    phase = 'setup'
     try:
         client = IndividualClient(require_env('FEC_API_KEY'), args.max_requests, args.minimum_interval)
         db = create_supabase_client(postgrest_timeout=65) if args.write else None
+        phase = 'read_queue'
         if not db:
             queue = [{'committee_id': scope, 'candidate_id': None} for scope in scopes]
         elif scopes:
@@ -148,7 +161,9 @@ def main(argv=None):
             store = None
             if client.requests >= client.max_requests:
                 raise RequestBudgetReached('Individual request budget reached; remaining campaigns await a later run')
+            phase = 'begin_campaign'
             store = IndividualStore(db, args.cycle, item['committee_id'], args.restart) if db else IndividualDryRunStore()
+            phase = 'sync_campaign'
             count = sync_individuals(client, store, args.cycle, item['committee_id'], item['candidate_id'])
             completed += 1
             LOG.info('Published individual campaign: committee=%s records=%s write=%s', item['committee_id'], count, args.write)
@@ -168,7 +183,7 @@ def main(argv=None):
         paused = partial and checkpoint_ok
         logger = LOG.warning if paused else LOG.error
         logger('data_sync_summary=%s', json.dumps({'job': 'fec_individuals', 'status': 'partial' if paused else 'failed',
-            'campaigns': completed, 'requests': client.requests if client else 0, 'error': message}))
+            'campaigns': completed, 'requests': client.requests if client else 0, 'phase': phase, 'error': message}))
         # Only the deliberate request cap/quota cooldown is a resumable pause.
         # API, validation, persistence and lease failures remain failures.
         return 0 if paused else 1

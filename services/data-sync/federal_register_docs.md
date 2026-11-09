@@ -228,6 +228,15 @@ GET https://www.federalregister.gov/api/v1/documents/2025-06842.json
 
 ## 📚 Official Documentation
 
+### Oversized PDF recovery
+
+When Storage rejects a PDF with status 413, the sync retains its official
+`pdf_url` and continues archiving HTML/XML. It succeeds only if usable content
+is available; authentication errors and other storage failures still fail the
+document. The rejected PDF is never recorded as an uploaded object. Because
+its storage path remains missing, recovery scans can retry it if storage limits
+are later increased.
+
 For more advanced filtering and endpoints:
 🔗 [https://www.federalregister.gov/developers/documentation](https://www.federalregister.gov/developers/documentation)
 
