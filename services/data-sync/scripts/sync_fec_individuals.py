@@ -97,15 +97,20 @@ def sync_individuals(client, store, cycle, committee, expected_candidate=None):
 
 def read_queue(db, cycle, committee=None):
     rows, offset = [], 0
-    while True:
+    def page_query():
+        # postgrest builders mutate in place: build a fresh request per attempt so
+        # a retry does not repeat order/offset/limit parameters.
         query = db.table('fec_individual_import_queue').select('committee_id,candidate_id,last_success_at').eq('cycle', cycle)
         if committee:
             query = query.eq('committee_id', committee)
+        return query.order('committee_id').range(offset, offset + 499)
+
+    while True:
         # This is a read-only request: retry the same page without duplicating
         # rows. Do not blindly retry lease or publication writes after a timeout.
         for attempt in range(3):
             try:
-                page = query.order('committee_id').range(offset, offset + 499).execute().data
+                page = page_query().execute().data
                 break
             except Exception as exc:
                 if attempt == 2 or not retryable_transfer_error(exc):

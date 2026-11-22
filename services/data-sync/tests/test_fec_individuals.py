@@ -15,6 +15,39 @@ def test_queue_read_timeout_retries_same_page(monkeypatch):
         Mock(data=[{'committee_id': 'C00442921', 'candidate_id': 'H8IN07184', 'last_success_at': None}])]
     assert len(read_queue(db, 2026)) == 1
     assert query.range.call_args_list[0] == query.range.call_args_list[1]
+    # Builders mutate in place, so each attempt must start from a fresh request.
+    assert db.table.call_count == 2
+
+
+def test_queue_read_retry_sends_clean_postgrest_params(monkeypatch):
+    from postgrest import SyncPostgrestClient
+    monkeypatch.setattr('sync_fec_individuals.time.sleep', lambda _: None)
+    client = SyncPostgrestClient('http://localhost/rest/v1')
+    sent = []
+
+    class DB:
+        def table(self, name):
+            builder = client.from_(name)
+            original = builder.select
+
+            def select(*columns):
+                request = original(*columns)
+
+                def capture():
+                    sent.append(str(request.request.params))
+                    if len(sent) == 1:
+                        raise httpx.ReadTimeout('timeout')
+                    return Mock(data=[])
+                request.execute = capture
+                return request
+            builder.select = select
+            return builder
+
+    # The request builder is returned from eq/order/range, so patching execute on
+    # the select builder captures the final parameters of each attempt.
+    assert read_queue(DB(), 2026) == []
+    assert len(sent) == 2 and sent[0] == sent[1]
+    assert sent[1].count('limit=') == 1 and sent[1].count('offset=') == 1
 
 
 @pytest.mark.parametrize('error,attempts', [(httpx.ReadTimeout('timeout'), 3), (ValueError('invalid'), 1)])

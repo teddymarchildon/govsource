@@ -1,8 +1,11 @@
 import type { MetadataRoute } from 'next';
 import { createAdminClient } from '@/utils/supabase/admin';
 
-// Publication and archival changes must be reflected without another deployment.
-export const dynamic = 'force-dynamic';
+// Publication and archival changes must be reflected without another deployment,
+// so regenerate hourly. Errors still throw rather than producing a partial
+// sitemap; Next.js then keeps serving the last successfully generated copy
+// instead of returning a 500 to crawlers.
+export const revalidate = 3600;
 
 const origin = 'https://www.govsrc.com';
 const sections = ['/', '/about', '/contact', '/privacy', '/editorial-policy', '/briefs',

@@ -28,14 +28,16 @@ function load(rows, fail = false) {
     return require(name);
   } };
   vm.runInNewContext(code, context);
-  return { run: context.exports.default, dynamic: context.exports.dynamic, calls };
+  return { run: context.exports.default, dynamic: context.exports.dynamic, revalidate: context.exports.revalidate, calls };
 }
 
 test('live sitemap includes publisher pages and every page of public Briefs', async () => {
   const fixture = Array.from({ length: 1001 }, (_, id) => ({ id, slug: `brief-${id}`, updated_at: '2026-10-31', published_at: '2026-10-30' }));
-  const { run, calls, dynamic } = load(fixture);
+  const { run, calls, dynamic, revalidate } = load(fixture);
   const urls = (await run()).map(entry => entry.url);
-  assert.equal(dynamic, 'force-dynamic');
+  // Cached with periodic regeneration so a failed refresh serves the last good copy.
+  assert.equal(dynamic, undefined);
+  assert.ok(Number.isInteger(revalidate) && revalidate > 0 && revalidate <= 3600);
   for (const path of ['/about', '/contact', '/privacy', '/editorial-policy', '/topics/health', '/briefs/brief-1000']) assert.ok(urls.includes(`https://www.govsrc.com${path}`));
   assert.equal(urls.filter(url => url.includes('/briefs/')).length, 1001);
   assert.ok(calls.some(call => call[1] === 'in' && call[2] === 'status' && JSON.stringify(call[3]) === '["published","scheduled"]'));

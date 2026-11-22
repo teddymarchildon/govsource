@@ -42,7 +42,10 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now?: D
   // Least recently covered first prevents repeated small-ID failures from
   // starving other campaigns. A time bound is not a lifetime article cap.
   const latestId = (id: number) => existing.find(row => row.primary_item_id === id)?.id ?? 0;
-  const deadline = Date.now() + 15 * 60 * 1000;
+  // The workflow times out at 20 minutes, including checkout, npm ci and tests,
+  // and one member's verification can run past this check. Leave room so the
+  // run ends normally and writes its step summary.
+  const deadline = Date.now() + 10 * 60 * 1000;
   for (const id of [...candidates].sort((a, b) => latestId(a) - latestId(b) || a - b)) {
     if (Date.now() >= deadline) return { ...summary, reason: 'Time budget reached; remaining campaigns resume on the next run.' };
     const prior = existing.filter(row => row.primary_item_id === id);
