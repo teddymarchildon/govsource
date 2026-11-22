@@ -99,4 +99,91 @@ def test_older_work_is_discarded():
     ai = FakeAI(None, None)
     process(DB(), j, 'lease', ai_factory=lambda *a: ai)
     assert 'selection' in ai.stages
-    assert PROMPT_VERSION == 'continuous-v7-style-rules'
+
+
+from brief_style import repetition_issues, plain_definitions, GLOSSARY
+from brief_evidence import bill_status_text
+from process_briefs import MAX_CONTEXT_CHARS
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('The bill would repeal Section 27 of the Clayton Act (15 U.S.C. 26b).', 'legal citation'),
+    ('The rule amends 40 CFR part 60 for large plants.', 'legal citation'),
+    ('The bill would repeal Clayton Act §27.', 'legal citation'),
+    ('The record shows no enactment (source_2_section_1).', 'internal label'),
+    ('The record explicitly shows "law_enacted_date": null.', 'internal label'),
+    ('### Source excerpts\n\nThe bill was introduced.', 'internal label'),
+    ('Pursuant to the bill, teams face the same rules.', '"pursuant to"'),
+    ('It removes the statutory protection for baseball.', '"statutory"'),
+    ('The bill was read twice and sent to committee.', '"read twice"'),
+    ('Operators shall file a report each year.', '"shall"'),
+])
+def test_citations_labels_and_legal_wording_are_rejected(text, expected):
+    assert any(expected in issue for issue in style_issues('context', text))
+
+
+def test_email_addresses_and_docket_names_are_not_labels():
+    assert style_issues('point_1', 'Send comments to tina_hardy@nps.gov or docket DOL_PRA_PUBLIC by email.') == []
+
+
+def test_legal_wording_inside_a_short_quote_is_allowed():
+    assert style_issues('point_1', 'Operators must file a report. The bill says they "shall file annually."') == []
+
+
+def test_quote_heavy_and_long_quoted_text_is_rejected():
+    heavy = ('The bill says baseball is "subject to the antitrust laws to the same extent" as other sports and '
+             'that "Section 27 of the Clayton Act is repealed" and that the term "includes section 5 of the '
+             'Federal Trade Commission Act to the extent that such section applies to unfair methods."')
+    assert any('quotation' in issue for issue in style_issues('context', heavy))
+    long = ('The bill says "the conduct, acts, practices, or agreements of persons in the business of organized '
+            'professional baseball are subject to the antitrust laws to the same extent such conduct would be." '
+            + 'Teams would be treated like other leagues. ' * 6)
+    assert any('too long' in issue for issue in style_issues('context', long))
+
+
+def test_repetition_within_context_and_across_fields():
+    clause = 'organized professional baseball would be treated the same as every other professional sport under these rules'
+    assert any(i.startswith('context:') for i in repetition_issues({'context': f'{clause}. Then more. {clause}.'}))
+    issues = repetition_issues({'title': clause, 'dek': clause + '.', 'point_1': 'Teams could be sued.',
+                                'point_2': clause + ' too.', 'context': 'Fans would see no change this season.'})
+    assert issues == [issues[0]] and issues[0].startswith('point_2: repeats') and 'from dek' in issues[0]
+
+
+def test_distinct_fields_and_shared_short_names_pass():
+    name = 'the Senate Committee on the Judiciary'
+    assert repetition_issues({'dek': f'The bill went to {name}.', 'point_1': f'{name} has not acted.',
+                              'context': 'Teams could face lawsuits over league rules if it becomes law.'}) == []
+
+
+def test_definitions_are_offered_only_for_terms_in_the_source_and_carry_no_numbers():
+    terms = {d['term'] for d in plain_definitions([{'text': 'Baseball is subject to the antitrust laws. '
+                                                            'Read twice and referred to the Committee on the Judiciary.'}])}
+    assert {'antitrust laws', 'referred to committee'} <= terms and 'final rule' not in terms
+    assert all(not any(ch.isdigit() for ch in definition) for _, _, definition in GLOSSARY)
+    assert all(style_issues('context', definition) == [] for _, _, definition in GLOSSARY)
+
+
+def test_writer_and_verifier_receive_definitions():
+    payloads = {}
+    class Recording(FakeAI):
+        def call(self, stage, instructions, payload, *a, **kw):
+            payloads[stage] = payload
+            return super().call(stage, instructions, payload, *a, **kw)
+    process(DB(), job(), 'lease', ai_factory=Recording)
+    for stage in ('write', 'verify'):
+        assert {d['term'] for d in payloads[stage]['plain_definitions']} >= {'exemption', 'proposed rule'}
+
+
+def test_context_length_cap():
+    d = draft()
+    d['context'] = claim('Large operators file. ' * (MAX_CONTEXT_CHARS // 20))
+    assert any('Context is too long' in e for e in validate_draft(d, {'passages': [PASSAGE]}))
+
+
+def test_bill_status_is_readable_text_without_field_names():
+    text = bill_status_text({'title': 'Baseball bill', 'introduced_date': '2026-11-10', 'law_enacted_date': None,
+                             'law_number': None, 'actions': [{'date': '2026-11-10T00:00:00',
+                                                              'text': 'Read twice and referred to the Committee on the Judiciary.'}]})
+    assert 'Became law: No enactment recorded' in text
+    assert '2026-11-10: Read twice and referred' in text
+    assert '_' not in text and '{' not in text

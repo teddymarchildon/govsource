@@ -15,10 +15,10 @@ from email.utils import parsedate_to_datetime
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = 'continuous-v7-style-rules'
+PROMPT_VERSION = 'continuous-v8-plain-language'
 # Versions whose selection and extraction prompts match the current ones. Their paid
 # selection/extraction checkpoints are kept; only drafting state is discarded.
-SELECTION_COMPATIBLE_VERSIONS = frozenset({'continuous-v6-scored-shortlist'})
+SELECTION_COMPATIBLE_VERSIONS = frozenset({'continuous-v6-scored-shortlist', 'continuous-v7-style-rules'})
 
 
 def obj(**properties: Any) -> dict:
@@ -40,7 +40,7 @@ SELECTION = obj(important=BOOL, reason=STRING, new_development=BOOL,
     reader_question=STRING, reader_value=STRING, explanation_plan=STRINGS)
 DRAFT = obj(title=CLAIM, dek=CLAIM, points={'type':'array','items':CLAIM,'minItems':3,'maxItems':5}, context=obj(text=STRING,evidence={'type':'array','items':CITATION}), policy_areas=STRINGS)
 EDITORIAL_QUALITY = obj(passed=BOOL, reader_value=BOOL, adds_explanation=BOOL,
-    context_not_metadata=BOOL, paraphrases_sources=BOOL, timing_clear=BOOL, no_filler=BOOL, issues=STRINGS)
+    context_not_metadata=BOOL, paraphrases_sources=BOOL, timing_clear=BOOL, no_filler=BOOL, plain_language=BOOL, issues=STRINGS)
 VERIFICATION = obj(passed=BOOL, material_omissions=STRINGS, status_correct=BOOL, issues=STRINGS,
  editorial_quality=EDITORIAL_QUALITY,
  claims={'type':'array','items':obj(field=STRING,supported=BOOL,reason=STRING)})

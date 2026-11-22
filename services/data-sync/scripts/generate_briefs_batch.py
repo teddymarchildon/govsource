@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List
 import requests
 from dotenv import load_dotenv
 
-from brief_style import PLAIN_ENGLISH_STYLE, style_issues
+from brief_style import PLAIN_ENGLISH_STYLE, repetition_issues, style_issues
 from import_briefs_supabase import validate_manifest
 from sync_common import create_supabase_client
 
@@ -347,6 +347,11 @@ def validate_generated_drafts(
                             *[(f"point_{i}", p) for i, p in enumerate(item.get("points") or [], 1)],
                             ("context", item.get("context_markdown"))]
         for issue in style_issues(f"{item.get('record_key')} {field}", text)
+    ] + [
+        f"{item.get('record_key')} {issue}"
+        for item in generated
+        for issue in repetition_issues({"dek": item.get("dek"), "context": item.get("context_markdown"),
+                                        **{f"point_{i}": p for i, p in enumerate(item.get("points") or [], 1)}})
     ]
     if style:
         raise ValueError("style violations: " + "; ".join(style))

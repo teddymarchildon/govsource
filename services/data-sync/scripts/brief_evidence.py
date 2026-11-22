@@ -98,6 +98,19 @@ def chunks(text: str) -> list[str]:
     return result
 
 
+def bill_status_text(row: dict) -> str:
+    """Readable status lines. Raw JSON invited quoting field names such as law_enacted_date."""
+    lines = [f"Title: {row.get('title') or 'Not recorded'}",
+             f"Introduced: {row.get('introduced_date') or 'Not recorded'}",
+             f"Became law: {row.get('law_enacted_date') or 'No enactment recorded'}"]
+    if row.get('law_number'):
+        lines.append(f"Public law number: {row['law_number']}")
+    lines.append('Actions, newest first:')
+    lines += [f"{str(a.get('date') or 'Undated')[:10]}: {a.get('text') or ''}".rstrip()
+              for a in row.get('actions') or []] or ['No actions recorded']
+    return '\n'.join(lines)
+
+
 def build_packet(db: Any, source_type: str, row: dict) -> dict:
     documents = []
     if source_type == 'bill':
@@ -120,7 +133,7 @@ def build_packet(db: Any, source_type: str, row: dict) -> dict:
         text = read_text(db, [('bill-htmls', version.get('html_file_path'), True), ('bill-xmls', version.get('xml_file_path'), True)])
         documents.append((f"Bill text: {version.get('type')} ({version.get('date')})", version.get('html_url') or version.get('xml_url') or congress_url(row), text))
         # Actions are an explicit source, separate from potentially older bill text.
-        documents.append(('Congress.gov bill status and actions', congress_url(row), json.dumps({k: row.get(k) for k in ('title','introduced_date','law_enacted_date','law_number','actions')}, ensure_ascii=False)))
+        documents.append(('Congress.gov bill status and actions', congress_url(row), bill_status_text(row)))
         item_type = 'law' if row.get('law_enacted_date') else 'bill'
         latest_action = (row.get('actions') or [{}])[0]
         development = fingerprint({'action': latest_action, 'version': version.get('type'), 'date': version.get('date'), 'law': row.get('law_enacted_date')})

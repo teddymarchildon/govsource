@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 RANK_VERSION = 'reader-value-v1'
 QUALITY_CHECKS = ('reader_value', 'adds_explanation', 'context_not_metadata',
-                  'paraphrases_sources', 'timing_clear', 'no_filler')
+                  'paraphrases_sources', 'timing_clear', 'no_filler', 'plain_language')
 
 
 def editorial_rank(kind, row):
@@ -121,6 +121,7 @@ EDITORIAL_WRITING = (
     'Do not present a codification of an older approval as a new approval. '
     'Keep quotations in the internal evidence fields; paraphrase public prose except for essential legal terms. '
     'Context consisting only of a docket number, agency name, filing history, generic importance, or repeated points is inadequate. '
+    'Context must not repeat the dek or points, restate legal status, or end with a list of source excerpts. '
     'Use readable paragraphs and descriptive Markdown subheadings when useful. No filler or word-count target. '
     'If evidence cannot support useful explanation, report that limitation rather than inventing background. '
 )
@@ -136,6 +137,9 @@ EDITORIAL_VERIFICATION = (
     'no_filler: every sentence states a specific fact, limit or consequence from the source; there are no '
     'platitudes, generic claims of importance, closing restatements, or references to the editorial plan '
     'or its angles. Quote the offending sentence in issues when this fails. '
+    'plain_language: a reader with no legal background can follow every sentence. Legal terms are explained or '
+    'replaced with everyday words, there are no statute citations or internal labels, and no fact is restated '
+    'across the dek, points and context. Name the term or repeated fact in issues when this fails. '
     'A brief can be entirely factual and still fail quality. Fail unsupported negative claims (for example '
     'that a rule does not change some requirement) unless the source supports the distinction. '
     'For every failed check, give specific repair feedback tied to the actual draft; never require padding. '

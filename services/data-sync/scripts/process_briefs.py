@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from brief_ai import AI, BudgetExhausted, DraftLimitReached, ProviderPause, ProviderPaused, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION, SELECTION_COMPATIBLE_VERSIONS
 from brief_requests import discover_requests
 from brief_editorial import editorial_rank, rank_queue, quality_passes, EDITORIAL_WRITING, EDITORIAL_VERIFICATION
-from brief_style import PLAIN_ENGLISH_STYLE, style_issues
+from brief_style import PLAIN_ENGLISH_STYLE, plain_definitions, repetition_issues, style_issues
 from brief_prefilter import prefilter_reason, filter_queue
 from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint, validate_packet
 from generate_briefs_batch import dek_is_complete, slugify
@@ -26,6 +26,8 @@ from import_briefs_supabase import validate_manifest
 from sync_common import create_supabase_client
 
 log = logging.getLogger(__name__)
+# Measured: v5 contexts (median 3,845 characters) were mostly restatement.
+MAX_CONTEXT_CHARS = 4000
 SOURCE_NAMES = {'bill':'congress','agency_document':'federal_register','cluster':'courtlistener'}
 
 SELECTION_INSTRUCTIONS = (
@@ -186,8 +188,9 @@ def validate_draft(draft: dict, packet: dict) -> list[str]:
         errors.append('Dek must be a complete sentence of at most 300 characters')
     if not 3 <= len(draft['points']) <= 5 or any(len(p['text'])>900 for p in draft['points']):
         errors.append('Brief must contain three to five concise points')
-    if len(draft['context']['text'])>6000:
-        errors.append('Context is too long')
+    errors.extend(repetition_issues({field: claim['text'] for field, claim in claims.items()}))
+    if len(draft['context']['text'])>MAX_CONTEXT_CHARS:
+        errors.append(f'Context is too long: keep it under {MAX_CONTEXT_CHARS} characters by cutting repetition')
     if not draft['context']['text'].strip():
         errors.append('Context must explain the development beyond the key points')
     if not 1<=len(draft['policy_areas'])<=3 or any(not s.strip() or len(s)>100 for s in draft['policy_areas']):
@@ -373,7 +376,8 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, pro
             raise TimeoutError('Run time budget reached')
         draft = work.get('draft') or ai.call('write',
             'Write a neutral, plain-English news brief: specific headline <=180 characters, one complete dek sentence <=300 '
-            'characters, 3-5 standalone points <=900 characters each, substantive context <=6000 characters, 1-3 topics. '
+            f'characters, 3-5 standalone points <=900 characters each, context <={MAX_CONTEXT_CHARS} characters '
+            '(usually two to four short paragraphs), 1-3 topics. '
             'Every nonempty field needs supporting exact quotes and passage IDs from the extracted evidence. '
             'Context is required: explain the change, affected audience, timing and qualifications in connected paragraphs. '
             'Add useful source-supported detail beyond the key points; do not repeat them or pad to a word count. '
@@ -383,6 +387,7 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, pro
             'claims. Source excerpts are literal copying aids, not a substitute for evidence or validation. '
             + EDITORIAL_WRITING + PLAIN_ENGLISH_STYLE,
             {'metadata':job['source_metadata'],'evidence':extracted,'feedback':feedback,
+             'plain_definitions':plain_definitions(packet['passages']),
              'editorial_plan':selection,'as_of_date':datetime.now(timezone.utc).date().isoformat(),
              'previous_draft':work.get('previous_draft'),
              'literal_source_hints':literal_source_hints(draft_claims(work['previous_draft']),packet['passages'])
@@ -416,8 +421,12 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, pro
             'Return exactly one claims entry for each nonempty field '
             '(title, dek, point_1 ... point_N, context). Any unsupported claim or material omission fails publication. '
             'Do not accept a quote merely because it exists; verify that it entails the entire claim. '
+            + 'plain_definitions are vetted general background. A sentence that explains a legal term using one '
+            'of them is supported without a source quote, but it must not be stretched into a claim about this '
+            'specific document. '
             + EDITORIAL_VERIFICATION,
             {'metadata':job['source_metadata'],'passages':packet['passages'],'claims':draft_claims(draft),
+             'plain_definitions':plain_definitions(packet['passages']),
              'editorial_plan':selection,'as_of_date':datetime.now(timezone.utc).date().isoformat()},VERIFICATION,verify=True)
         report['passed'] = verification_passes(report,draft)
         report['deterministic_passed'] = True
