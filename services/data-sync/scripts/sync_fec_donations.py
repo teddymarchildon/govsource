@@ -177,8 +177,15 @@ class FECClient:
                 **cursor, 'undated_batch_size': max(1, batch_size // 2),
                 # Restart the smaller batches; staged source IDs are idempotent.
                 'last_index': None}}
-        if any(row.get('committee_id') not in batch or row.get('contribution_receipt_date') for row in body['results']):
-            raise FECError('Undated receipt batch returned records outside its scope')
+        stray = next((row for row in body['results'] if row.get('committee_id') not in batch
+                      or row.get('contribution_receipt_date')), None)
+        if stray is not None:
+            raise FECError('Undated receipt batch returned records outside its scope '
+                           f"(committee={stray.get('committee_id')}, date={stray.get('contribution_receipt_date')})")
+        if body.get('_null_filter_ignored'):
+            # The upstream filter cannot isolate undated rows for any batch, so
+            # scanning further committees would only spend requests.
+            return {**body, '_undated_next': None}
         next_receipt = next_cursor(body, receipt_cursor)
         if next_receipt is not None:
             continuation = {**cursor, **next_receipt}
@@ -208,6 +215,19 @@ class FECClient:
                 # Earlier dates have already been saved by this ascending scan.
                 params['min_date'] = cursor['last_contribution_receipt_date']
         body = self.get('/schedules/schedule_a/', params)
+        if nulls:
+            dated = sum(1 for row in body['results'] if row.get('contribution_receipt_date'))
+            if dated:
+                # OpenFEC has stopped honoring sort_null_only: it returns the
+                # ordinary dated scan (observed Nov 2026). Following its cursor
+                # would rescan, or loop on, rows the completed dated pass has
+                # already saved. Keep any undated rows on this page and end the
+                # undated partition instead of failing every resumed run.
+                LOG.warning('FEC ignored sort_null_only (%s of %s rows dated); ending the undated scan',
+                            dated, len(body['results']))
+                undated = [row for row in body['results'] if not row.get('contribution_receipt_date')]
+                return {**body, 'results': undated, '_receipt_partition': 'undated',
+                        '_null_filter_ignored': True, '_undated_next': None}
         return {**body, '_receipt_partition': 'undated' if nulls else 'dated'}
 
     def candidates(self, ids):

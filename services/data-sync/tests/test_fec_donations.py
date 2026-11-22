@@ -258,7 +258,7 @@ def test_receipt_scan_bounds_saved_dates_and_visits_undated_partition():
     client.get = Mock(side_effect=[
         {'results': [ROWS[0]], 'pagination': {'last_indexes': {'last_index': '2', 'last_contribution_receipt_date': '2025-09-15'}}},
         {'results': [], 'pagination': {}},
-        {'results': [ROWS[0]], 'pagination': {'last_indexes': {'last_index': '3'}}},
+        {'results': [{**ROWS[0], 'contribution_receipt_date': None}], 'pagination': {'last_indexes': {'last_index': '3'}}},
         {'results': [], 'pagination': {}},
     ])
     old = {'last_index': '1', 'last_contribution_receipt_date': '2025-09-15'}

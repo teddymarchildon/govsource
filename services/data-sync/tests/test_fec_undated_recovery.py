@@ -89,3 +89,22 @@ def test_out_of_scope_receipts_fail():
     with pytest.raises(FECError, match='outside its scope'):
         client.receipts(2026, '11C', {'sort_null_only': True, 'undated_page': 1,
             'undated_last_page': True, 'undated_committees': ['C00000001']}, 'all')
+
+
+def test_ignored_null_filter_ends_undated_scan_instead_of_failing():
+    ids = [f'C{i:08d}' for i in range(1, 61)]
+    client = FECClient('unused', minimum_interval=0)
+    client.get = Mock(return_value=receipts([{'committee_id': 'C00000004', 'contribution_receipt_date': '2026-05-17'}], '4073120261540040056'))
+    cursor = {'sort_null_only': True, 'undated_page': 5, 'undated_last_page': False, 'undated_committees': ids}
+    body = client.receipts(2026, '11C', cursor, 'all')
+    assert body['results'] == []
+    assert next_cursor(body, cursor) is None
+    assert client.get.call_count == 1
+
+
+def test_out_of_scope_error_names_the_row():
+    client = FECClient('unused', minimum_interval=0)
+    client.get = Mock(return_value=receipts([{'committee_id': 'C00000002', 'contribution_receipt_date': None}], '123'))
+    with pytest.raises(FECError, match='committee=C00000002'):
+        client.receipts(2026, '11C', {'sort_null_only': True, 'undated_page': 1,
+            'undated_last_page': True, 'undated_committees': ['C00000001']}, 'all')

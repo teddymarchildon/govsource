@@ -146,7 +146,7 @@ def main(argv=None):
     logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
     for name in ('urllib3', 'httpx', 'httpcore'):
         logging.getLogger(name).setLevel(logging.WARNING)
-    client, store, completed = None, None, 0
+    client, store, completed, failed = None, None, 0, []
     phase = 'setup'
     try:
         client = IndividualClient(require_env('FEC_API_KEY'), args.max_requests, args.minimum_interval)
@@ -169,12 +169,27 @@ def main(argv=None):
             phase = 'begin_campaign'
             store = IndividualStore(db, args.cycle, item['committee_id'], args.restart) if db else IndividualDryRunStore()
             phase = 'sync_campaign'
-            count = sync_individuals(client, store, args.cycle, item['committee_id'], item['candidate_id'])
+            try:
+                count = sync_individuals(client, store, args.cycle, item['committee_id'], item['candidate_id'])
+            except FECError as exc:
+                if isinstance(exc, RequestBudgetReached):
+                    raise
+                # An upstream/validation failure in one campaign must not
+                # starve the rest of the queue: record it and move on. Its
+                # checkpoint is preserved, and the run still exits nonzero.
+                if args.write:
+                    store.finish('failed', str(exc))
+                failed.append({'committee_id': item['committee_id'], 'error': str(exc)})
+                LOG.error('Individual campaign failed: committee=%s error=%s', item['committee_id'], exc)
+                store = None
+                continue
             completed += 1
             LOG.info('Published individual campaign: committee=%s records=%s write=%s', item['committee_id'], count, args.write)
             store = None
-        LOG.info('data_sync_summary=%s', json.dumps({'job': 'fec_individuals', 'status': 'success', 'campaigns': completed, 'requests': client.requests}))
-        return 0
+        status = 'failed' if failed else 'success'
+        (LOG.error if failed else LOG.info)('data_sync_summary=%s', json.dumps({'job': 'fec_individuals', 'status': status,
+            'campaigns': completed, 'requests': client.requests, 'failed': failed}))
+        return 1 if failed else 0
     except Exception as exc:
         partial = isinstance(exc, RequestBudgetReached)
         checkpoint_ok = True
@@ -188,7 +203,10 @@ def main(argv=None):
         paused = partial and checkpoint_ok
         logger = LOG.warning if paused else LOG.error
         logger('data_sync_summary=%s', json.dumps({'job': 'fec_individuals', 'status': 'partial' if paused else 'failed',
-            'campaigns': completed, 'requests': client.requests if client else 0, 'phase': phase, 'error': message}))
+            'campaigns': completed, 'requests': client.requests if client else 0, 'phase': phase, 'error': message,
+            'failed': failed}))
+        if paused and failed:
+            return 1
         # Only the deliberate request cap/quota cooldown is a resumable pause.
         # API, validation, persistence and lease failures remain failures.
         return 0 if paused else 1

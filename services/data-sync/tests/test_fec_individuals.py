@@ -268,3 +268,36 @@ def test_missing_target_does_not_silently_refresh_only_other_campaigns(monkeypat
     monkeypatch.setattr(mod, 'sync_individuals', sync)
     assert mod.main(['--write', '--committee', 'C00442921']) == 1
     sync.assert_not_called()
+
+
+def test_failed_campaign_does_not_block_rest_of_queue(monkeypatch, caplog):
+    import sync_fec_individuals as mod
+    monkeypatch.setattr(mod, 'load_dotenv', lambda *a: None)
+    monkeypatch.setattr(mod, 'require_env', lambda *a: 'test-key')
+    monkeypatch.setattr(mod, 'create_supabase_client', lambda **kw: Mock())
+    monkeypatch.setattr(mod, 'IndividualClient', lambda *a: Mock(requests=1, max_requests=10))
+    stores = {}
+    monkeypatch.setattr(mod, 'IndividualStore', lambda db, cycle, cid, restart: stores.setdefault(cid, Mock()))
+    monkeypatch.setattr(mod, 'read_queue', lambda *a: [
+        {'committee_id': 'C00608695', 'candidate_id': None}, {'committee_id': 'C00442921', 'candidate_id': None}])
+    sync = Mock(side_effect=[FECError('FEC receipt pagination repeated its cursor'), 12])
+    monkeypatch.setattr(mod, 'sync_individuals', sync)
+    assert mod.main(['--write', '--cycle', '2026']) == 1
+    assert sync.call_count == 2
+    stores['C00608695'].finish.assert_called_once_with('failed', 'FEC receipt pagination repeated its cursor')
+    stores['C00442921'].finish.assert_not_called()
+    assert '"campaigns": 1' in caplog.text and '"C00608695"' in caplog.text
+
+
+def test_undated_scan_ends_when_fec_ignores_null_filter():
+    # Stuck production checkpoint: OpenFEC returns dated rows for sort_null_only.
+    dated = {'sub_id': '1', 'contribution_receipt_date': '2026-05-17'}
+    undated = {'sub_id': '2', 'contribution_receipt_date': None}
+    client = IndividualClient('unused', minimum_interval=0)
+    client.get = Mock(return_value={'results': [dated, undated],
+        'pagination': {'last_indexes': {'last_index': '4052020251203091985'}}})
+    cursor = {'last_index': '4052020251203091985', 'sort_null_only': True}
+    body = client.individual_receipts(2026, 'C00608695', cursor)
+    assert body['results'] == [undated]
+    from sync_fec_donations import next_cursor
+    assert next_cursor(body, cursor) is None
