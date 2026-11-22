@@ -45,11 +45,18 @@ SELECTION_INSTRUCTIONS = (
     'Skip purely ceremonial actions, housekeeping with no practical change, routine meeting announcements, '
     'and ordinary bill introductions. An introduced bill may qualify only when its actual provisions support '
     'a consequential reader question and useful explanation; never describe it as an operative change. '
-    'Return a reader_question, a source-supported reader_value claim, and at least two distinct '
-    'source-supported explanation_plan claims for selected items. Each claim needs an exact quote of at '
-    'least 12 characters and a passage_id. These should establish the practical change, affected audience, '
+    'Return a reader_question, a one-sentence reader_value, and at least two distinct explanation_plan '
+    'angles for selected items, each grounded in the passages. These are planning notes for the writer, '
+    'not public copy: paraphrase, do not quote. They should establish the practical change, affected audience, '
     'and meaningful limits or distinctions, not just repeat the title or filing metadata. For rejected items '
-    'use an empty reader_question, empty reader_value text/evidence and empty explanation_plan. '
+    'use an empty reader_question, empty reader_value and empty explanation_plan. '
+    'Score EVERY candidate, selected or not, on four integer scales from 0 to 25 so candidates can be ranked '
+    'against each other. reach: how many people or organizations are directly affected (a single party is near 0; '
+    'most households is near 25). magnitude: how much rights, costs, obligations, benefits or safety change for '
+    'those affected. timeliness: how current the development is against as_of_date and whether readers can still '
+    'act on it (comment, apply, comply, prepare). certainty: operative effect; enacted law, final rules, signed '
+    'orders and merits decisions score high, proposals lower, introduced bills lowest. Use the full range: '
+    'routine documents score low, and scores must not be inflated to justify selection. '
     'Judge timeliness against as_of_date. A past meeting notice without outcomes is not current coverage. '
     'Do not infer duplicate coverage merely because '
     'a document previously appeared on an agency website. Compare the supplied previous coverage: '
@@ -125,6 +132,17 @@ def citation_errors(claim: dict, passages: list[dict]) -> list[str]:
         if literal not in cited and not spelled_percent:
             errors.append(f'Unsupported number: {number}')
     return errors
+
+
+def selection_score(selection: dict) -> int:
+    """Comparable 0-100 rank from four 0-25 scales; malformed parts count as zero."""
+    scores = selection.get('scores') if isinstance(selection, dict) else None
+    total = 0
+    for key in ('reach', 'magnitude', 'timeliness', 'certainty'):
+        value = scores.get(key) if isinstance(scores, dict) else None
+        if isinstance(value, int) and not isinstance(value, bool):
+            total += max(0, min(25, value))
+    return total
 
 
 def draft_claims(draft: dict) -> dict[str, dict]:
@@ -237,7 +255,7 @@ def complete(db: Any, job: dict, token: str, status: str, reason: str, *, draft=
         'p_verifier':ai.verifier if ai else '', 'p_prompt':PROMPT_VERSION}).execute()
 
 
-def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, provider_pause=None) -> str:
+def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, provider_pause=None, shortlist=False) -> str:
     # Queued jobs can predate source validation and contain cached bad evidence.
     try:
         validate_packet(job['evidence'])
@@ -278,17 +296,18 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, pro
     if selection.get('important') is not True or selection.get('new_development') is not True:
         complete(db,job,token,'skipped',selection['reason'])
         return 'skipped'
-    plan = selection.get('explanation_plan') or []
-    selection_errors = []
-    if not selection.get('reader_question', '').strip() or len(plan) < 2:
-        selection_errors.append('Selection needs a reader question and two supported explanatory angles')
-    for claim in [selection.get('reader_value', {}), *plan]:
-        if not claim.get('text', '').strip():
-            selection_errors.append('Selection has no concrete reader value')
-        selection_errors.extend(citation_errors(claim,packet['passages']))
-    if selection_errors:
-        complete(db,job,token,'withheld','Editorial selection lacks supported value: '+ '; '.join(selection_errors),ai=ai)
+    plan = [angle for angle in selection.get('explanation_plan') or [] if isinstance(angle,str) and angle.strip()]
+    if (not str(selection.get('reader_question') or '').strip()
+            or not str(selection.get('reader_value') or '').strip() or len(plan) < 2):
+        complete(db,job,token,'withheld','Editorial selection lacks a reader question, reader value and two explanatory angles',ai=ai)
         return 'withheld'
+    if shortlist and not manual and job.get('selection_score') is None:
+        # Passing selection earns a place on the shortlist, not a draft. Drafting
+        # slots go to the highest-scoring shortlisted candidates, so an early
+        # passable document cannot take a slot from a stronger later one.
+        db.rpc('shortlist_brief_job',{'p_id':job['id'],'p_token':token,
+            'p_score':selection_score(selection),'p_reason':selection['reason']}).execute()
+        return 'shortlisted'
     extracted = work.get('extracted',[])
     for passage in packet['passages'][len(extracted):]:
         repair = work.get('extraction_repair') or {}
@@ -442,18 +461,26 @@ def publish_ready(db: Any, limit: int) -> int:
 def process_queue(db, limit, deadline, queue='current', provider_pause=None):
     provider_pause = provider_pause or ProviderPause()
     summary = {'failed':0, 'processed':0, 'claimed':0}
+    drafting = True
     for _ in range(limit):
         if provider_pause.stopped.is_set() or time.monotonic()>deadline-180:
             break
         token = str(uuid4())
-        rows = db.rpc('claim_brief_job',{'p_token':token,'p_queue':queue}).execute().data or []
+        rows = []
+        if drafting:
+            # Draft the best shortlisted candidate while today's paced slots allow,
+            # then spend the rest of the run screening new candidates.
+            rows = db.rpc('claim_shortlisted_brief_job',{'p_token':token}).execute().data or []
+            drafting = bool(rows)
+        if not rows:
+            rows = db.rpc('claim_brief_job',{'p_token':token,'p_queue':queue}).execute().data or []
         if not rows:
             break
         job = rows[0]
         summary['claimed'] += 1
         try:
             provider_pause.check()
-            status = process(db,job,token,deadline=deadline-180,provider_pause=provider_pause)
+            status = process(db,job,token,deadline=deadline-180,provider_pause=provider_pause,shortlist=True)
             summary[status]=summary.get(status,0)+1
             summary['processed'] += 1
         except ProviderPaused as exc:
@@ -481,7 +508,13 @@ def process_queue(db, limit, deadline, queue='current', provider_pause=None):
             db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token,'p_budget':False}).execute()
             break
         except DraftLimitReached as exc:
-            db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token}).execute()
+            if job.get('selection_score') is not None and not job.get('manual_request_id'):
+                # Keep its rank and compete again tomorrow instead of waiting in the retry queue.
+                db.rpc('shortlist_brief_job',{'p_id':job['id'],'p_token':token,
+                    'p_score':job['selection_score'],'p_reason':job.get('reason') or ''}).execute()
+                drafting = False
+            else:
+                db.rpc('defer_brief_budget',{'p_id':job['id'],'p_token':token}).execute()
             summary['draft_limit_deferred'] = summary.get('draft_limit_deferred',0)+1
             log.info('%s; continuing selection of other candidates',exc)
             continue
@@ -494,6 +527,14 @@ def process_queue(db, limit, deadline, queue='current', provider_pause=None):
             complete(db,job,token,'retry',str(exc)[:1000])
             log.exception('Job %s failed',job['id'])
     return summary
+
+
+def require_shortlist_schema(db: Any) -> None:
+    """Fail before claiming work if the scored-shortlist migration is missing."""
+    try:
+        db.table('brief_job').select('selection_score').limit(1).execute()
+    except Exception as exc:
+        raise SystemExit('Apply the scored_brief_shortlist migration before running this worker: '+str(exc)[:300])
 
 
 def main() -> int:
@@ -531,6 +572,7 @@ def main() -> int:
             parser.error('--seed-days must be 1-90')
         log.info('Seeded %s source changes',db.rpc('seed_brief_source_changes',{'p_days':args.seed_days}).execute().data)
     if not args.discover_only:
+        require_shortlist_schema(db)
         discover_requests(db, deadline=min(deadline-180,time.monotonic()+120))
     summary = discover(db,args.discovery_limit,deadline=min(deadline-180,time.monotonic()+300))
     if not args.discover_only:

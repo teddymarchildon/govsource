@@ -288,4 +288,60 @@ await db.query("update brief set status='archived' where id=$1",[manualDraft]);
 assert.notEqual(await scalar("select request_brief_generation('bill',1,$1,$2)",[token,published]),requestId,'completed or archived request can be regenerated');
 console.log('PASS: manual generation, historical priority, idempotency, access control, separate review drafts, and original preservation');
 
+// Scored shortlist: passing selection queues a candidate for ranking, not drafting.
+await db.exec(readFileSync(root+'apps/web/supabase/migrations/20261122210317_scored_brief_shortlist.sql','utf8'));
+await db.exec(`
+ update brief_job set status='withheld' where status in ('pending','retry','processing');
+ delete from brief_api_call;
+ update brief_pipeline_settings set daily_draft_limit=1;
+ insert into bill(id,title) values(901,'Low score'),(902,'High score'),(903,'Middle score');
+`);
+const ranked={};
+for (const [bill,score] of [[901,40],[902,90],[903,70]]) {
+ const m=await scalar("select brief_source_bundle('bill',$1)",[bill]);
+ const jobId=await scalar("select enqueue_brief_job('bill',$1,1,$2,$2,'bill',$3,$4,50)",[bill,'shortlist-'+bill,m,packet]);
+ assert.equal((await db.query("select * from claim_brief_job($1,'current')",[token])).rows[0].id,jobId);
+ await assert.rejects(()=>db.query('select shortlist_brief_job($1,$2,$3,$4)',[jobId,other,score,'Ranked']),/Job lease lost/);
+ await assert.rejects(()=>db.query('select shortlist_brief_job($1,$2,101,$3)',[jobId,token,'Ranked']),/Invalid selection score/);
+ await db.query('select shortlist_brief_job($1,$2,$3,$4)',[jobId,token,score,'Ranked']);
+ ranked[score]=jobId;
+}
+assert.equal(await scalar("select count(*) from brief_job where status='shortlisted' and attempts=0 and lease_token is null"),3);
+assert.equal((await db.query("select * from claim_brief_job($1,'current')",[token])).rows.length,0,'shortlisted work is not screened again');
+assert.equal((await scalar('select brief_pipeline_overview()')).current_waiting,0,'shortlisted work is not overdue backlog');
+const top=(await db.query('select * from claim_shortlisted_brief_job($1)',[token])).rows;
+assert.equal(top[0].id,ranked[90],'highest score drafts first regardless of arrival order');
+assert.equal(top[0].selection_score,90);
+assert.equal((await db.query('select * from claim_shortlisted_brief_job($1)',[other])).rows[0].id,ranked[70],'a leased job is skipped');
+const enteredAt=await scalar('select shortlisted_at from brief_job where id=$1',[ranked[70]]);
+await db.query('select shortlist_brief_job($1,$2,70,$3)',[ranked[70],other,'Draft limit reached']);
+assert.deepEqual(await scalar('select shortlisted_at from brief_job where id=$1',[ranked[70]]),enteredAt,'returning to the shortlist does not extend its time there');
+// A draft started today uses the released slot; the daily cap stays authoritative.
+await db.query("select reserve_brief_api_call($1,'model','selection',0.01)",[ranked[70]]);
+assert.equal((await db.query('select * from claim_shortlisted_brief_job($1)',[other])).rows[0].id,ranked[70],'screening calls do not use draft slots');
+await db.query('select shortlist_brief_job($1,$2,70,$3)',[ranked[70],other,'Ranked']);
+await db.query("select reserve_brief_api_call($1,'model','extract',0.01)",[ranked[90]]);
+assert.equal((await db.query('select * from claim_shortlisted_brief_job($1)',[other])).rows.length,0,'no slot is released beyond the daily draft limit');
+await db.exec('update brief_pipeline_settings set daily_draft_limit=0; delete from brief_api_call');
+assert.equal((await db.query('select * from claim_shortlisted_brief_job($1)',[other])).rows.length,0,'a zero limit pauses drafting');
+await db.exec('update brief_pipeline_settings set daily_draft_limit=1');
+// Outranked candidates leave the shortlist with a visible reason.
+await db.query("update brief_job set shortlisted_at=now()-interval '73 hours' where id=$1",[ranked[40]]);
+assert.equal((await db.query('select * from claim_shortlisted_brief_job($1)',[other])).rows[0].id,ranked[70]);
+assert.equal(await scalar('select status from brief_job where id=$1',[ranked[40]]),'skipped');
+assert.match(await scalar('select reason from brief_job where id=$1',[ranked[40]]),/Shortlist expired/);
+// Source changes supersede shortlisted work, and stale revisions cannot be drafted.
+await db.query('select shortlist_brief_job($1,$2,70,$3)',[ranked[70],other,'Ranked']);
+await db.exec("update bill set title='Middle score, amended' where id=903");
+assert.equal((await db.query('select * from claim_shortlisted_brief_job($1)',[other])).rows.length,0,'changed source is not drafted from old evidence');
+const amended=await scalar("select brief_source_bundle('bill',903)");
+await db.query("select enqueue_brief_job('bill',903,2,'shortlist-903-v2','shortlist-903','bill',$1,$2,50)",[amended,packet]);
+assert.equal(await scalar('select status from brief_job where id=$1',[ranked[70]]),'superseded');
+for (const fn of ['shortlist_brief_job(bigint,uuid,integer,text)','claim_shortlisted_brief_job(uuid,integer)']) {
+ assert.equal(await scalar("select has_function_privilege('anon',$1,'execute')",['public.'+fn]),false);
+ assert.equal(await scalar("select has_function_privilege('authenticated',$1,'execute')",['public.'+fn]),false);
+ assert.equal(await scalar("select has_function_privilege('service_role',$1,'execute')",['public.'+fn]),true);
+}
+console.log('PASS: scored shortlist ranking, leases, paced draft slots, expiry, supersession, and permissions');
+
 await db.close();

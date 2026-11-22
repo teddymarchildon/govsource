@@ -52,6 +52,36 @@ list, and inspect public HTML on mobile. Publish a focused set of source-checked
 explainers before requesting another AdSense review. Content, production crawl
 access, and provider-backed results still require a live editorial audit.
 
+## Scored shortlist — November 22, 2026
+
+This section supersedes the selection-evidence and draft-admission guidance
+elsewhere in this document. Apply `20261122210317_scored_brief_shortlist.sql`
+before deploying the worker; the worker exits before claiming any job if the
+migration is missing.
+
+Selection is triage, not public copy. It no longer returns quotations: it returns
+a reader question, a one-sentence reader value, at least two explanatory angles,
+and four 0–25 scores (reach, magnitude, timeliness, certainty) whose sum is the
+job's `selection_score`. Previously about 70% of screened candidates were withheld
+because a selection quotation or passage ID did not match literally, with no
+repair. Every headline, dek, point and context claim still needs exact quotations
+and independent verification at the extraction, drafting and verification stages.
+
+A candidate that passes selection becomes `shortlisted` instead of being drafted
+immediately. Each run first drafts from the shortlist, highest score first (newer
+developments break ties), then screens new candidates with the remaining time.
+Draft slots are released evenly across the UTC day, with the first hour's share
+available at midnight, so the daily draft limit is spent on the best candidates
+seen so far rather than the first to pass after midnight. `reserve_brief_api_call`
+remains the atomic daily cap. A candidate still on the shortlist after 72 hours is
+skipped with the reason `Shortlist expired: outranked by higher-scoring candidates`.
+
+A shortlisted job that reaches the draft limit returns to the shortlist with its
+score and original entry time. Source changes supersede shortlisted jobs the same
+way as queued ones. Editor-requested jobs skip the shortlist and draft directly.
+Shortlisted jobs are not counted as waiting backlog in health checks. The new
+prompt version (`continuous-v6-scored-shortlist`) invalidates saved work from v5.
+
 ---
 
 # Continuous brief pipeline

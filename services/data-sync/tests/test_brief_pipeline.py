@@ -251,7 +251,9 @@ class DB:
 def selection():
     return {'important':True,'new_development':True,'reason':'Consequential rule',
             'reader_question':'Which operators face a reporting requirement?',
-            'reader_value':claim(),'explanation_plan':[claim(),claim('Small operators are exempt.')]}
+            'scores':{'reach':15,'magnitude':20,'timeliness':18,'certainty':10},
+            'reader_value':'Large operators would have to file annual reports.',
+            'explanation_plan':['Who counts as a large operator','Small operators are exempt.']}
 
 
 class FakeAI:
@@ -509,7 +511,8 @@ def test_null_content_is_withheld_and_never_written(monkeypatch, stage):
             super().rpc(name, args)
             if name == 'claim_brief_job' and not self.claimed:
                 self.claimed = True
-                return SimpleNamespace(execute=lambda: SimpleNamespace(data=[job()]))
+                # Already shortlisted, so the drafting stages run in this claim.
+                return SimpleNamespace(execute=lambda: SimpleNamespace(data=[{**job(),'selection_score':50}]))
             return self
     monkeypatch.setattr(process_briefs, 'process', lambda db, j, token, **kw:
                         process(db, j, token, ai_factory=NullAI, **kw))
@@ -529,7 +532,8 @@ def test_database_failure_still_fails_worker(monkeypatch):
         def rpc(self, name, args):
             if name == 'claim_brief_job' and not self.claimed:
                 self.claimed = True
-                return SimpleNamespace(execute=lambda: SimpleNamespace(data=[job()]))
+                # Already shortlisted, so the drafting stages run in this claim.
+                return SimpleNamespace(execute=lambda: SimpleNamespace(data=[{**job(),'selection_score':50}]))
             return super().rpc(name, args)
     def broken(*a, **kw):
         raise ConnectionError('database unavailable')
@@ -547,6 +551,7 @@ def test_four_workers_preserve_total_limit_and_independent_clients(monkeypatch):
     monkeypatch.setattr(process_briefs, 'discover', lambda *args, **kwargs: {})
     monkeypatch.setattr(process_briefs, 'rank_queue', lambda *args, **kwargs: {})
     monkeypatch.setattr(process_briefs, 'filter_queue', lambda *args, **kwargs: {})
+    monkeypatch.setattr(process_briefs, 'require_shortlist_schema', lambda db: None)
     pauses = []
     def worker(db, limit, deadline, queue, provider_pause=None):
         pauses.append(provider_pause)

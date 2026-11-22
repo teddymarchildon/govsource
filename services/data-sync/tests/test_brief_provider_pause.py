@@ -14,6 +14,8 @@ class Queue:
         self.filters = []
 
     def rpc(self, name, args):
+        if name == 'claim_shortlisted_brief_job':
+            return SimpleNamespace(execute=lambda: SimpleNamespace(data=[]))
         assert name == 'claim_brief_job'
         self.claims += 1
         return SimpleNamespace(execute=lambda: SimpleNamespace(data=[{'id': self.claims, 'attempts': 2}]))
@@ -80,5 +82,6 @@ def test_main_reports_provider_pause_as_unsuccessful(monkeypatch):
     monkeypatch.setattr(process_briefs, 'create_supabase_client', object)
     for name in ('discover_requests', 'discover', 'rank_queue', 'filter_queue'):
         monkeypatch.setattr(process_briefs, name, lambda *a, **k: {})
+    monkeypatch.setattr(process_briefs, 'require_shortlist_schema', lambda db: None)
     monkeypatch.setattr(process_briefs, 'process_queue', lambda *a, **k: {'failed': 0, 'provider_paused': 1})
     assert process_briefs.main() == 1

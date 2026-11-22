@@ -15,7 +15,7 @@ from email.utils import parsedate_to_datetime
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = 'continuous-v5-reader-value'
+PROMPT_VERSION = 'continuous-v6-scored-shortlist'
 
 
 def obj(**properties: Any) -> dict:
@@ -29,9 +29,12 @@ CITATION = obj(passage_id=STRING, quote=STRING)
 CITATIONS = {'type': 'array', 'items': CITATION, 'minItems': 1}
 CLAIM = obj(text=STRING, evidence=CITATIONS)
 EXTRACTION = obj(facts={'type':'array','items':CLAIM}, qualifications=STRINGS)
+INT = {'type': 'integer'}
+# Selection is triage, not public copy: it returns planning notes and a comparable
+# score. Quotation checks apply to extraction, drafting and verification.
 SELECTION = obj(important=BOOL, reason=STRING, new_development=BOOL,
-    reader_question=STRING, reader_value=obj(text=STRING,evidence={'type':'array','items':CITATION}),
-    explanation_plan={'type':'array','items':CLAIM})
+    scores=obj(reach=INT, magnitude=INT, timeliness=INT, certainty=INT),
+    reader_question=STRING, reader_value=STRING, explanation_plan=STRINGS)
 DRAFT = obj(title=CLAIM, dek=CLAIM, points={'type':'array','items':CLAIM,'minItems':3,'maxItems':5}, context=obj(text=STRING,evidence={'type':'array','items':CITATION}), policy_areas=STRINGS)
 EDITORIAL_QUALITY = obj(passed=BOOL, reader_value=BOOL, adds_explanation=BOOL,
     context_not_metadata=BOOL, paraphrases_sources=BOOL, timing_clear=BOOL, issues=STRINGS)
