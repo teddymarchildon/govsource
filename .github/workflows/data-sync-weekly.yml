@@ -140,7 +140,7 @@ jobs:
         run: python scripts/map_fec_candidates.py --write --report reports/fec-member-mapping.json
       - name: Save member mapping report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fec-member-mapping
           path: services/data-sync/reports/fec-member-mapping.json
