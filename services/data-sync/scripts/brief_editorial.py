@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 RANK_VERSION = 'reader-value-v1'
 QUALITY_CHECKS = ('reader_value', 'adds_explanation', 'context_not_metadata',
-                  'paraphrases_sources', 'timing_clear')
+                  'paraphrases_sources', 'timing_clear', 'no_filler')
 
 
 def editorial_rank(kind, row):
@@ -110,9 +110,11 @@ def quality_passes(quality):
 EDITORIAL_WRITING = (
     'Write an explanation, not a condensed filing. Answer the reader question in the supplied selection plan. '
     'Identify the affected audience and concrete change, then develop at least two distinct source-supported '
-    'explanatory angles in context: for example the difference between eligibility and qualification, '
-    'a reporting threshold and permission, a risk notification and a diagnosis, or program approval and a project permit. '
-    'Use these as examples of reasoning, not facts to copy into unrelated stories. '
+    'points from the editorial plan in context, such as a limit on who is covered, a distinction readers could '
+    'easily confuse, or what stays the same. The editorial plan, its reader question and its angles are private '
+    'notes: never mention, number or label them in public text, and never write phrases such as "Angle 1" or '
+    '"explanatory angles". Subheadings must name the subject itself, for example "Who must report" or '
+    '"When the limit applies", not the type of explanation. '
     'Explain what changes and what does not only where the source supports that distinction. '
     'Separate announcement, enactment, applicability, effective and comment dates. Use the supplied as_of_date '
     'to avoid announcing past events as upcoming. Do not infer that a meeting took place just because its date passed. '
@@ -131,6 +133,9 @@ EDITORIAL_VERIFICATION = (
     'or legislative status. paraphrases_sources: public prose explains rather than stringing together quotations '
     'or lightly rearranging the source. timing_clear: proposals and operative changes are distinguished and '
     'past announcements are not described as upcoming relative to as_of_date. '
+    'no_filler: every sentence states a specific fact, limit or consequence from the source; there are no '
+    'platitudes, generic claims of importance, closing restatements, or references to the editorial plan '
+    'or its angles. Quote the offending sentence in issues when this fails. '
     'A brief can be entirely factual and still fail quality. Fail unsupported negative claims (for example '
     'that a rule does not change some requirement) unless the source supports the distinction. '
     'For every failed check, give specific repair feedback tied to the actual draft; never require padding. '

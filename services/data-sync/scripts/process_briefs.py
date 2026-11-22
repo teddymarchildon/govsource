@@ -15,10 +15,10 @@ from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
-from brief_ai import AI, BudgetExhausted, DraftLimitReached, ProviderPause, ProviderPaused, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION
+from brief_ai import AI, BudgetExhausted, DraftLimitReached, ProviderPause, ProviderPaused, ResponseWithheld, validate_json_text, DRAFT, EXTRACTION, SELECTION, VERIFICATION, PROMPT_VERSION, SELECTION_COMPATIBLE_VERSIONS
 from brief_requests import discover_requests
 from brief_editorial import editorial_rank, rank_queue, quality_passes, EDITORIAL_WRITING, EDITORIAL_VERIFICATION
-from brief_style import PLAIN_ENGLISH_STYLE
+from brief_style import PLAIN_ENGLISH_STYLE, style_issues
 from brief_prefilter import prefilter_reason, filter_queue
 from brief_evidence import EvidenceUnavailable, EvidenceReviewRequired, build_packet, fingerprint, validate_packet
 from generate_briefs_batch import dek_is_complete, slugify
@@ -179,6 +179,7 @@ def validate_draft(draft: dict, packet: dict) -> list[str]:
         errors.extend(f'{field}: {e}' for e in citation_errors(claim,packet['passages']))
         if field!='context' and not claim['text'].strip():
             errors.append(f'{field}: empty claim')
+        errors.extend(style_issues(field, claim['text']))
     if not 1 <= len(draft['title']['text']) <= 180:
         errors.append('Headline length is invalid')
     if not 1 <= len(draft['dek']['text']) <= 300 or not dek_is_complete(draft['dek']['text']):
@@ -274,7 +275,9 @@ def process(db: Any, job: dict, token: str, *, ai_factory=AI, deadline=None, pro
         ai.provider_pause = provider_pause
         provider_pause.check()
     work = job.get('work') or {}
-    if work.get('prompt_version') != PROMPT_VERSION:
+    if work.get('prompt_version') in SELECTION_COMPATIBLE_VERSIONS:
+        work={k:work[k] for k in ('selection','extracted','extraction_repair') if k in work}
+    elif work.get('prompt_version') != PROMPT_VERSION:
         work={}
     work['prompt_version']=PROMPT_VERSION
     def checkpoint():

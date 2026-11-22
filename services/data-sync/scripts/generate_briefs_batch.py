@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List
 import requests
 from dotenv import load_dotenv
 
-from brief_style import PLAIN_ENGLISH_STYLE
+from brief_style import PLAIN_ENGLISH_STYLE, style_issues
 from import_briefs_supabase import validate_manifest
 from sync_common import create_supabase_client
 
@@ -340,6 +340,17 @@ def validate_generated_drafts(
             f"wrong record set: expected {expected}, got {actual}"
         )
 
+    style = [
+        issue
+        for item in generated
+        for field, text in [("title", item.get("title")), ("dek", item.get("dek")),
+                            *[(f"point_{i}", p) for i, p in enumerate(item.get("points") or [], 1)],
+                            ("context", item.get("context_markdown"))]
+        for issue in style_issues(f"{item.get('record_key')} {field}", text)
+    ]
+    if style:
+        raise ValueError("style violations: " + "; ".join(style))
+
     invalid_deks = [
         str(item.get("record_key"))
         for item in generated
@@ -367,11 +378,11 @@ def generate_batch(
     instructions = (
         "You are the GovSource editorial desk. Write one concise news brief per "
         "record. Use only facts explicitly present in that record's metadata and "
-        "source text. The headline must be catchy and journalistic: active, specific, "
-        "plain-English, and accurate, without clickbait, partisan framing, predictions, "
-        "or unsupported stakes. The dek should be one complete sentence of no more than "
-        "280 characters, ending with sentence punctuation, that explains the action or "
-        "holding and why it matters. Never truncate a word or sentence to meet the limit. "
+        "source text. The headline must be active, specific, plain-English, and "
+        "accurate, without clickbait, partisan framing, predictions, or unsupported "
+        "stakes. The dek should be one complete sentence of no more than 280 characters, "
+        "ending with sentence punctuation, that states the action or holding and who it "
+        "affects. Never truncate a word or sentence to meet the limit. "
         "Write 3 to 5 standalone factual points. For a bill, clearly call it a "
         "proposal unless enacted. For a court opinion, identify the holding, vote or "
         "author only when the source states it; distinguish majority opinions, dissents, "
