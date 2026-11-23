@@ -7,7 +7,13 @@ export class ContributionDataPending extends Error {
   constructor(message: string) { super(message); this.name = 'ContributionDataPending'; }
 }
 
-export type ContributionVerification = { checkedAt: string; coverageStart: string; coverageEnd: string; sources: { id: string; label: string; url: string }[] };
+// Individual coverage is limited to itemized receipts of at least this amount
+// (the data-sync LARGE_RECEIPT_MIN). Briefs describe large checks only.
+export const LARGE_CONTRIBUTION_MIN = 1000;
+
+export type ContributionVerification = { checkedAt: string; coverageStart: string; coverageEnd: string; sources: { id: string; label: string; url: string }[];
+  // FEC's own itemized individual total for the period, from the committee summaries.
+  fecItemizedIndividualTotal: number };
 const cents = (n: number) => {
   const value = Math.round(n * 100);
   if (!Number.isFinite(n) || !Number.isSafeInteger(value)) throw new Error('Invalid contribution amount.');
@@ -38,7 +44,7 @@ export async function verifyContributionFigures(committees: MemberContributions,
   const ids = [...new Set(committees.committeeIds)].sort();
   if (!cycle || individuals.cycle !== cycle || !committees.linked || !individuals.linked || !committees.nationwide
     || committees.excludedCommittees || individuals.excludedCommittees || !ids.length
-    || individuals.coveredCommittees !== individuals.eligibleCommittees
+    || individuals.coveredCommittees !== individuals.eligibleCommittees || individuals.minAmount !== LARGE_CONTRIBUTION_MIN
     || JSON.stringify(ids) !== JSON.stringify([...new Set(individuals.committeeIds)].sort())) throw new Error('Contribution coverage is incomplete or ambiguous.');
   for (const value of [committees.refreshedAt, individuals.refreshedAt]) {
     const age = now.getTime() - Date.parse(value ?? '');
@@ -59,16 +65,19 @@ export async function verifyContributionFigures(committees: MemberContributions,
     sources.push({ id: `summary_${id}`, label: `FEC financial summary: ${id}`, url });
   }
   if (ends.size !== 1) throw new ContributionDataPending('Campaign committees have different reporting coverage dates; waiting for aligned FEC data.');
+  // Committee receipts are a complete import and must reconcile exactly. Large
+  // individual receipts are a subset of FEC's itemized total, so they can only
+  // be bounded by it; the brief cites FEC's own total for the whole category.
   const committeeDifference = committeeCents - cents(committees.total);
-  const individualDifference = individualCents - cents(individuals.total);
-  if (committeeDifference || individualDifference) {
-    const differences = `committee difference $${(committeeDifference / 100).toFixed(2)}; itemized difference $${(individualDifference / 100).toFixed(2)}.`;
+  if (committeeDifference) {
+    const difference = `committee difference $${(committeeDifference / 100).toFixed(2)}.`;
     // A shortfall can be an unfinished import or lagging processed FEC data.
     // Do not claim the cause is proven, or treat excess imported money as lag.
-    if (committeeDifference < 0 || individualDifference < 0) throw new Error(`FEC reconciliation failed: ${differences} Imported totals exceed the FEC summary; review original filings before publication.`);
-    throw new ContributionDataPending(`Waiting for FEC reconciliation: ${differences} Refresh or reconcile original filings before publication; publication remains blocked.`);
+    if (committeeDifference < 0) throw new Error(`FEC reconciliation failed: ${difference} Imported totals exceed the FEC summary; review original filings before publication.`);
+    throw new ContributionDataPending(`Waiting for FEC reconciliation: ${difference} Refresh or reconcile original filings before publication; publication remains blocked.`);
   }
-  return { checkedAt: now.toISOString(), coverageStart: `${cycle - 1}-01-01`, coverageEnd: [...ends][0], sources };
+  if (cents(individuals.total) > individualCents) throw new Error(`FEC reconciliation failed: large individual receipts ($${individuals.total.toFixed(2)}) exceed FEC's itemized individual total ($${(individualCents / 100).toFixed(2)}); review original filings before publication.`);
+  return { checkedAt: now.toISOString(), coverageStart: `${cycle - 1}-01-01`, coverageEnd: [...ends][0], sources, fecItemizedIndividualTotal: individualCents / 100 };
 }
 
 export function assertContributionContent(actual: { points: unknown; sources: unknown; context_markdown?: string | null }, expected: { points: unknown; sources: unknown; context_markdown: string }) {

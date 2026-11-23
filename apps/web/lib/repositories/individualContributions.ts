@@ -14,6 +14,8 @@ export type IndividualGroup = { label: string | null; total: number; count: numb
 export type IndividualContributions = {
   cycle: number | null; cycles: number[]; linked: boolean; excludedCommittees: number;
   coveredCommittees: number; eligibleCommittees: number; refreshedAt: string | null;
+  // Smallest receipt amount imported; null when campaigns use different thresholds.
+  minAmount: number | null;
   total: number; count: number; page: number; receipts: IndividualReceipt[];
   filteredCount: number; committeeIds: string[]; employers: IndividualGroup[]; occupations: IndividualGroup[];
 };
@@ -30,7 +32,7 @@ export async function getMemberIndividualContributions(memberId: string, request
   const cycles = (periods.data ?? []).map(row => Number(row.cycle));
   const cycle = cycles.includes(Number(requestedCycle)) ? Number(requestedCycle) : cycles[0] ?? null;
   const result: IndividualContributions = { cycle, cycles, linked: Boolean(candidates.data?.length), excludedCommittees: 0,
-    coveredCommittees: 0, eligibleCommittees: 0, refreshedAt: null, total: 0, count: 0, page: 1, receipts: [], filteredCount: 0, committeeIds: [], employers: [], occupations: [] };
+    coveredCommittees: 0, eligibleCommittees: 0, refreshedAt: null, minAmount: null, total: 0, count: 0, page: 1, receipts: [], filteredCount: 0, committeeIds: [], employers: [], occupations: [] };
   if (!cycle || !candidates.data?.length) return result;
   const links = await db.from('fec_candidate_committee').select('committee_id').eq('cycle', cycle)
     .in('candidate_id', candidates.data.map(row => row.candidate_id));
@@ -39,7 +41,7 @@ export async function getMemberIndividualContributions(memberId: string, request
   if (!committees.length) return result;
   const [allLinks, coverage] = await Promise.all([
     db.from('fec_candidate_committee').select('committee_id,candidate_id').eq('cycle', cycle).in('committee_id', committees),
-    db.from('fec_individual_coverage').select('committee_id,last_success_at,receipt_count,total_amount').eq('cycle', cycle).in('committee_id', committees),
+    db.from('fec_individual_coverage').select('committee_id,last_success_at,receipt_count,total_amount,min_amount').eq('cycle', cycle).in('committee_id', committees),
   ]);
   if (allLinks.error) throw allLinks.error;
   if (coverage.error) throw coverage.error;
@@ -52,6 +54,8 @@ export async function getMemberIndividualContributions(memberId: string, request
   result.coveredCommittees = published.length;
   if (!published.length) return result;
   result.refreshedAt = published.map(row => row.last_success_at).sort()[0];
+  const thresholds = new Set(published.map(row => Number(row.min_amount ?? 0)));
+  result.minAmount = thresholds.size === 1 ? [...thresholds][0] : null;
   result.count = published.reduce((sum, row) => sum + Number(row.receipt_count), 0);
   result.total = published.reduce((sum, row) => sum + Math.round(Number(row.total_amount) * 100), 0) / 100;
   const ids = published.map(row => row.committee_id);

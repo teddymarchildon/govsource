@@ -12,20 +12,20 @@ function load(path, mocks = {}) {
 }
 const brief = load('../lib/contributionBrief.ts');
 const committees = { cycle: 2026, linked: true, count: 100, total: 500000, committeeIds: ['C00000001'], groups: [] };
-const individuals = { cycle: 2026, linked: true, count: 100, total: 500000, committeeIds: ['C00000001'], employers: [], coveredCommittees: 1, eligibleCommittees: 1, refreshedAt: '2026-10-11T11:00:00Z' };
+const individuals = { cycle: 2026, linked: true, count: 100, total: 500000, committeeIds: ['C00000001'], employers: [], coveredCommittees: 1, eligibleCommittees: 1, minAmount: 1000, refreshedAt: '2026-10-11T11:00:00Z' };
 const now = new Date('2026-10-11T13:00:00Z');
-function setup({ existing = [], fresh = true, individualFresh = true, broken = [], waiting = false, allowance = 100, failWrite = false } = {}) {
+function setup({ existing = [], fresh = true, individualFresh = true, broken = [], waiting = false, allowance = 100, failWrite = false, minAmount = 1000 } = {}) {
   const writes = []; const verified = [];
   class ContributionDataPending extends Error {}
   const api = load('../lib/contributionBriefBatch.ts', {
     './contributionBrief': brief,
-    './contributionVerification': { ContributionDataPending, verifyContributionFigures: async (c) => {
+    './contributionVerification': { ContributionDataPending, LARGE_CONTRIBUTION_MIN: 1000, verifyContributionFigures: async (c) => {
       verified.push(c.memberId);
       if (broken.includes(c.memberId)) throw waiting ? new ContributionDataPending('Waiting') : new Error('Mismatch');
-      return { checkedAt: now.toISOString(), coverageStart: '2025-01-01', coverageEnd: '2026-09-30', sources: [] };
+      return { checkedAt: now.toISOString(), coverageStart: '2025-01-01', coverageEnd: '2026-09-30', sources: [], fecItemizedIndividualTotal: 2000000 };
     } },
     './repositories/contributions': { getMemberContributions: async id => ({ ...committees, memberId: Number(id) }) },
-    './repositories/individualContributions': { getMemberIndividualContributions: async () => ({ ...individuals, refreshedAt: individualFresh ? individuals.refreshedAt : '2026-09-01' }) },
+    './repositories/individualContributions': { getMemberIndividualContributions: async () => ({ ...individuals, minAmount, refreshedAt: individualFresh ? individuals.refreshedAt : '2026-09-01' }) },
   });
   const db = { from(table) {
     let first = 0, last = 499, member = 1;
@@ -71,4 +71,18 @@ test('refresh-only differences deduplicate; signed material corrections qualify;
   assert.equal(brief.selectContributionDevelopment(committees,individuals,{committees:{total:510000},individuals:{total:500000}}).selected,false);
   assert.equal(brief.selectContributionDevelopment(committees,individuals,{committees:{total:700000}}).selected,true);
   assert.equal(brief.selectContributionDevelopment({...committees,count:1},{...individuals,count:1}).selected,false);
+});
+
+test('only large-receipt ($1,000+) individual coverage is drafted, and copy says so', async () => {
+  for (const minAmount of [null, 0]) { const f = setup({ minAmount }); const r = await f.run(); assert.equal(r.created.length, 0); assert.equal(r.ineligible, 12); }
+  const f = setup(); await f.run();
+  const point = f.writes[0].points.find(p => p.label === 'Individual contributions of $1,000 or more');
+  assert.match(point.text, /receipts of \$1,000 or more total \$500,000\.00 across 100 transactions/);
+  assert.match(point.text, /25% of the \$2,000,000\.00 in itemized individual contributions/);
+  assert.ok(f.writes[0].sources.find(s => s.id === 'individuals').url.includes('min_amount=1000'));
+});
+test('individual totals from another scope are not treated as a material change', () => {
+  // Prior briefs measured full itemized history; only committee changes count.
+  assert.equal(brief.selectContributionDevelopment(committees, individuals, { committees: { total: 500000 }, individuals: { total: 5000000 } }).selected, false);
+  assert.equal(brief.selectContributionDevelopment(committees, individuals, { committees: { total: 500000 }, individuals: { total: 5000000, minAmount: 1000 } }).selected, true);
 });

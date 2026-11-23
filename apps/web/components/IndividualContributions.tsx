@@ -10,6 +10,8 @@ import { CONTRIBUTION_PAGE_SIZE } from '@/lib/repositories/contributions';
 import { getMemberIndividualContributions, type IndividualGroup } from '@/lib/repositories/individualContributions';
 
 const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+// Coverage is limited to large itemized receipts; say so wherever totals appear.
+export const thresholdLabel = (minAmount: number | null) => minAmount ? `${money(minAmount).replace(/\.00$/, '')} or more` : null;
 const date = (value: string) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 function EmptyState({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">{children}</div>;
@@ -35,12 +37,13 @@ export default async function IndividualContributions({ memberId, cycle, page, f
     return <div className="space-y-6"><ContributionKindLinks kind="individuals" /><EmptyState>Individual contributions are temporarily unavailable. <Link href="?tab=contributions&contributionKind=individuals" className="font-medium text-primary hover:underline">Try again</Link>.</EmptyState></div>;
   }
   const period = data.cycle;
+  const threshold = thresholdLabel(data.minAmount);
   const pageCount = Math.max(1, Math.ceil(data.filteredCount / CONTRIBUTION_PAGE_SIZE));
   const href = (next: number) => contributionHref('individuals', period, filters, next);
   return <div className="space-y-6">
     <ContributionKindLinks kind="individuals" cycle={period} />
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><h2 className="flex items-center gap-2 text-xl font-semibold"><Users className="h-5 w-5 text-primary" />Individual and other-person contributions</h2><p className="mt-1 text-sm text-muted-foreground">Itemized contributions reported by this member’s campaigns.</p></div>
+      <div><h2 className="flex items-center gap-2 text-xl font-semibold"><Users className="h-5 w-5 text-primary" />Individual and other-person contributions</h2><p className="mt-1 text-sm text-muted-foreground">{threshold ? `Itemized contributions of ${threshold}` : 'Itemized contributions'} reported by this member’s campaigns.</p></div>
       {period ? <form action={`/congress-members/${memberId}`} className="flex shrink-0 items-end gap-2">
         <input type="hidden" name="tab" value="contributions" /><input type="hidden" name="contributionKind" value="individuals" />
         <div className="space-y-1.5"><label htmlFor="individual-cycle" className="block text-xs font-medium text-muted-foreground">Reporting period</label>
@@ -50,8 +53,8 @@ export default async function IndividualContributions({ memberId, cycle, page, f
       </form> : null}
     </div>
     <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-      <div className="flex flex-wrap items-center gap-2"><Badge variant="outline">Itemized individual/other-person records</Badge>{data.refreshedAt ? <span className="text-xs">{data.coveredCommittees > 1 ? 'Oldest campaign refresh' : 'Updated'} {date(data.refreshedAt)}</span> : null}</div>
-      <p className="mt-3">These are itemized receipts on the FEC individual/other-person reporting line, which can include organizations and tribal governments. Unitemized donations are not included. Signed corrections are included; refunds are not subtracted. Record counts are not counts of unique donors.</p>
+      <div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{threshold ? `Itemized receipts of ${threshold}` : 'Itemized individual/other-person records'}</Badge>{data.refreshedAt ? <span className="text-xs">{data.coveredCommittees > 1 ? 'Oldest campaign refresh' : 'Updated'} {date(data.refreshedAt)}</span> : null}</div>
+      <p className="mt-3">These are itemized receipts on the FEC individual/other-person reporting line, which can include organizations and tribal governments.{threshold ? ` Only receipts of ${threshold} are shown; smaller receipts are not imported, so totals here are not the campaign’s full individual fundraising.` : ''}{data.coveredCommittees && data.minAmount === null ? ' Covered campaigns were imported with different minimum amounts, so totals mix scopes.' : ''} Unitemized donations are not included. Signed corrections are included; refunds are not subtracted. Record counts are not counts of unique donors.</p>
       <p className="mt-2">Employer totals group the employer field reported on receipts; they do not establish donations by the employer. Employer and occupation groupings normalize only capitalization and spacing; spelling variants remain separate. “Retired,” “self-employed,” and other reported values are retained.</p>
       {data.excludedCommittees ? <p className="mt-2">{data.excludedCommittees} campaign committee{data.excludedCommittees === 1 ? ' is' : 's are'} linked to multiple candidates and excluded because attribution is uncertain.</p> : null}
       {data.coveredCommittees > 0 && data.coveredCommittees < data.eligibleCommittees ? <p className="mt-2 font-medium">Partial coverage: {data.coveredCommittees} of {data.eligibleCommittees} eligible campaigns have individual records published. Totals below cover only those campaigns.</p> : null}
@@ -59,15 +62,15 @@ export default async function IndividualContributions({ memberId, cycle, page, f
     {!period ? <EmptyState>No reporting periods have been published yet.</EmptyState>
       : !data.linked ? <EmptyState>A verified FEC candidate link is not yet available for this member. This does not mean they received no individual contributions.</EmptyState>
       : !data.coveredCommittees ? <EmptyState>Individual contribution coverage is not yet available for this member in {period - 1}–{period}. Missing coverage does not mean no contributions were received.</EmptyState>
-      : !data.count ? <EmptyState>The completed import found no attributable itemized individual/other-person records for the covered campaigns in {period - 1}–{period}. Unitemized donations are not included.</EmptyState>
+      : !data.count ? <EmptyState>The completed import found no attributable itemized individual/other-person records {threshold ? ` of ${threshold}` : ''} for the covered campaigns in {period - 1}–{period}. Unitemized donations are not included.</EmptyState>
       : <>
         <div className="grid gap-4 sm:grid-cols-3">{[
-          ['Available itemized contributions', money(data.total), 'Signed amounts, before refunds'],
+          [threshold ? `Contributions of ${threshold}` : 'Available itemized contributions', money(data.total), 'Signed amounts, before refunds'],
           ['Contribution records', data.count.toLocaleString('en-US'), 'Transactions, not unique people'],
           ['Campaigns covered', `${data.coveredCommittees} of ${data.eligibleCommittees}`, `${period - 1}–${period} reporting period`],
         ].map(([label, value, helper]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 wrap-break-word text-2xl font-bold lg:text-3xl">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></CardContent></Card>)}</div>
         <div className="grid gap-6 lg:grid-cols-2"><GroupSummary title="By reported employer" groups={data.employers} kind="employer" cycle={period} /><GroupSummary title="By reported occupation" groups={data.occupations} kind="occupation" cycle={period} /></div>
-        <Card><CardHeader><CardTitle className="text-xl">Individual contribution transactions</CardTitle><p className="text-sm text-muted-foreground">Most recent receipts first. Reporting periods may include receipts dated outside those years.</p></CardHeader><CardContent>
+        <Card><CardHeader><CardTitle className="text-xl">{threshold ? `Individual contributions of ${threshold}` : 'Individual contribution transactions'}</CardTitle><p className="text-sm text-muted-foreground">Most recent receipts first. Reporting periods may include receipts dated outside those years.</p></CardHeader><CardContent>
           <ContributionFilters key={JSON.stringify(filters)} kind="individuals" cycle={period} filters={filters} />
           {!data.filteredCount ? <p role="status" className="mb-4 text-sm text-muted-foreground">No transactions match these filters.</p> : null}
           <div className="relative overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Itemized individual/other-person contributions in {period - 1}–{period}</caption>

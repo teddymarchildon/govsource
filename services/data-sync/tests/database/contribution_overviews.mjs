@@ -5,7 +5,7 @@ const db = new PGlite();
 await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
 create schema auth; create table auth.users(id uuid primary key);
 create table public.congressman(id bigint primary key);`);
-for (const file of ['20260820192741_replace_articles_with_briefs.sql', '20260906235854_fec_committee_contributions.sql', '20260920195644_fec_individual_contributions.sql', '20261011005959_contribution_overviews.sql', '20261011010041_contribution_views_read_only.sql']) {
+for (const file of ['20260820192741_replace_articles_with_briefs.sql', '20260906235854_fec_committee_contributions.sql', '20260920195644_fec_individual_contributions.sql','20261123120000_large_individual_contributions.sql', '20261011005959_contribution_overviews.sql', '20261011010041_contribution_views_read_only.sql']) {
   await db.exec(readFileSync(new URL(`../../../../apps/web/supabase/migrations/${file}`, import.meta.url), 'utf8'));
 }
 await db.exec(`insert into congressman values(1);

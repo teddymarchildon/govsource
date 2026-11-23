@@ -1,4 +1,4 @@
-import { ContributionDataPending, verifyContributionFigures } from './contributionVerification';
+import { ContributionDataPending, LARGE_CONTRIBUTION_MIN, verifyContributionFigures } from './contributionVerification';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildContributionBrief, contributionFingerprint, selectContributionDevelopment, type PriorEvidence } from './contributionBrief';
 import { getMemberContributions } from './repositories/contributions';
@@ -58,6 +58,7 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now?: D
       ]);
       if (committees.cycle !== cycle || individuals.cycle !== cycle || !committees.linked || !individuals.linked
         || !individuals.coveredCommittees || individuals.coveredCommittees !== individuals.eligibleCommittees
+        || individuals.minAmount !== LARGE_CONTRIBUTION_MIN
         || !individuals.refreshedAt || new Date(individuals.refreshedAt) < new Date(cutoff)
         || (!committees.count && !individuals.count)) { summary.ineligible++; continue; }
       const fingerprint = contributionFingerprint(committees, individuals);

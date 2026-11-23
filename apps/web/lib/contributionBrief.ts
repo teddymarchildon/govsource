@@ -15,18 +15,23 @@ export function contributionFingerprint(committees: MemberContributions, individ
   const sorted = (rows: unknown[]) => rows.map(canonical).sort();
   return createHash('sha256').update(canonical({ cycle: committees.cycle,
     committees: { total: committees.total, count: committees.count, ids: [...committees.committeeIds].sort(), groups: sorted(committees.groups.slice(0, 10)) },
-    individuals: { total: individuals.total, count: individuals.count, ids: [...individuals.committeeIds].sort(), employers: sorted(individuals.employers.slice(0, 10)) },
+    individuals: { total: individuals.total, count: individuals.count, ids: [...individuals.committeeIds].sort(), employers: sorted(individuals.employers.slice(0, 10)), minAmount: individuals.minAmount },
   })).digest('hex');
 }
 
-export type PriorEvidence = { committees?: { total?: number }; individuals?: { total?: number } };
+const largeLabel = (individuals: IndividualContributions) => `${money(individuals.minAmount ?? 0).replace(/\.00$/, '')} or more`;
+
+export type PriorEvidence = { committees?: { total?: number }; individuals?: { total?: number; minAmount?: number | null } };
 export function selectContributionDevelopment(committees: MemberContributions, individuals: IndividualContributions, prior?: PriorEvidence) {
   // Transparent triage, not a claim that dollar size proves public importance.
   // Require a substantial attributable record base; avoid thin directory entries.
   if (committees.count + individuals.count < 100 || Math.abs(committees.total) + Math.abs(individuals.total) < 100000)
     return { selected: false, reason: 'Insufficient substantive evidence for an explanatory overview.' };
   if (!prior) return { selected: true, reason: 'First verified overview: explain the campaign’s reported funding mix and the limits of donor/employer attribution.' };
-  const changed = ([['committees', committees.total], ['individuals', individuals.total]] as const).some(([kind, total]) => {
+  // Totals measured under a different individual threshold (or the old full
+  // history) are not comparable; a scope change is not a reported development.
+  const comparable = (prior.individuals?.minAmount ?? null) === individuals.minAmount;
+  const changed = ([['committees', committees.total], ...(comparable ? [['individuals', individuals.total] as const] : [])] as const).some(([kind, total]) => {
     const previous = prior[kind]?.total;
     return typeof previous === 'number' && Number.isFinite(previous)
       && Math.abs(total - previous) >= Math.max(100000, Math.abs(previous) * 0.1);
@@ -46,8 +51,8 @@ export function buildContributionBrief(member: { id: number; full_name: string }
     const params = new URLSearchParams({ two_year_transaction_period: String(cycle) });
     ids.forEach(id => params.append('committee_id', id));
     if (kind === 'committees') { params.append('line_number', 'F3-11B'); params.append('line_number', 'F3-11C'); }
-    else params.set('line_number', 'F3-11AI');
-    return { id: kind, label: kind === 'committees' ? `FEC party and other committee receipts, ${period}` : `FEC itemized individual/other-person receipts, ${period}`,
+    else { params.set('line_number', 'F3-11AI'); params.set('min_amount', String(individuals.minAmount ?? 0)); }
+    return { id: kind, label: kind === 'committees' ? `FEC party and other committee receipts, ${period}` : `FEC itemized individual/other-person receipts of ${largeLabel(individuals)}, ${period}`,
       url: `https://www.fec.gov/data/receipts/?${params}` };
   };
   const sources = [
@@ -62,11 +67,14 @@ export function buildContributionBrief(member: { id: number; full_name: string }
     : 'No unambiguously attributable party or PAC campaign coverage is available for this period. This does not establish that no contributions were received.', committees.committeeIds.length ? ['committees'] : sources.map(source => source.id));
   const top = committees.groups[0];
   if (top && top.total_amount > 0) add('Largest reported committee grouping', `${top.group_name} ${committees.groups.filter(group => group.total_amount === top.total_amount).length > 1 ? 'is tied for the largest' : 'has the largest'} available committee-category group total at ${money(top.total_amount)}, across ${top.contribution_count.toLocaleString('en-US')} record${top.contribution_count === 1 ? '' : 's'}.${!top.giving_committee_id ? ' Its committee ID is unresolved; this grouping uses the reported name.' : ''}`, ['committees']);
-  add('Itemized individual/other-person contributions', individuals.coveredCommittees
-    ? `Available itemized individual/other-person records total ${money(individuals.total)} across ${individuals.count.toLocaleString('en-US')} transactions, covering ${individuals.coveredCommittees} of ${individuals.eligibleCommittees} eligible campaigns. This FEC reporting category can include organizations. Unitemized donations are excluded, refunds are not subtracted, and transaction counts are not unique donor counts.`
-    : 'Individual contribution coverage is not yet available for this period. Missing coverage does not mean that no individual contributions were received.', individuals.coveredCommittees ? ['individuals'] : sources.map(source => source.id));
+  const large = largeLabel(individuals);
+  const fecTotal = verification?.fecItemizedIndividualTotal;
+  const share = fecTotal && fecTotal > 0 ? ` That is ${Math.round(individuals.total / fecTotal * 100)}% of the ${money(fecTotal)} in itemized individual contributions shown in the FEC financial summaries.` : '';
+  add(`Individual contributions of ${large}`, individuals.coveredCommittees
+    ? `Itemized individual/other-person receipts of ${large} total ${money(individuals.total)} across ${individuals.count.toLocaleString('en-US')} transactions, covering ${individuals.coveredCommittees} of ${individuals.eligibleCommittees} eligible campaigns.${share} Smaller and unitemized donations are excluded. This FEC reporting category can include organizations, and transaction counts are not unique donor counts.`
+    : 'Individual contribution coverage is not yet available for this period. Missing coverage does not mean that no individual contributions were received.', individuals.coveredCommittees ? ['individuals', ...(share ? sources.filter(source => source.id.startsWith('summary_')).map(source => source.id) : [])] : sources.map(source => source.id));
   const employer = individuals.employers.find(group => group.label !== null && group.total > 0);
-  if (employer) add('By reported employer', `The largest reported employer-field category is ${employer.label}, totaling ${money(employer.total)} from receipts reporting that value. Employment-status labels such as RETIRED are not employers. This is not a contribution by the employer. Only capitalization and spacing are normalized; spelling variants remain separate.`, ['individuals']);
+  if (employer) add('By reported employer', `Among receipts of ${large}, the largest reported employer-field category is ${employer.label}, totaling ${money(employer.total)}. Employment-status labels such as RETIRED are not employers. This is not a contribution by the employer. Only capitalization and spacing are normalized; spelling variants remain separate.`, ['individuals']);
   const excluded = Math.max(committees.excludedCommittees, individuals.excludedCommittees);
   add('Scope and coverage', `${verification ? `Reports cover ${verification.coverageStart} through ${verification.coverageEnd}. ` : ''}These records do not establish total campaign fundraising or political influence. They retain signed corrections and exclude independent spending, loans, and joint-fundraising transfers.${excluded ? ` ${excluded} ambiguously linked campaign committee${excluded === 1 ? ' is' : 's are'} excluded.` : ''} Receipt dates can fall outside the reporting period.`, sources.map(source => source.id));
   for (const point of points) for (const ref of point.source_refs) {
@@ -75,9 +83,9 @@ export function buildContributionBrief(member: { id: number; full_name: string }
   return {
     title: `${member.full_name}: contributions in ${period}`.slice(0, 180),
     slug: `contributions-${member.id}-${cycle}`,
-    dek: `A source-linked overview of available campaign contribution records for ${period}, with committee-category and itemized individual/other-person amounts shown separately.`,
+    dek: `A source-linked overview of campaign contributions for ${period}: party and PAC money, and individual checks of ${large}, shown separately.`,
     points,
-    context_markdown: `### What these records tell voters\n\nThese figures help readers distinguish money reported from political committees from itemized individual/other-person receipts. The categories describe reported receipts, not the campaign’s available cash: refunds have not been deducted, and loans, transfers and unitemized donations are outside this overview. Adding the two categories would therefore not establish total fundraising or money available to spend.\n\n### Why an employer label is not a donor\n\nThe employer field groups receipts by a reported affiliation. It does not identify a payment by that employer or establish that the employer directed those contributions. Labels can also describe employment status, and spelling variants remain separate. Likewise, several transactions may belong to one donor; receipt counts cannot establish how many people supported the campaign. These records alone do not establish political influence or a connection to a member’s votes.\n\n### Reporting period and changes\n\n${verification ? `FEC reporting coverage: ${verification.coverageStart} through ${verification.coverageEnd}. This is not full-period coverage.\n\n` : ''}Committee-category data as of: ${date(committees.refreshedAt)}. Oldest covered individual campaign refresh: ${date(individuals.refreshedAt)}. These are retrieval dates, not donation dates or evidence that every filing is current. Signed corrections remain in the totals; a changed snapshot should not be interpreted as new donations without checking the underlying filings.\n\nThis overview reflects the data available when drafted. It does not update automatically. FEC source searches may show newer filings. Summary figures cover attributable campaign committees only. Missing employer and occupation values remain separate from named groups.`,
+    context_markdown: `### What these records tell voters\n\nThese figures help readers distinguish money reported from political committees from large individual/other-person checks of ${large}. The categories describe reported receipts, not the campaign’s available cash: refunds have not been deducted, and loans, transfers, smaller individual receipts and unitemized donations are outside these totals. Adding the two categories would therefore not establish total fundraising or money available to spend.\n\n### Why an employer label is not a donor\n\nThe employer field groups receipts by a reported affiliation. It does not identify a payment by that employer or establish that the employer directed those contributions. Labels can also describe employment status, and spelling variants remain separate. Likewise, several transactions may belong to one donor; receipt counts cannot establish how many people supported the campaign. These records alone do not establish political influence or a connection to a member’s votes.\n\n### Reporting period and changes\n\n${verification ? `FEC reporting coverage: ${verification.coverageStart} through ${verification.coverageEnd}. This is not full-period coverage.\n\n` : ''}Committee-category data as of: ${date(committees.refreshedAt)}. Oldest covered individual campaign refresh: ${date(individuals.refreshedAt)}. These are retrieval dates, not donation dates or evidence that every filing is current. Signed corrections remain in the totals; a changed snapshot should not be interpreted as new donations without checking the underlying filings.\n\nThis overview reflects the data available when drafted. It does not update automatically. FEC source searches may show newer filings. Summary figures cover attributable campaign committees only. Missing employer and occupation values remain separate from named groups.`,
     primary_item_type: 'campaign_finance' as const,
     primary_item_id: member.id,
     contribution_cycle: cycle,
@@ -87,7 +95,7 @@ export function buildContributionBrief(member: { id: number; full_name: string }
     generation_metadata: { method: 'contribution-template', verification, cycle, generated_at: new Date().toISOString(),
       evidence: {
         committees: { total: committees.total, count: committees.count, top: committees.groups.slice(0, 10), committeeIds: committees.committeeIds, refreshedAt: committees.refreshedAt, nationwide: committees.nationwide, excludedCommittees: committees.excludedCommittees },
-        individuals: { total: individuals.total, count: individuals.count, employers: individuals.employers.slice(0, 10), committeeIds: individuals.committeeIds, refreshedAt: individuals.refreshedAt, coveredCommittees: individuals.coveredCommittees, eligibleCommittees: individuals.eligibleCommittees, excludedCommittees: individuals.excludedCommittees },
+        individuals: { total: individuals.total, count: individuals.count, employers: individuals.employers.slice(0, 10), committeeIds: individuals.committeeIds, refreshedAt: individuals.refreshedAt, minAmount: individuals.minAmount, coveredCommittees: individuals.coveredCommittees, eligibleCommittees: individuals.eligibleCommittees, excludedCommittees: individuals.excludedCommittees },
       } },
   };
 }

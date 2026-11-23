@@ -8,7 +8,17 @@ GovSource Congress member through the verified FEC/Bioguide mapping.
 ## Scope and interpretation
 
 Requests use `line_number=F3-11AI`, the selected
-`two_year_transaction_period`, and the receiving campaign's committee ID.
+`two_year_transaction_period`, the receiving campaign's committee ID, and
+`min_amount=1000` (inclusive; override with `--min-amount` or
+`FEC_INDIVIDUAL_MIN_AMOUNT`). Only large receipts are imported: a full-history
+scan of a large campaign needed hundreds of thousands of rows and many days of
+request budget, while briefs only describe large checks. Coverage records the
+threshold (`fec_individual_coverage.min_amount`); campaigns published under a
+different threshold are queued as never published, and staged data from another
+threshold restarts. Drafting and publication require the $1,000 scope, quote
+FEC's own itemized individual total from the committee summary, and only check
+that the large-receipt total does not exceed it. Committee receipts still
+reconcile exactly.
 The reporting line, not the inconsistent OpenFEC `is_individual` flag, defines the category. This includes other persons such as LLCs and tribal governments when reported on that line. Memo entries (`memo_code=X` or `memoed_subtotal=true`) are excluded. Signed
 corrections are retained. Data is not net of refunds and excludes unitemized
 contributions; these totals are not complete individual fundraising totals.

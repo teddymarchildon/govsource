@@ -78,6 +78,16 @@ test('combines campaigns without double counting ambiguous mappings and preserve
   assert.equal(result.employers[0].total, 100);
   assert.equal(result.occupations[0].count, 27);
   assert.equal(result.refreshedAt, '2026-09-19');
+  assert.equal(result.minAmount, 0, 'legacy coverage without a threshold is full history');
+});
+
+test('reports a shared import threshold and refuses to label mixed scopes', async () => {
+  const coverage = threshold => [
+    { cycle: 2026, committee_id: 'C1', last_success_at: '2026-09-20', receipt_count: 26, total_amount: '100.01', min_amount: '1000.00' },
+    { cycle: 2026, committee_id: 'C2', last_success_at: '2026-09-19', receipt_count: 1, total_amount: '-0.01', min_amount: threshold },
+  ];
+  assert.equal((await repository({ fec_individual_coverage: coverage('1000.00') }).get('1')).minAmount, 1000);
+  assert.equal((await repository({ fec_individual_coverage: coverage('0') }).get('1')).minAmount, null);
 });
 
 test('pagination remains stable for tied and missing dates and clamps invalid pages', async () => {

@@ -8,16 +8,21 @@ const { parseFecSummary, verifyContributionFigures, assertContributionContent } 
 const html = (committee = '229,974.61', individual = '1,113,084.58', end = '06/30/2026') => `<h2>Coverage dates:</h2> 01/01/2025 to ${end} <b>Party committee contributions</b> $0.00 Other committee contributions $${committee} Itemized individual contributions $${individual} Total spent`;
 const now = new Date('2026-10-14T10:00:00Z');
 const c = { cycle: 2026, linked: true, nationwide: true, excludedCommittees: 0, committeeIds: ['C00473827'], refreshedAt: '2026-10-12', total: 229974.61 };
-const i = { ...c, total: 1113084.58, coveredCommittees: 1, eligibleCommittees: 1 };
+// Individual coverage is the $1,000+ subset of FEC's itemized total.
+const i = { ...c, total: 412500, coveredCommittees: 1, eligibleCommittees: 1, minAmount: 1000 };
 const fetcher = async () => new Response(html());
-test('Lee discrepancies are blocked; reconciled figures retain source coverage', async () => {
-  await assert.rejects(verifyContributionFigures({ ...c, total: 220974.61 }, { ...i, total: 1112084.58 }, now, fetcher), /9000.00.*1000.00/);
+test('Lee committee discrepancies are blocked; verified figures carry FEC itemized total', async () => {
+  await assert.rejects(verifyContributionFigures({ ...c, total: 220974.61 }, i, now, fetcher), /9000.00/);
   const result = await verifyContributionFigures(c, i, now, fetcher);
   assert.equal(result.coverageEnd, '2026-06-30'); assert.equal(result.sources.length, 1);
+  assert.equal(result.fecItemizedIndividualTotal, 1113084.58);
 });
-test('Fischer missing LLC and Paul new-quarter totals cannot pass', async () => {
-  await assert.rejects(verifyContributionFigures({ ...c, total: 339154.16 }, { ...i, total: 315280.48 }, now, async () => new Response(html('339,154.16', '316,280.48'))), /1000.00/);
-  await assert.rejects(verifyContributionFigures({ ...c, total: 97046.15 }, { ...i, total: 2223210.11 }, now, async () => new Response(html('100,546.15', '2,674,152.80', '09/30/2026'))), /Waiting for FEC reconciliation/);
+test('Paul new-quarter committee totals wait; large receipts above FEC itemized total fail', async () => {
+  await assert.rejects(verifyContributionFigures({ ...c, total: 97046.15 }, i, now, async () => new Response(html('100,546.15', '2,674,152.80', '09/30/2026'))), /Waiting for FEC reconciliation/);
+  await assert.rejects(verifyContributionFigures(c, { ...i, total: 1113084.59 }, now, fetcher), error => !(error instanceof exports.ContributionDataPending) && /exceed FEC's itemized/.test(error.message));
+});
+test('individual coverage must use the $1,000 large-receipt scope', async () => {
+  for (const minAmount of [null, 0, 200]) await assert.rejects(verifyContributionFigures(c, { ...i, minAmount }, now, fetcher), /incomplete or ambiguous/);
 });
 test('unavailable sources, stale imports, ambiguity, partial coverage and malformed summaries fail closed', async () => {
   for (const change of [{ refreshedAt: null }, { refreshedAt: '2026-09-01' }, { excludedCommittees: 1 }, { nationwide: false }]) await assert.rejects(verifyContributionFigures({ ...c, ...change }, i, now, fetcher));
@@ -33,7 +38,7 @@ test('financial copy and citations cannot change between verification and public
 
 
 test('pending data throws at the publication boundary; operational errors are not waiting', async () => {
-  await assert.rejects(verifyContributionFigures(c, { ...i, total: 1 }, now, fetcher), exports.ContributionDataPending);
+  await assert.rejects(verifyContributionFigures({ ...c, total: 1 }, i, now, fetcher), exports.ContributionDataPending);
   await assert.rejects(verifyContributionFigures(c, { ...i, refreshedAt: '2026-09-01' }, now, fetcher), exports.ContributionDataPending);
   await assert.rejects(verifyContributionFigures(c, i, now, async () => new Response('broken', { status: 503 })), error => !(error instanceof exports.ContributionDataPending));
   await assert.rejects(verifyContributionFigures(c, i, now, async () => new Response('unexpected layout')), error => !(error instanceof exports.ContributionDataPending));

@@ -68,12 +68,12 @@ def receipt(**changes):
         'committee': {'committee_id': 'C00442921', 'name': 'Campaign', 'cycle': 2026, 'candidate_ids': ['H8IN07184']},
         'contributor_name': 'EXAMPLE, DONOR', 'contributor_employer': ' Example Co ', 'contributor_occupation': 'ENGINEER',
         'contributor_city': 'INDIANAPOLIS', 'contributor_state': 'IN', 'contributor_street_1': 'Never persist this',
-        'contribution_receipt_amount': 100.01, 'contribution_receipt_date': '2025-01-01', **changes}
+        'contribution_receipt_amount': 1000.01, 'contribution_receipt_date': '2025-01-01', **changes}
 
 
 def test_individual_fields_are_allowlisted_and_decimal_and_source_identity_preserved():
     data = normalize_receipt(receipt(), 2026, '11AI', 'C00442921', individual=True)[-1]['data']
-    assert data['amount'] == '100.01'
+    assert data['amount'] == '1000.01'
     assert data['sub_id'] == '9999999999999999999'
     assert data['employer'] == 'Example Co'
     assert data['occupation'] == 'ENGINEER'
@@ -136,7 +136,7 @@ def test_resume_keeps_cursor_and_requires_empty_page_not_short_page():
 def test_changed_duplicate_and_changed_candidate_attribution_fail():
     store = IndividualDryRunStore()
     client = Mock()
-    client.individual_receipts.side_effect = [page([receipt()]), page([receipt(contribution_receipt_amount=200)], '200')]
+    client.individual_receipts.side_effect = [page([receipt()]), page([receipt(contribution_receipt_amount=2000)], '200')]
     with pytest.raises(FECError, match='changed during pagination'):
         sync_individuals(client, store, 2026, 'C00442921', 'H8IN07184')
     client.individual_receipts.side_effect = [page([receipt()])]
@@ -147,11 +147,13 @@ def test_changed_duplicate_and_changed_candidate_attribution_fail():
 def test_queue_prioritizes_unpublished_then_oldest_snapshot():
     db = Mock()
     db.table.return_value.select.return_value.eq.return_value.order.return_value.range.return_value.execute.return_value.data = [
-        {'committee_id': 'C2', 'last_success_at': '2026-09-20'},
-        {'committee_id': 'C3', 'last_success_at': '2026-09-01'},
-        {'committee_id': 'C1', 'last_success_at': None},
+        {'committee_id': 'C2', 'last_success_at': '2026-09-20', 'min_amount': 1000},
+        {'committee_id': 'C3', 'last_success_at': '2026-09-01', 'min_amount': 1000},
+        {'committee_id': 'C4', 'last_success_at': '2026-11-20', 'min_amount': 0},
+        {'committee_id': 'C1', 'last_success_at': None, 'min_amount': None},
     ]
-    assert [r['committee_id'] for r in read_queue(db, 2026)] == ['C1', 'C3', 'C2']
+    # A snapshot published under another threshold counts as never published.
+    assert [r['committee_id'] for r in read_queue(db, 2026)] == ['C1', 'C4', 'C3', 'C2']
 
 
 @pytest.mark.parametrize('error,finish_error,expected', [
@@ -222,7 +224,7 @@ def test_network_error_at_budget_boundary_is_not_a_successful_pause(monkeypatch)
 @pytest.mark.parametrize('entity', ['IND', 'ORG', 'COM'])
 def test_itemized_report_line_keeps_inconsistent_flags_and_other_persons(entity):
     data = normalize_receipt(receipt(entity_type=entity, is_individual=False), 2026, '11AI', individual=True)[-1]['data']
-    assert data['amount'] == '100.01'
+    assert data['amount'] == '1000.01'
 
 
 def test_old_staged_filter_scope_restarts_before_resuming():
@@ -249,7 +251,7 @@ def test_targeted_refresh_visits_each_requested_campaign_once(monkeypatch, reque
     monkeypatch.setattr(mod, 'create_supabase_client', lambda **kw: Mock())
     client = Mock(requests=0, max_requests=2200)
     monkeypatch.setattr(mod, 'IndividualClient', lambda *a: client)
-    monkeypatch.setattr(mod, 'read_queue', lambda db, cycle, committee: [{'committee_id': committee, 'candidate_id': None}])
+    monkeypatch.setattr(mod, 'read_queue', lambda db, cycle, committee, min_amount: [{'committee_id': committee, 'candidate_id': None}])
     monkeypatch.setattr(mod, 'IndividualStore', lambda *a: Mock())
     sync = Mock(return_value=1)
     monkeypatch.setattr(mod, 'sync_individuals', sync)
@@ -277,7 +279,7 @@ def test_failed_campaign_does_not_block_rest_of_queue(monkeypatch, caplog):
     monkeypatch.setattr(mod, 'create_supabase_client', lambda **kw: Mock())
     monkeypatch.setattr(mod, 'IndividualClient', lambda *a: Mock(requests=1, max_requests=10))
     stores = {}
-    monkeypatch.setattr(mod, 'IndividualStore', lambda db, cycle, cid, restart: stores.setdefault(cid, Mock()))
+    monkeypatch.setattr(mod, 'IndividualStore', lambda db, cycle, cid, restart, min_amount: stores.setdefault(cid, Mock()))
     monkeypatch.setattr(mod, 'read_queue', lambda *a: [
         {'committee_id': 'C00608695', 'candidate_id': None}, {'committee_id': 'C00442921', 'candidate_id': None}])
     sync = Mock(side_effect=[FECError('FEC receipt pagination repeated its cursor'), 12])
@@ -301,3 +303,37 @@ def test_undated_scan_ends_when_fec_ignores_null_filter():
     assert body['results'] == [undated]
     from sync_fec_donations import next_cursor
     assert next_cursor(body, cursor) is None
+
+
+def test_only_large_receipts_are_requested_and_recorded():
+    client = IndividualClient('unused', minimum_interval=0)
+    client.get = Mock(return_value=page([]))
+    client.individual_receipts(2026, 'C00442921', {})
+    assert client.get.call_args.args[1]['min_amount'] == 1000
+    store = IndividualDryRunStore()
+    fake = Mock()
+    fake.individual_receipts.side_effect = [page([receipt(contribution_receipt_amount=1000)]), page([])]
+    assert sync_individuals(fake, store, 2026, 'C00442921', 'H8IN07184') == 1
+    assert store.checkpoint['min_amount'] == 1000
+    assert fake.individual_receipts.call_args.args[3] == 1000
+
+
+@pytest.mark.parametrize('amount', [999.99, -2500, None, '1500'])
+def test_receipt_below_requested_minimum_fails(amount):
+    client = Mock()
+    client.individual_receipts.side_effect = [page([receipt(contribution_receipt_amount=amount)])]
+    with pytest.raises(FECError, match='below the requested minimum'):
+        sync_individuals(client, IndividualDryRunStore(), 2026, 'C00442921', 'H8IN07184')
+
+
+def test_staging_under_another_threshold_restarts():
+    from types import SimpleNamespace
+    from sync_fec_individuals import IndividualStore
+    db = Mock()
+    old = {'version': 1, 'phase': 'receipts', 'fetched': 100, 'report_line_scope': 2, 'cursor': {'last_index': '1'}}
+    fresh = {'version': 1, 'phase': 'receipts', 'fetched': 0, 'cursor': {}}
+    db.rpc.return_value.execute.side_effect = [SimpleNamespace(data=old), SimpleNamespace(data=None), SimpleNamespace(data=fresh)]
+    assert IndividualStore(db, 2026, 'C00442921').checkpoint == fresh
+    same = {**old, 'min_amount': 1000}
+    db.rpc.return_value.execute.side_effect = [SimpleNamespace(data=same)]
+    assert IndividualStore(db, 2026, 'C00442921').checkpoint == same
