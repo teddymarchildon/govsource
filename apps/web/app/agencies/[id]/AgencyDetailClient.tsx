@@ -20,7 +20,7 @@ export default function AgencyDetailClient({ agencyId, agency, childAgencies, do
     <div className="container mx-auto px-4 py-8">
       <Breadcrumbs collection={'agencies'} currentLabel={agency.short_name || agency.name} />
 
-      <header className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+      <header className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs">
         <div className="h-1.5 bg-primary" />
         <div className="flex flex-col gap-6 p-6 md:flex-row md:items-start md:justify-between md:p-8">
           <div className="flex min-w-0 items-start gap-4 md:gap-6">

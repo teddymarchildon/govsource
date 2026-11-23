@@ -16,7 +16,7 @@ export default function AdminNavigation() {
     {destinations.map(([href, label]) => {
       const active = href === '/admin' ? pathname === href : pathname.startsWith(href);
       // Full navigation preserves the editors' existing beforeunload protection.
-      return <a key={href} href={href} aria-current={active ? 'page' : undefined} className={`rounded-md px-3 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>{label}</a>;
+      return <a key={href} href={href} aria-current={active ? 'page' : undefined} className={`rounded-md px-3 py-2 text-sm font-medium transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>{label}</a>;
     })}
   </nav>;
 }

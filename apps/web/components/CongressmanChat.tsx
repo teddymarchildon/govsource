@@ -244,7 +244,7 @@ const CongressmanChat: React.FC<CongressmanChatProps> = ({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className="bg-gray-100 p-4 rounded-t-lg flex-shrink-0">
+      <div className="bg-gray-100 p-4 rounded-t-lg shrink-0">
         <h2 className="text-lg font-semibold">{title}</h2>
         <p className="text-sm text-gray-600">{subtitle}</p>
       </div>
@@ -294,19 +294,19 @@ const CongressmanChat: React.FC<CongressmanChatProps> = ({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="border-t p-4 bg-white rounded-b-lg flex-shrink-0">
+      <form onSubmit={handleSubmit} className="border-t p-4 bg-white rounded-b-lg shrink-0">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about this Congress member..."
-            className="flex-1 border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans text-sm bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+            className="flex-1 border rounded-lg px-4 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-sans text-sm bg-gray-50 hover:bg-white focus:bg-white transition-colors"
           />
           <button
             type="submit"
             disabled={isLoading}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 font-medium transition-colors"
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 font-medium transition-colors"
           >
             Send
           </button>

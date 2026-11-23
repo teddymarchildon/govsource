@@ -31,7 +31,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
           {brief.author_name ? <span>· By {getBriefAuthorName(brief.author_name)}</span> : null}
           {brief.version > 1 && brief.updated_at ? <span>· Updated <time dateTime={brief.updated_at}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(brief.updated_at))}</time></span> : null}
         </div>
-        <h1 className="mt-3 break-words font-serif text-[28px] font-semibold leading-[1.15] tracking-[-0.025em] md:text-[38px]">{brief.title}</h1>
+        <h1 className="mt-3 wrap-break-word font-serif text-[28px] font-semibold leading-[1.15] tracking-tight md:text-[38px]">{brief.title}</h1>
         {brief.dek ? <p className="mt-3 max-w-[70ch] text-base leading-[1.6] text-muted-foreground">{brief.dek}</p> : null}
       </header>
 
@@ -45,7 +45,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
                   <span aria-hidden="true" className="pt-1 font-mono text-xs font-semibold text-primary">{String(index + 1).padStart(2, '0')}</span>
                   <div>
                     {point.label?.trim() ? <h3 className="mb-1 text-base font-semibold leading-6">{point.label}</h3> : null}
-                    <p className="max-w-[72ch] break-words text-base leading-[1.65]">
+                    <p className="max-w-[72ch] wrap-break-word text-base leading-[1.65]">
                       {point.text}
                       {[...new Set(point.source_refs)].map((ref) => {
                         if (ref === 'primary') return <Link key={ref} href={primaryHref} aria-label={`Primary source for point ${index + 1}`} className="ml-1 inline-flex min-h-6 items-center align-baseline text-xs font-semibold text-primary underline decoration-primary/30 underline-offset-2">[Source]</Link>;
@@ -69,7 +69,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
           <h2 id="brief-sources" className="text-xs font-bold uppercase tracking-[0.12em]">Sources &amp; records</h2>
           <Link href="/editorial-policy#how-we-use-ai" className="mt-3 block text-xs text-primary hover:underline">How we produce our Briefs</Link>
           <Link href={primaryHref} className="mt-3 flex items-start justify-between gap-2 py-1 text-sm font-semibold leading-5 text-primary hover:underline">View the {getContentTypeLabel(brief.primary_item_type).toLowerCase()}<ArrowUpRight aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" /></Link>
-          {brief.sources.length > 0 ? <ol className="mt-3 space-y-2 border-t border-border pt-3">{brief.sources.map((source, index) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="block break-words py-1 text-sm leading-5 text-primary hover:underline">[{index + 1}] {source.label}</a></li>)}</ol> : null}
+          {brief.sources.length > 0 ? <ol className="mt-3 space-y-2 border-t border-border pt-3">{brief.sources.map((source, index) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="block wrap-break-word py-1 text-sm leading-5 text-primary hover:underline">[{index + 1}] {source.label}</a></li>)}</ol> : null}
           {brief.related_items?.length ? <div className="mt-3 border-t border-border pt-3"><h3 className="mb-2 text-xs font-semibold text-muted-foreground">Related records</h3>{brief.related_items.map((item) => <Link key={`${item.type}-${item.id}`} href={getContentHref(item)} className="block py-1 text-sm text-primary hover:underline">{getContentTypeLabel(item.type)} #{item.id}</Link>)}</div> : null}
         </aside>
       </div>

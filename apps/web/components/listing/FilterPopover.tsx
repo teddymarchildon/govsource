@@ -45,7 +45,7 @@ export function FilterPopover({
           {typeof displayCount !== "undefined" && (
             <Badge
               variant="secondary"
-              className="h-5 min-w-[1.25rem] justify-center rounded-full px-1 text-[0.65rem]"
+              className="h-5 min-w-5 justify-center rounded-full px-1 text-[0.65rem]"
             >
               {displayCount}
             </Badge>

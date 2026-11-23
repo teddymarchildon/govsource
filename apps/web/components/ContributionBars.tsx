@@ -7,7 +7,7 @@ export default function ContributionBars({ rows, label }: { rows: ContributionBa
   return <ol aria-label={label} className="space-y-4">
     {rows.map((row, index) => <li key={`${row.label}-${index}`}>
       <div className="mb-1.5 flex items-start justify-between gap-3 text-sm">
-        <div className="min-w-0">{row.href ? <Link href={row.href} className="break-words font-medium text-primary hover:underline">{row.label}</Link> : <span className="break-words font-medium">{row.label}</span>}
+        <div className="min-w-0">{row.href ? <Link href={row.href} className="wrap-break-word font-medium text-primary hover:underline">{row.label}</Link> : <span className="wrap-break-word font-medium">{row.label}</span>}
           {row.count !== undefined ? <p className="text-xs text-muted-foreground">{row.count.toLocaleString('en-US')} records</p> : null}</div>
         <span className="shrink-0 font-semibold tabular-nums">{money(row.total)}</span>
       </div>

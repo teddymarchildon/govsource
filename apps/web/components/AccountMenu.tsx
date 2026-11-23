@@ -68,7 +68,7 @@ export default function AccountMenu() {
             { label: 'Account & billing', href: '/profile?section=account', icon: CreditCard },
             ...(userId && adminUserId === userId ? [{ label: 'Admin dashboard', href: '/admin', icon: ShieldCheck }] : []),
           ].map(({ label, href, icon: Icon }) => (
-            <Link key={href} href={href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Link key={href} href={href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
               <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />{label}
             </Link>
           ))}

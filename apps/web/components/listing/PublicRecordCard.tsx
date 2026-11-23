@@ -40,7 +40,7 @@ export function PublicRecordCard({
       <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
         <Link
           href={href}
-          className="after:absolute after:inset-0 focus:outline-none"
+          className="after:absolute after:inset-0 focus:outline-hidden"
           aria-label={`View ${title}`}
         >
           <h2 className="line-clamp-3 text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">

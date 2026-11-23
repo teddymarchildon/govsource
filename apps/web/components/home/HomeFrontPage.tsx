@@ -24,8 +24,8 @@ export default function HomeFrontPage({ briefs, placement = 'home', leadHeading 
         <article data-brief-preview={lead.id} data-brief-placement={`${placement}:lead`} className={lead.points.length > 0 ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]' : 'max-w-2xl'}>
           <div className="min-w-0">
             <BriefMeta brief={lead} />
-            <Link href={`/briefs/${lead.slug}`} className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
-              <LeadHeading className="mt-3 break-words font-serif text-[32px] font-semibold leading-[1.08] tracking-[-0.03em] group-hover:text-primary md:text-[38px]">{lead.display_title?.trim() || lead.title}</LeadHeading>
+            <Link href={`/briefs/${lead.slug}`} className="group block focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+              <LeadHeading className="mt-3 wrap-break-word font-serif text-[32px] font-semibold leading-[1.08] tracking-[-0.03em] group-hover:text-primary md:text-[38px]">{lead.display_title?.trim() || lead.title}</LeadHeading>
               {lead.dek ? <p className="mt-4 text-base leading-relaxed text-muted-foreground">{lead.dek}</p> : null}
               <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">Read the Brief <ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
             </Link>
@@ -56,7 +56,7 @@ export default function HomeFrontPage({ briefs, placement = 'home', leadHeading 
           <section aria-labelledby={moreId} className="mt-7 border-t border-foreground/70 pt-4">
             <h2 id={moreId} className="mb-1 text-sm font-bold">More to understand</h2>
             <div className="grid sm:grid-cols-2 sm:gap-x-6">
-              {latest.map((brief) => <div key={brief.id} className="border-b border-border py-5 last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0"><BriefTeaser brief={brief} variant="headline" placement={`${placement}:latest`} /></div>)}
+              {latest.map((brief) => <div key={brief.id} className="border-b border-border py-5 last:border-b-0 sm:nth-last-2:border-b-0"><BriefTeaser brief={brief} variant="headline" placement={`${placement}:latest`} /></div>)}
             </div>
           </section>
         ) : null}

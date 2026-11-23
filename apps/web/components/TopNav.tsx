@@ -202,7 +202,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
 
   return (
     <>
-      <nav className="fixed left-0 right-0 top-12 z-[9] hidden h-12 border-b border-border bg-background md:block" aria-label="Primary navigation">
+      <nav className="fixed left-0 right-0 top-12 z-9 hidden h-12 border-b border-border bg-background md:block" aria-label="Primary navigation">
         <div ref={desktopMenusRef} className="relative container mx-auto grid h-full grid-cols-[1fr_auto] items-center px-4 lg:grid-cols-[1fr_auto_1fr]">
 
           <div className="flex items-center justify-center gap-3 lg:col-start-2 lg:gap-5">
@@ -230,7 +230,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               </button>
 
               {topicsOpen ? (
-                <div className="absolute inset-x-4 top-full mx-auto mt-2 max-h-[calc(100dvh-7rem)] max-w-[44rem] overflow-y-auto rounded-xl border border-border/80 bg-card p-4 shadow-xl backdrop-blur-sm" role="menu">
+                <div className="absolute inset-x-4 top-full mx-auto mt-2 max-h-[calc(100dvh-7rem)] max-w-176 overflow-y-auto rounded-xl border border-border/80 bg-card p-4 shadow-xl backdrop-blur-xs" role="menu">
                   <div className="mb-3 flex items-center justify-between border-b border-border pb-3">
                     <div>
                       <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Explore policy</p>
@@ -267,7 +267,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
               </button>
 
               {sourcesOpen && (
-                <div className="absolute inset-x-4 top-full mx-auto mt-2 max-h-[calc(100dvh-7rem)] max-w-[36rem] overflow-y-auto rounded-xl border border-border/80 bg-card p-4 shadow-xl backdrop-blur-sm" role="menu">
+                <div className="absolute inset-x-4 top-full mx-auto mt-2 max-h-[calc(100dvh-7rem)] max-w-xl overflow-y-auto rounded-xl border border-border/80 bg-card p-4 shadow-xl backdrop-blur-xs" role="menu">
                   <div className="grid grid-cols-3 gap-5">
                     {archiveGroups.map((group) => (
                       <div key={group.label}>
@@ -306,7 +306,7 @@ export default function TopNav({ topics }: { topics: TopicLink[] }) {
             </button>
 
             {watchingOpen && (
-              <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border/80 bg-card/95 p-2 shadow-xl backdrop-blur-sm">
+              <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border/80 bg-card/95 p-2 shadow-xl backdrop-blur-xs">
                 <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Watched Items</div>
                 {watchingContent}
               </div>

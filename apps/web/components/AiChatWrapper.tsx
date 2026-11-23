@@ -42,7 +42,7 @@ export default function AiChatWrapper(props: AiChatWrapperProps) {
       {/* Floating button */}
       <button
         onClick={() => setShowMobileChat(true)}
-        className="fixed bottom-4 right-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-lg border border-primary/20 bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+        className="fixed bottom-4 right-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-lg border border-primary/20 bg-primary text-primary-foreground shadow-xs transition-colors hover:bg-primary/90"
         aria-label="Open AI Assistant"
         title="Open AI Assistant"
       >
@@ -51,13 +51,13 @@ export default function AiChatWrapper(props: AiChatWrapperProps) {
 
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-[2px] transition-opacity duration-200 ${showMobileChat ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-60 bg-foreground/20 backdrop-blur-[2px] transition-opacity duration-200 ${showMobileChat ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setShowMobileChat(false)}
       />
 
       {/* Chat panel - stays mounted to preserve conversation state */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-[70] transition-transform duration-300 ${showMobileChat ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`}
+        className={`fixed inset-x-0 bottom-0 z-70 transition-transform duration-300 ${showMobileChat ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`}
       >
         <div className="flex max-h-[85vh] flex-col rounded-t-lg border border-border bg-card shadow-xl">
           <div className="flex justify-center pt-2">
@@ -72,7 +72,7 @@ export default function AiChatWrapper(props: AiChatWrapperProps) {
               variant="ghost"
               size="sm"
               onClick={() => setShowMobileChat(false)}
-              className="h-8 w-8 flex-shrink-0 rounded-md p-0"
+              className="h-8 w-8 shrink-0 rounded-md p-0"
               aria-label="Close assistant"
             >
               <X className="h-5 w-5" />

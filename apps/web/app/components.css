@@ -118,11 +118,11 @@
 }
 
 .form-input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500;
+  @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-hidden focus:ring-2 focus:ring-blue-500;
 }
 
 .form-button {
-  @apply w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50;
+  @apply w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:opacity-50;
 }
 
 .form-link {

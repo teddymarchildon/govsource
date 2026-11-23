@@ -20,7 +20,7 @@ function GroupSummary({ title, groups, kind, cycle }: { title: string; groups: I
   return <Card><CardHeader><CardTitle className="text-xl">{title}</CardTitle><p className="text-sm text-muted-foreground">Top ten reported employer or occupation fields.</p></CardHeader><CardContent>
     {named.length ? <ol className="divide-y divide-border/60">{named.slice(0, 10).map((group, index) => <li key={group.label} className="flex items-start gap-3 py-3 first:pt-0">
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
-      <div className="min-w-0 flex-1"><Link href={contributionHref('individuals', cycle, { [kind]: group.label! })} className="break-words text-sm font-medium text-primary hover:underline">{group.label}</Link><p className="mt-1 text-xs text-muted-foreground">{group.count.toLocaleString('en-US')} {group.count === 1 ? 'record' : 'records'}</p></div>
+      <div className="min-w-0 flex-1"><Link href={contributionHref('individuals', cycle, { [kind]: group.label! })} className="wrap-break-word text-sm font-medium text-primary hover:underline">{group.label}</Link><p className="mt-1 text-xs text-muted-foreground">{group.count.toLocaleString('en-US')} {group.count === 1 ? 'record' : 'records'}</p></div>
       <span className="shrink-0 text-sm font-semibold tabular-nums">{money(group.total)}</span>
     </li>)}</ol> : <p className="text-sm text-muted-foreground">No reported values are available.</p>}
     {missing ? <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">Not reported: {money(missing.total)} across {missing.count.toLocaleString('en-US')} records.</p> : null}
@@ -44,7 +44,7 @@ export default async function IndividualContributions({ memberId, cycle, page, f
       {period ? <form action={`/congress-members/${memberId}`} className="flex shrink-0 items-end gap-2">
         <input type="hidden" name="tab" value="contributions" /><input type="hidden" name="contributionKind" value="individuals" />
         <div className="space-y-1.5"><label htmlFor="individual-cycle" className="block text-xs font-medium text-muted-foreground">Reporting period</label>
-          <select id="individual-cycle" name="cycle" defaultValue={period} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <select id="individual-cycle" name="cycle" defaultValue={period} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
             {data.cycles.map(value => <option key={value} value={value}>{value - 1}–{value}</option>)}
           </select></div><Button type="submit" variant="outline">Apply</Button>
       </form> : null}
@@ -65,7 +65,7 @@ export default async function IndividualContributions({ memberId, cycle, page, f
           ['Available itemized contributions', money(data.total), 'Signed amounts, before refunds'],
           ['Contribution records', data.count.toLocaleString('en-US'), 'Transactions, not unique people'],
           ['Campaigns covered', `${data.coveredCommittees} of ${data.eligibleCommittees}`, `${period - 1}–${period} reporting period`],
-        ].map(([label, value, helper]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 break-words text-2xl font-bold lg:text-3xl">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></CardContent></Card>)}</div>
+        ].map(([label, value, helper]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 wrap-break-word text-2xl font-bold lg:text-3xl">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></CardContent></Card>)}</div>
         <div className="grid gap-6 lg:grid-cols-2"><GroupSummary title="By reported employer" groups={data.employers} kind="employer" cycle={period} /><GroupSummary title="By reported occupation" groups={data.occupations} kind="occupation" cycle={period} /></div>
         <Card><CardHeader><CardTitle className="text-xl">Individual contribution transactions</CardTitle><p className="text-sm text-muted-foreground">Most recent receipts first. Reporting periods may include receipts dated outside those years.</p></CardHeader><CardContent>
           <ContributionFilters key={JSON.stringify(filters)} kind="individuals" cycle={period} filters={filters} />
@@ -73,8 +73,8 @@ export default async function IndividualContributions({ memberId, cycle, page, f
           <div className="relative overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Itemized individual/other-person contributions in {period - 1}–{period}</caption>
             <thead><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">{['Contributor', 'Reported employer / occupation', 'Receipt date', 'Amount', 'Source'].map(label => <th scope="col" key={label} className={`pb-3 pr-4 font-medium ${['Amount', 'Source'].includes(label) ? 'text-right' : ''}`}>{label}</th>)}</tr></thead>
             <tbody>{data.receipts.map(receipt => <tr key={`${receipt.receiving_committee_id}:${receipt.sub_id}`} className="border-b border-border/60 last:border-0">
-              <td className="min-w-[12rem] py-3 pr-4"><p className="font-medium">{receipt.contributor_name}</p><p className="text-xs text-muted-foreground">{[receipt.city, receipt.state].filter(Boolean).join(', ') || 'Location not reported'}</p></td>
-              <td className="min-w-[12rem] py-3 pr-4"><p>{receipt.employer || 'Employer not reported'}</p><p className="text-xs text-muted-foreground">{receipt.occupation || 'Occupation not reported'}</p></td>
+              <td className="min-w-48 py-3 pr-4"><p className="font-medium">{receipt.contributor_name}</p><p className="text-xs text-muted-foreground">{[receipt.city, receipt.state].filter(Boolean).join(', ') || 'Location not reported'}</p></td>
+              <td className="min-w-48 py-3 pr-4"><p>{receipt.employer || 'Employer not reported'}</p><p className="text-xs text-muted-foreground">{receipt.occupation || 'Occupation not reported'}</p></td>
               <td className="whitespace-nowrap py-3 pr-4 text-muted-foreground">{receipt.receipt_date ? date(receipt.receipt_date) : 'Not reported'}</td>
               <td className="whitespace-nowrap py-3 pr-4 text-right font-medium tabular-nums">{money(Number(receipt.amount))}</td>
               <td className="py-3 text-right"><a href={safeSource(receipt.source_url, receipt.receiving_committee_id, period)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">FEC<ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" /><span className="sr-only"> source for record {receipt.sub_id}</span></a></td>

@@ -237,7 +237,7 @@ export default function BillOrLawDetail({ item, texts, sponsors, cosponsors, act
               <div className="mx-auto max-w-3xl border-l border-border pl-5">
                 {actions.map((action, index) => (
                   <article key={action.id} className="relative pb-7 last:pb-0">
-                    <span className={`absolute -left-[25px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-card ${index === 0 ? 'bg-primary ring-4 ring-primary/10' : 'bg-muted-foreground/35'}`} />
+                    <span className={`absolute left-[-25px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-card ${index === 0 ? 'bg-primary ring-4 ring-primary/10' : 'bg-muted-foreground/35'}`} />
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <time dateTime={action.date} className="font-medium text-foreground">{formatLegislationDate(action.date)}</time><span aria-hidden="true">·</span><span>{action.type}</span>
                       {index === 0 ? <Badge variant="secondary" className="h-5 text-[10px]">Latest</Badge> : null}
@@ -260,11 +260,11 @@ export default function BillOrLawDetail({ item, texts, sponsors, cosponsors, act
 
   return (
     <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:h-[calc(100dvh-9rem)] md:min-h-[560px]">
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <Breadcrumbs collection={isLaw ? 'laws' : 'bills'} currentLabel={number} />
       </div>
 
-      <header className="flex flex-shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">
+      <header className="flex shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 max-w-5xl">
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">{isLaw ? 'Federal law' : 'Federal bill'} · {number}</p>
           <h1 className="text-balance text-2xl font-bold leading-tight text-foreground md:text-3xl">{title}</h1>
@@ -290,9 +290,9 @@ export default function BillOrLawDetail({ item, texts, sponsors, cosponsors, act
 
       {isMobile ? (
         <>
-          <div className="sticky top-16 z-30 flex flex-shrink-0 rounded-lg bg-muted p-1 shadow-sm" aria-label={`${isLaw ? 'Law' : 'Bill'} workspace`}>
-            <button type="button" onClick={() => setMobileWorkspace('details')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'details' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'details'}><ScrollText className="h-4 w-4" /> Details</button>
-            <button type="button" onClick={() => setMobileWorkspace('assistant')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'assistant' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'assistant'}><MessageSquareText className="h-4 w-4" /> Ask this {itemNoun}</button>
+          <div className="sticky top-16 z-30 flex shrink-0 rounded-lg bg-muted p-1 shadow-xs" aria-label={`${isLaw ? 'Law' : 'Bill'} workspace`}>
+            <button type="button" onClick={() => setMobileWorkspace('details')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'details' ? 'bg-card shadow-xs' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'details'}><ScrollText className="h-4 w-4" /> Details</button>
+            <button type="button" onClick={() => setMobileWorkspace('assistant')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'assistant' ? 'bg-card shadow-xs' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'assistant'}><MessageSquareText className="h-4 w-4" /> Ask this {itemNoun}</button>
           </div>
           <div className="h-[calc(100dvh-7rem)] min-h-[560px]">
             <div className={mobileWorkspace === 'details' ? 'h-full' : 'hidden h-full'}>{detailsPanel}</div>
@@ -303,7 +303,7 @@ export default function BillOrLawDetail({ item, texts, sponsors, cosponsors, act
         <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: assistantOpen ? `minmax(0, 1fr) 10px ${assistantWidth}px` : 'minmax(0, 1fr) 0 0' }}>
           {detailsPanel}
           <div role="separator" aria-label="Resize assistant" aria-orientation="vertical" aria-valuemin={360} aria-valuemax={600} aria-valuenow={assistantWidth} tabIndex={assistantOpen ? 0 : -1} onPointerDown={handleResizeStart} onKeyDown={handleResizeKeyDown} className={`group flex cursor-col-resize items-center justify-center ${assistantOpen ? '' : 'pointer-events-none opacity-0'}`}>
-            <span className="flex h-12 w-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm group-hover:text-foreground group-focus:text-foreground"><GripVertical className="h-4 w-4" /></span>
+            <span className="flex h-12 w-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-xs group-hover:text-foreground group-focus:text-foreground"><GripVertical className="h-4 w-4" /></span>
           </div>
           <div className={`min-h-0 overflow-hidden transition-opacity ${assistantOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>{assistantPanel}</div>
         </div>

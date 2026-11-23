@@ -131,11 +131,11 @@ export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProp
 
   return (
     <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:h-[calc(100dvh-9rem)] md:min-h-[560px]">
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <Breadcrumbs collection={'executiveOrders'} currentLabel={order.remote_document_number ? `Document ${order.remote_document_number}` : order.title} />
       </div>
 
-      <header className="flex flex-shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">
+      <header className="flex shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 max-w-5xl">
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">Executive Order</p>
           <h1 className="text-balance text-2xl font-bold leading-tight text-foreground md:text-3xl">{order.title}</h1>
@@ -183,11 +183,11 @@ export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProp
 
       {isMobile ? (
         <>
-          <div className="sticky top-16 z-30 flex flex-shrink-0 rounded-lg bg-muted p-1 shadow-sm" aria-label="Executive order workspace">
+          <div className="sticky top-16 z-30 flex shrink-0 rounded-lg bg-muted p-1 shadow-xs" aria-label="Executive order workspace">
             <button
               type="button"
               onClick={() => setMobileWorkspace('source')}
-              className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'source' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}
+              className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'source' ? 'bg-card shadow-xs' : 'text-muted-foreground'}`}
               aria-pressed={mobileWorkspace === 'source'}
             >
               <FileText className="h-4 w-4" /> Official text
@@ -195,7 +195,7 @@ export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProp
             <button
               type="button"
               onClick={() => setMobileWorkspace('assistant')}
-              className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'assistant' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}
+              className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'assistant' ? 'bg-card shadow-xs' : 'text-muted-foreground'}`}
               aria-pressed={mobileWorkspace === 'assistant'}
             >
               <MessageSquareText className="h-4 w-4" /> Ask this order
@@ -236,7 +236,7 @@ export default function ExecutiveOrderDetail({ order }: ExecutiveOrderDetailProp
             onKeyDown={handleResizeKeyDown}
             className={`group flex cursor-col-resize items-center justify-center ${assistantOpen ? '' : 'pointer-events-none opacity-0'}`}
           >
-            <span className="flex h-12 w-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm group-hover:text-foreground group-focus:text-foreground">
+            <span className="flex h-12 w-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-xs group-hover:text-foreground group-focus:text-foreground">
               <GripVertical className="h-4 w-4" />
             </span>
           </div>

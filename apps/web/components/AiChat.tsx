@@ -722,7 +722,7 @@ export default function AiChat({
                   {message.role === 'assistant' ? (
                     <MessageResponse className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-headings:my-3 prose-code:text-xs">{message.content}</MessageResponse>
                   ) : (
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
                       {message.content}
                     </div>
                   )}

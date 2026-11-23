@@ -40,7 +40,7 @@ export function FilterToolbar({
   return (
     <div
       className={cn(
-        "space-y-4 rounded-xl border bg-card/80 p-4 shadow-sm backdrop-blur",
+        "space-y-4 rounded-xl border bg-card/80 p-4 shadow-xs backdrop-blur-sm",
         className,
       )}
     >

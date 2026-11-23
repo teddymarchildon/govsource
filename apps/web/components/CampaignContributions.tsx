@@ -40,7 +40,7 @@ export default async function CampaignContributions({ memberId, cycle, page, fil
       {period ? <form className="flex shrink-0 items-end gap-2" action={`/congress-members/${memberId}`}>
         <input type="hidden" name="tab" value="contributions" /><input type="hidden" name="contributionKind" value="committees" />
         <div className="space-y-1.5"><label htmlFor="contribution-cycle" className="block text-xs font-medium text-muted-foreground">Reporting period</label>
-          <select id="contribution-cycle" name="cycle" defaultValue={period} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <select id="contribution-cycle" name="cycle" defaultValue={period} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
             {data.cycles.map(value => <option key={value} value={value}>{value - 1}–{value}</option>)}
           </select></div>
         <Button type="submit" variant="outline">Apply</Button>
@@ -63,7 +63,7 @@ export default async function CampaignContributions({ memberId, cycle, page, fil
             ['Reported contributions', money(data.total), 'Signed amounts, before refunds'],
             ['Contributing groups', data.groups.length.toLocaleString('en-US'), 'Includes reported names with unresolved IDs'],
             ['Contribution records', data.count.toLocaleString('en-US'), `${period - 1}–${period} reporting period`],
-          ].map(([label, value, helper]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 break-words text-2xl font-bold lg:text-3xl">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></CardContent></Card>)}
+          ].map(([label, value, helper]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 wrap-break-word text-2xl font-bold lg:text-3xl">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></CardContent></Card>)}
         </div>
 
         <Card><CardHeader><CardTitle className="text-xl">Top contributing committees</CardTitle><p className="text-sm text-muted-foreground">The ten largest reported totals for this period.</p></CardHeader><CardContent>
@@ -81,7 +81,7 @@ export default async function CampaignContributions({ memberId, cycle, page, fil
           <div className="relative overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Reported party and other committee contributions for {period - 1}–{period}</caption>
             <thead><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground"><th scope="col" className="pb-3 pr-4 font-medium">Contributor</th><th scope="col" className="whitespace-nowrap pb-3 pr-4 font-medium">Receipt date</th><th scope="col" className="pb-3 pr-4 text-right font-medium">Amount</th><th scope="col" className="pb-3 text-right font-medium">Source</th></tr></thead>
             <tbody>{data.receipts.map(receipt => <tr key={receipt.sub_id} className="border-b border-border/60 last:border-0">
-              <td className="min-w-[13rem] py-3 pr-4"><p className="font-medium">{receipt.contributor_name}</p><a href={committeeUrl(receipt.receiving_committee_id, period)} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">To {receipt.receiving_committee_id}<span className="sr-only"> (FEC recipient committee)</span></a>{!receipt.giving_committee_id ? <p className="text-xs text-muted-foreground">Donor committee ID unavailable</p> : null}</td>
+              <td className="min-w-52 py-3 pr-4"><p className="font-medium">{receipt.contributor_name}</p><a href={committeeUrl(receipt.receiving_committee_id, period)} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary hover:underline">To {receipt.receiving_committee_id}<span className="sr-only"> (FEC recipient committee)</span></a>{!receipt.giving_committee_id ? <p className="text-xs text-muted-foreground">Donor committee ID unavailable</p> : null}</td>
               <td className="whitespace-nowrap py-3 pr-4 text-muted-foreground">{receipt.receipt_date ? date(receipt.receipt_date) : 'Not reported'}</td><td className="whitespace-nowrap py-3 pr-4 text-right font-medium tabular-nums">{money(Number(receipt.amount))}</td>
               <td className="py-3 text-right">{sourceUrl(receipt.source_url) ? <a href={sourceUrl(receipt.source_url)!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">FEC<ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" /><span className="sr-only"> source for {receipt.contributor_name}, record {receipt.sub_id}</span></a> : <span className="text-muted-foreground">Unavailable</span>}</td>
             </tr>)}</tbody>
