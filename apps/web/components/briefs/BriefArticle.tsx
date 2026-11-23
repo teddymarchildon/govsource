@@ -50,7 +50,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
                       {[...new Set(point.source_refs)].map((ref) => {
                         if (ref === 'primary') return <Link key={ref} href={primaryHref} aria-label={`Primary source for point ${index + 1}`} className="ml-1 inline-flex min-h-6 items-center align-baseline text-xs font-semibold text-primary underline decoration-primary/30 underline-offset-2">[Source]</Link>;
                         const source = sourcesById.get(ref);
-                        return source ? <a key={ref} href={source.url} target="_blank" rel="noreferrer" aria-label={`Source ${source.number} for point ${index + 1}: ${source.label}`} className="ml-1 inline-flex min-h-6 items-center text-xs font-semibold text-primary underline decoration-primary/30 underline-offset-2">[{source.number}]</a> : null;
+                        return source ? <span key={ref} title={source.label} aria-label={`Source ${source.number} for point ${index + 1}: ${source.label}`} className="ml-1 inline-flex min-h-6 items-center text-xs font-semibold text-muted-foreground">[{source.number}]</span> : null;
                       })}
                     </p>
                   </div>
@@ -69,7 +69,7 @@ export default function BriefArticle({ brief, children }: { brief: Brief; childr
           <h2 id="brief-sources" className="text-xs font-bold uppercase tracking-[0.12em]">Sources &amp; records</h2>
           <Link href="/editorial-policy#how-we-use-ai" className="mt-3 block text-xs text-primary hover:underline">How we produce our Briefs</Link>
           <Link href={primaryHref} className="mt-3 flex items-start justify-between gap-2 py-1 text-sm font-semibold leading-5 text-primary hover:underline">View the {getContentTypeLabel(brief.primary_item_type).toLowerCase()}<ArrowUpRight aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" /></Link>
-          {brief.sources.length > 0 ? <ol className="mt-3 space-y-2 border-t border-border pt-3">{brief.sources.map((source, index) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="block wrap-break-word py-1 text-sm leading-5 text-primary hover:underline">[{index + 1}] {source.label}</a></li>)}</ol> : null}
+          {brief.sources.length > 0 ? <ol className="mt-3 space-y-2 border-t border-border pt-3">{brief.sources.map((source, index) => <li key={source.id} className="wrap-break-word py-1 text-sm leading-5 text-muted-foreground">[{index + 1}] {source.label}</li>)}</ol> : null}
           {brief.related_items?.length ? <div className="mt-3 border-t border-border pt-3"><h3 className="mb-2 text-xs font-semibold text-muted-foreground">Related records</h3>{brief.related_items.map((item) => <Link key={`${item.type}-${item.id}`} href={getContentHref(item)} className="block py-1 text-sm text-primary hover:underline">{getContentTypeLabel(item.type)} #{item.id}</Link>)}</div> : null}
         </aside>
       </div>
