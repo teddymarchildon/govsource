@@ -21,9 +21,9 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now?: D
     return { ...summary, waiting: [{ memberId: 0, reason: 'Nationwide committee import is stale.' }], reason: 'Waiting for a successful nationwide committee import.' };
   }
   // Pagination matters once this is no longer a five-article pilot.
-  const existing: { id: number; primary_item_id: number; status: string; generation_metadata: { fingerprint?: string; evidence?: PriorEvidence } }[] = [];
+  const existing: { id: number; primary_item_id: number; status: string; published_at: string | null; generation_metadata: { fingerprint?: string; evidence?: PriorEvidence } }[] = [];
   for (let offset = 0; ; offset += 500) {
-    const page = await db.from('brief').select('id,primary_item_id,status,generation_metadata')
+    const page = await db.from('brief').select('id,primary_item_id,status,published_at,generation_metadata')
       .eq('primary_item_type', 'campaign_finance').eq('contribution_cycle', cycle)
       .order('id', { ascending: false }).range(offset, offset + 499);
     if (page.error) throw page.error;
@@ -64,8 +64,12 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now?: D
       const fingerprint = contributionFingerprint(committees, individuals);
       if (prior.some(row => row.generation_metadata?.fingerprint === fingerprint)) { summary.unchanged++; continue; }
       // Unknown legacy evidence cannot establish a change safely.
-      const baseline = prior[0]?.generation_metadata?.evidence;
-      if (prior.length && !baseline) { summary.unchanged++; continue; }
+      // Only coverage readers actually saw is a baseline. An archived draft that
+      // was never published (e.g. superseded by a scope change) is not; the
+      // fingerprint check above still blocks redrafting identical content.
+      const published = prior.filter(row => row.published_at);
+      const baseline = published[0]?.generation_metadata?.evidence;
+      if (published.length && !baseline) { summary.unchanged++; continue; }
       const selection = selectContributionDevelopment(committees, individuals, baseline);
       if (!selection.selected) { summary.unchanged++; continue; }
       const verification = await verifyContributionFigures(committees, individuals, now ?? new Date());
@@ -79,7 +83,7 @@ export async function generateContributionBriefBatch(db: SupabaseClient, now?: D
         slug: `${draft.slug}-${fingerprint.slice(0, 16)}`,
         author_name: 'GovSource',
         generation_metadata: { ...draft.generation_metadata, trigger: 'contribution-continuous', fingerprint,
-          selection: { ...selection, version: 'reader-value-finance-v1', prior_brief_id: prior[0]?.id ?? null,
+          selection: { ...selection, version: 'reader-value-finance-v1', prior_brief_id: published[0]?.id ?? null,
             reader_question: 'What does the reported funding mix reveal, and what can voters not infer from these records?',
             affected_audience: 'Voters evaluating this member’s campaign financing',
             editorial_review_required: true } },

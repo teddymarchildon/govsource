@@ -43,7 +43,7 @@ function setup({ existing = [], fresh = true, individualFresh = true, broken = [
   } };
   return { run: () => api.generateContributionBriefBatch(db, now), writes, verified };
 }
-const prior = (id, status = 'published', totals = 100000) => ({ id, primary_item_id: id, status, generation_metadata: { evidence: { committees: { total: totals }, individuals: { total: totals } } } });
+const prior = (id, status = 'published', totals = 100000, publishedAt = status === 'published' ? '2026-10-01T00:00:00Z' : null) => ({ id, primary_item_id: id, status, published_at: publishedAt, generation_metadata: { evidence: { committees: { total: totals }, individuals: { total: totals } } } });
 test('continues beyond five total briefs and creates follow-ups without overwriting publications', async () => {
   const f=setup({ existing: Array.from({length: 5},(_,i)=>prior(i+1)) });
   assert.equal((await f.run()).created.length,12);
@@ -85,4 +85,11 @@ test('individual totals from another scope are not treated as a material change'
   // Prior briefs measured full itemized history; only committee changes count.
   assert.equal(brief.selectContributionDevelopment(committees, individuals, { committees: { total: 500000 }, individuals: { total: 5000000 } }).selected, false);
   assert.equal(brief.selectContributionDevelopment(committees, individuals, { committees: { total: 500000 }, individuals: { total: 5000000, minAmount: 1000 } }).selected, true);
+});
+
+test('an archived draft that was never published is not a baseline; a previously published one is', async () => {
+  // Same committee totals as the archived draft: only a real baseline can suppress a redraft.
+  const never = setup({ existing: [prior(1, 'archived', 500000)] }); assert.equal((await never.run()).created.length, 12);
+  const seen = setup({ existing: [prior(1, 'archived', 500000, '2026-10-01T00:00:00Z')] }); const r = await seen.run();
+  assert.equal(r.created.length, 11); assert.equal(r.unchanged, 1);
 });
