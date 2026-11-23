@@ -11,7 +11,7 @@ type PageStateProps = {
 export default function PageState({ title, description, action }: PageStateProps) {
   return (
     <div className="container mx-auto flex min-h-[55vh] max-w-3xl items-center justify-center px-4 py-12">
-      <div className="w-full rounded-2xl border bg-card p-8 text-center shadow-sm">
+      <div className="w-full rounded-2xl border bg-card p-8 text-center shadow-xs">
         <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
           <AlertCircle className="h-5 w-5" />
         </div>

@@ -174,7 +174,7 @@ export default function SupremeCourtCaseClient({ cluster }: { cluster: Cluster }
             return (
               <TabsContent key={opinion.id} value={opinion.id} className="m-0 h-full">
                 <div className="flex h-full min-h-0 flex-col">
-                  <div className="flex flex-shrink-0 flex-col gap-2 border-b border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex shrink-0 flex-col gap-2 border-b border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="secondary" className="text-[10px]">{opinionTypeLabel(opinion.type)}</Badge>
@@ -244,11 +244,11 @@ export default function SupremeCourtCaseClient({ cluster }: { cluster: Cluster }
 
   return (
     <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:h-[calc(100dvh-9rem)] md:min-h-[560px]">
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <Breadcrumbs collection={'courtCases'} currentLabel={cluster.case_name_short || cluster.case_name} />
       </div>
 
-      <header className="flex flex-shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">
+      <header className="flex shrink-0 flex-col gap-3 border-b border-border/80 pb-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 max-w-5xl">
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">Supreme Court case</p>
           <h1 className="text-balance text-2xl font-bold leading-tight text-foreground md:text-3xl">{cluster.case_name}</h1>
@@ -276,11 +276,11 @@ export default function SupremeCourtCaseClient({ cluster }: { cluster: Cluster }
 
       {isMobile ? (
         <>
-          <div className="sticky top-16 z-30 flex flex-shrink-0 rounded-lg bg-muted p-1 shadow-sm" aria-label="Court opinion workspace">
-            <button type="button" onClick={() => setMobileWorkspace('opinions')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'opinions' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'opinions'}>
+          <div className="sticky top-16 z-30 flex shrink-0 rounded-lg bg-muted p-1 shadow-xs" aria-label="Court opinion workspace">
+            <button type="button" onClick={() => setMobileWorkspace('opinions')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'opinions' ? 'bg-card shadow-xs' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'opinions'}>
               <Scale className="h-4 w-4" /> Opinions
             </button>
-            <button type="button" onClick={() => setMobileWorkspace('assistant')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'assistant' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'assistant'}>
+            <button type="button" onClick={() => setMobileWorkspace('assistant')} className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium ${mobileWorkspace === 'assistant' ? 'bg-card shadow-xs' : 'text-muted-foreground'}`} aria-pressed={mobileWorkspace === 'assistant'}>
               <MessageSquareText className="h-4 w-4" /> Ask this opinion
             </button>
           </div>
@@ -293,7 +293,7 @@ export default function SupremeCourtCaseClient({ cluster }: { cluster: Cluster }
         <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: assistantOpen ? `minmax(0, 1fr) 10px ${assistantWidth}px` : 'minmax(0, 1fr) 0 0' }}>
           {opinionsPanel}
           <div role="separator" aria-label="Resize assistant" aria-orientation="vertical" aria-valuemin={360} aria-valuemax={600} aria-valuenow={assistantWidth} tabIndex={assistantOpen ? 0 : -1} onPointerDown={handleResizeStart} onKeyDown={handleResizeKeyDown} className={`group flex cursor-col-resize items-center justify-center ${assistantOpen ? '' : 'pointer-events-none opacity-0'}`}>
-            <span className="flex h-12 w-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm group-hover:text-foreground group-focus:text-foreground"><GripVertical className="h-4 w-4" /></span>
+            <span className="flex h-12 w-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-xs group-hover:text-foreground group-focus:text-foreground"><GripVertical className="h-4 w-4" /></span>
           </div>
           <div className={`min-h-0 overflow-hidden transition-opacity ${assistantOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>{assistantPanel}</div>
         </div>

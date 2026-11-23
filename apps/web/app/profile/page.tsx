@@ -222,7 +222,7 @@ function ProfileContent() {
           { id: 'account', label: 'Account & billing', href: '/profile?section=account' },
         ].map((item) => (
           <Link key={item.id} href={item.href} scroll={false} aria-current={activeSection === item.id ? 'page' : undefined}
-            className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeSection === item.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring ${activeSection === item.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             {item.label}
           </Link>
         ))}

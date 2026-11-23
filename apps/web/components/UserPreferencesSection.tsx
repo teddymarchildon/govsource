@@ -165,7 +165,7 @@ const UserPreferencesSection = () => {
                   Search and select states...
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+              <PopoverContent className="p-0 w-(--radix-popover-trigger-width)">
                 <div className="p-2">
                     <Input
                     aria-label="Search states"
@@ -228,7 +228,7 @@ const UserPreferencesSection = () => {
                         Search and select policy areas...
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                <PopoverContent className="p-0 w-(--radix-popover-trigger-width)">
                 <div className="p-2">
                     <Input
                         aria-label="Search policy areas"

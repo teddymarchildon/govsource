@@ -31,7 +31,7 @@ export default function OnboardingContainer() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm py-4 px-6">
+      <header className="bg-white shadow-xs py-4 px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">GovSource Onboarding</h1>
           <button
@@ -47,7 +47,7 @@ export default function OnboardingContainer() {
       </header>
 
       {error && <p role="alert" className="px-6 pt-4 text-destructive">{error}</p>}
-      <main className="flex-grow flex flex-col items-center justify-center py-12">
+      <main className="grow flex flex-col items-center justify-center py-12">
         <div className="w-full max-w-4xl">
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
             <div className="p-4 bg-primary text-primary-foreground">

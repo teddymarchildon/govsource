@@ -410,7 +410,7 @@ export default function BriefsAdminPage({
           <div aria-busy={loading} className="overflow-hidden rounded-lg border bg-white">
             <div className="border-b bg-gray-50 px-4 py-3 text-sm font-semibold">{STATUS_LABELS[statusFilter as BriefStatus] || 'All Briefs'} · {total}</div>
             {loading ? <p className="p-6 text-sm text-gray-500">Loading Briefs…</p> : briefs.length === 0 ? <p className="p-6 text-sm text-gray-500">{statusFilter === 'review' ? 'You’re caught up. New verified drafts will appear here for review.' : 'No Briefs match this view.'}</p> : <ul className="max-h-80 divide-y overflow-y-auto xl:max-h-[70vh]">{briefs.map(brief => <li key={brief.id}>
-              <button disabled={busy} aria-current={selected?.id === brief.id ? 'true' : undefined} onClick={() => void openBrief(brief)} className={`w-full p-4 text-left transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60 ${selected?.id === brief.id ? 'border-l-4 border-primary bg-secondary' : ''}`}>
+              <button disabled={busy} aria-current={selected?.id === brief.id ? 'true' : undefined} onClick={() => void openBrief(brief)} className={`w-full p-4 text-left transition hover:bg-gray-50 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60 ${selected?.id === brief.id ? 'border-l-4 border-primary bg-secondary' : ''}`}>
                 <span className="text-xs font-semibold text-primary">{STATUS_LABELS[brief.status]} · {TYPE_LABELS[brief.primary_item_type]}</span>
                 <span className="mt-2 block font-serif text-lg font-semibold leading-snug">{brief.title}</span>
                 <span className="mt-2 block text-xs text-gray-500">{opening === brief.id ? 'Opening…' : `Updated ${formatDate(brief.updated_at)}`}</span>
@@ -425,7 +425,7 @@ export default function BriefsAdminPage({
         </section>
 
         {editing ? (
-          <section ref={editorPanel} className="scroll-mt-28 rounded-lg border bg-white p-4 shadow-sm sm:p-6">
+          <section ref={editorPanel} className="scroll-mt-28 rounded-lg border bg-white p-4 shadow-xs sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold">{selected ? `Review Brief` : 'New Brief'}</h2>
               {selected?.status === 'published' && selected.slug ? <Link className="text-sm font-medium text-blue-600 hover:underline" href={`/briefs/${selected.slug}`}>View live</Link> : null}
@@ -452,7 +452,7 @@ export default function BriefsAdminPage({
               <aside className="rounded-lg border bg-gray-50 p-4" aria-label="Source documents">
                 <h3 className="font-semibold">Check the evidence</h3>
                 <a className="mt-2 block text-sm text-primary underline" target="_blank" rel="noreferrer" href={getContentHref({ type: form.primary_item_type, id: form.primary_item_id, cycle: Number(form.contribution_cycle) || null })}>Open the government record ↗</a>
-                {sources.map(source => sourceHost(source.url) ? <a key={source.url} className="mt-2 block break-words text-sm text-primary underline" target="_blank" rel="noreferrer" href={source.url}>{source.label} · {sourceHost(source.url)} ↗</a> : <p key={source.url} className="text-sm text-red-700">Invalid source URL: {source.url}</p>)}
+                {sources.map(source => sourceHost(source.url) ? <a key={source.url} className="mt-2 block wrap-break-word text-sm text-primary underline" target="_blank" rel="noreferrer" href={source.url}>{source.label} · {sourceHost(source.url)} ↗</a> : <p key={source.url} className="text-sm text-red-700">Invalid source URL: {source.url}</p>)}
                 <p className="mt-3 text-xs text-gray-600">Automated verification supports your review; it does not establish editorial accuracy or significance.</p>
               </aside>
             </div> : <fieldset disabled={busy} className="mt-6 min-w-0 space-y-5">

@@ -21,7 +21,7 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "react-hooks/preserve-manual-memoization": "warn"
   }
 }, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "tailwind.config.js"]
+  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts"]
 }];
 
 export default eslintConfig;

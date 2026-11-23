@@ -145,7 +145,7 @@ function LoginPageInner() {
                   onClick={() => { setAuthMode('magic-link'); setError(''); }}
                   className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                     authMode === 'magic-link'
-                      ? 'bg-white text-gray-900 shadow-sm'
+                      ? 'bg-white text-gray-900 shadow-xs'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -157,7 +157,7 @@ function LoginPageInner() {
                   onClick={() => { setAuthMode('password'); setError(''); }}
                   className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                     authMode === 'password'
-                      ? 'bg-white text-gray-900 shadow-sm'
+                      ? 'bg-white text-gray-900 shadow-xs'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -240,9 +240,9 @@ function LoginPageInner() {
 
               {/* Divider with OR */}
               <div className="flex items-center my-3">
-                <div className="flex-grow border-t border-gray-300" />
+                <div className="grow border-t border-gray-300" />
                 <span className="mx-4 text-gray-500 font-small">or</span>
-                <div className="flex-grow border-t border-gray-300" />
+                <div className="grow border-t border-gray-300" />
               </div>
 
               {/* Google Sign-In Button */}

@@ -17,7 +17,7 @@ export default function ContributionFilters({ kind, cycle, filters }: { kind: 'c
         ['min', 'Minimum amount ($)', 'number'], ['max', 'Maximum amount ($)', 'number'],
       ].map(([key, label, type]) => <label key={key} className="text-xs font-medium text-muted-foreground">{label}
         <input name={key} type={type} defaultValue={filters[key as keyof Filters] ?? ''} step={type === 'number' ? '0.01' : undefined}
-          className="mt-1 block h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" />
+          className="mt-1 block h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary" />
       </label>)}
     </div>
     {filters.committee ? <p className="text-xs text-muted-foreground">Selected committee: {filters.committee}</p> : null}

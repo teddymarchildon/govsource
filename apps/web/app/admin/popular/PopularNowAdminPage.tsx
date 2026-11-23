@@ -466,7 +466,7 @@ export default function PopularNowAdminPage() {
         </div>
       ) : null}
 
-      <form onSubmit={handleCreate} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <form onSubmit={handleCreate} className="rounded-lg border border-gray-200 bg-white p-4 shadow-xs">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-600">Add ranked item</h2>
         <div className="grid gap-3 md:grid-cols-5">
           <label className="flex flex-col gap-1 text-xs font-medium uppercase text-gray-500">
@@ -513,7 +513,7 @@ export default function PopularNowAdminPage() {
         </div>
       </form>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xs">
         <div className="border-b border-gray-200 px-4 py-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-600">Active and scheduled rankings</h2>
           <p className="mt-1 text-xs text-gray-500">
@@ -662,7 +662,7 @@ export default function PopularNowAdminPage() {
         </table>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white shadow-xs">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-600">Ended rankings</h2>
           <Button variant="ghost" size="sm" onClick={() => setShowEnded((prev) => !prev)}>

@@ -154,7 +154,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
             }}
             onFocus={() => setIsOpen(true)}
             placeholder={placeholder}
-            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
           />
           {search && (
             <button
@@ -183,7 +183,7 @@ const CongressmanSearchSelect = forwardRef<CongressmanSearchSelectRef, Congressm
                   key={congressman.id}
                   className="hover:bg-gray-100"
                 >
-                  <button type="button" onClick={() => handleSelect(congressman)} className="flex w-full items-center p-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                  <button type="button" onClick={() => handleSelect(congressman)} className="flex w-full items-center p-2 text-left focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary">
                     <span className="text-sm font-medium">
                       {congressman.full_name}
                     </span>
